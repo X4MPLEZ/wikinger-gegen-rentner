@@ -475,8 +475,8 @@ const KINDS = [
   { key:'oma',       fac:'rentner', role:'ranged', name:'Gebiss-Oma',     hp:80,  dmg:14, cd:1.3,  range:12.5,aggro:14.5,speed:3.7,cost:60, build:2.6, r:0.5,  sp:'Gebiss-Salve', proj:'teeth', pspeed:17 },
   { key:'ziege',     fac:'viking',  role:'cav',    name:'Ziegenreiter',   hp:125, dmg:16, cd:1.0,  range:1.8, aggro:10, speed:7.5, cost:75, build:3.2, r:0.75, sp:'Ramm-Anlauf' },
   { key:'rollator',  fac:'rentner', role:'cav',    name:'Rollator-Raser', hp:140, dmg:15, cd:1.05, range:1.8, aggro:10, speed:6.9, cost:75, build:3.2, r:0.75, sp:'Turbo' },
-  { key:'katapult',  fac:'viking',  role:'siege',  name:'Wikinger-Katapult', hp:650, dmg:60, cd:4.2, range:17, aggro:19, speed:1.8, cost:250, build:0, r:1.4, sp:'', proj:'boulder', pspeed:14, aoe:4.2 },
-  { key:'torte',     fac:'rentner', role:'siege',  name:'Torten-Katapult',   hp:650, dmg:60, cd:4.2, range:17, aggro:19, speed:1.8, cost:250, build:0, r:1.4, sp:'', proj:'cake', pspeed:14, aoe:4.2 },
+  { key:'katapult',  fac:'viking',  role:'siege',  name:'Wikinger-Katapult', hp:1200, dmg:60, cd:4.2, range:17, aggro:19, speed:1.8, cost:250, build:0, r:1.4, sp:'', proj:'boulder', pspeed:14, aoe:4.2 },
+  { key:'torte',     fac:'rentner', role:'siege',  name:'Torten-Katapult',   hp:1200, dmg:60, cd:4.2, range:17, aggro:19, speed:1.8, cost:250, build:0, r:1.4, sp:'', proj:'cake', pspeed:14, aoe:4.2 },
 ];
 const ROLE_NAME = { melee:'Nahkampf', ranged:'Fernkampf', cav:'Reiter' };
 const BEATS = { melee:'cav', cav:'ranged', ranged:'melee' };
@@ -508,7 +508,7 @@ const PERKS = {
   jump:    { t:1, ic:'🦘', n:'Sprungfedern',    d:'Ego-Krieger kann springen – Landung haut Gegner um' },
   moon:    { t:1, ic:'🌙', n:'Mondschwerkraft', d:'Umgestoßene Gegner fliegen sehr hoch und lange' },
   dance:   { t:1, ic:'🪩', n:'Tanzgranate',     d:'Ego-Krieger wirft Discokugeln: Gegner müssen tanzen' },
-  chicken: { t:2, ic:'🐔', n:'Hühnerfluch',     d:'Alle 30 s wird ein Gegner 6 s lang zum Huhn' },
+  chicken: { t:2, ic:'🐔', n:'Hühnerfluch',     d:'Alle 30 s wird ein gegnerischer Krieger 8 s lang zum Huhn und pickt nur noch schwach' },
   volley:  { t:2, ic:'🎯', n:'Salvenhölle',     d:'Pfeilfächer und Gebiss-Salve: +10 Geschosse' },
   bighead: { t:2, ic:'🎃', n:'Dickschädel',     d:'Ego-Krieger: doppelter Schaden, aber Riesenkopf – Pfeile treffen doppelt hart' },
   catapult:{ t:3, ic:'🪨', n:'Katapult',        d:'Alle 30 s rollt ein mächtiges Katapult aus deiner Basis' },
@@ -773,9 +773,9 @@ function applyCmd(G, team, c) {
     if (!Number.isFinite(c.x) || !Number.isFinite(c.z)) return;
     T.rally = nearestWalkable(MAP, clampX(c.x), clampZ(c.z));
   } else if (c.t === 'poss') {
-    const u = G.units.find(v => v.id === c.id && v.team === team); if (!u || KINDS[u.k].role === 'siege') return;
+    const u = G.units.find(v => v.id === c.id && v.team === team); if (!u) return;
     if (T.pos) { const o = G.units.find(v => v.id === T.pos); if (o) setPoss(o, false); }
-    setPoss(u, true); u.kb = null; u.down = 0; u.la = undefined; u.ls = undefined; u.spcd = 0; u.rage = 0; u.yaw = 0; T.pos = u.id; T.posIn = null;
+    setPoss(u, true); u.kb = null; u.down = 0; u.chick = 0; u.la = undefined; u.ls = undefined; u.spcd = 0; u.rage = 0; u.yaw = 0; T.pos = u.id; T.posIn = null;
   } else if (c.t === 'unposs') {
     { const o = T.pos && G.units.find(v => v.id === T.pos); if (o && o.dance > 0) return; }
     if (T.pos) { const o = G.units.find(v => v.id === T.pos); if (o) { setPoss(o, false); o.ord = { x:o.x, z:o.z, mv:false }; o.path = null; } }
@@ -794,6 +794,7 @@ function makeOffer(G, T) {
 }
 function perkPause(G) {
   G.pz -= DT;
+  if (!G.teams[0].offer && !G.teams[1].offer) G.pz = Math.min(G.pz, 0.6);
   if (G.pz <= 0) { G.pz = 0; for (const T of G.teams) if (T.offer) pickPerk(G, T, T.offer[0]); }
 }
 function fireball(G, team, x, z, lvl, r, dm, fi) { G.fbId = (G.fbId + 1) % 1000; G.fb.push({ id:G.fbId, x, z, t:1.4, team, lvl, r, dm, fi }); }
@@ -804,11 +805,11 @@ function perkStep(G) {
     const T = G.teams[i];
     if (pkL(G, i, 'fire')) { T.fireT += DT; if (T.fireT >= 10) { const tg = G.flags.map((f, fi) => fi).filter(fi => G.flags[fi].owner === 1 - i); if (tg.length) { T.fireT = 0; const fi = tg[Math.floor(Math.random() * tg.length)], F = FLAGS[fi]; fireball(G, i, F.x + (Math.random() - .5) * 3, F.z + (Math.random() - .5) * 3, 3, 8, 70, fi); } else T.fireT = 10; } }
     if (pkL(G, i, 'meteor')) { T.metT = (T.metT || 0) + DT; if (T.metT >= 25) { const foes = G.units.filter(u => u.team !== i); if (foes.length) { T.metT = 0; for (let k = 0; k < 6; k++) { const e = foes[Math.floor(Math.random() * foes.length)]; fireball(G, i, e.x + (Math.random() - .5) * 4, e.z + (Math.random() - .5) * 4, 1, 3.5, 45, -1); } } else T.metT = 25; } }
-    if (pkL(G, i, 'catapult')) { T.catT = (T.catT || 0) + DT; if (T.catT >= 30) { T.catT = 0; spawnUnit(G, i, T.fac === 'viking' ? 6 : 7); } }
+    if (pkL(G, i, 'catapult')) { T.catT = (T.catT || 0) + DT; if (T.catT >= 30) { T.catT = 0; if (G.units.filter(u => u.team === i && KINDS[u.k].role === 'siege').length < 3) spawnUnit(G, i, T.fac === 'viking' ? 6 : 7); } }
   }
   const byId = new Map(G.units.map(u => [u.id, u]));
   for (const u of G.units) { if (u.chick > 0) u.chick -= DT; if (u.bite > 0) { u.bite -= DT; hit(G, u.id, 7 * DT, u.biteT, byId, -1); } }
-  for (let i = 0; i < 2; i++) if (pkL(G, i, 'chicken')) { const T = G.teams[i]; T.chT = (T.chT || 0) + DT; if (T.chT >= 30) { const foes = G.units.filter(u => u.team !== i && KINDS[u.k].role !== 'siege' && !(u.chick > 0)); if (foes.length) { T.chT = 0; const pp = foes.filter(u => u.poss); const e = pp.length && Math.random() < 0.4 ? pp[0] : foes[Math.floor(Math.random() * foes.length)]; e.chick = 6; e.dance = 0; } else T.chT = 30; } }
+  for (let i = 0; i < 2; i++) if (pkL(G, i, 'chicken')) { const T = G.teams[i]; T.chT = (T.chT || 0) + DT; if (T.chT >= 30) { const foes = G.units.filter(u => u.team !== i && KINDS[u.k].role !== 'siege' && !u.poss && !(u.chick > 0)); if (foes.length) { T.chT = 0; const e = foes[Math.floor(Math.random() * foes.length)]; e.chick = 8; } else T.chT = 30; } }
   if (G.gr) { for (const g of G.gr) { g.t -= DT; if (g.t <= 0) for (const e of G.units) if (e.team !== g.team && e.hp > 0 && (e.x - g.x) ** 2 + (e.z - g.z) ** 2 < 25) { e.dance = 5; e.tgt = -1; } } G.gr = G.gr.filter(g => g.t > 0); }
   for (const b of G.fb) { b.t -= DT; if (b.t <= 0) { for (const e of G.units) if (e.team !== b.team && (e.x - b.x) ** 2 + (e.z - b.z) ** 2 < b.r * b.r) hit(G, e.id, b.dm, b.team, byId, -1); const f = b.fi >= 0 && G.flags[b.fi]; if (f) { const k = 0.6; f.p = f.p > 0 ? Math.max(0, f.p - k) : Math.min(0, f.p + k); if (f.owner === 0 && f.p <= 0) f.owner = -1; if (f.owner === 1 && f.p >= 0) f.owner = -1; } } }
   G.fb = G.fb.filter(b => b.t > 0);
@@ -886,6 +887,13 @@ function possAttack(G, u, byId) {
   const K = KINDS[u.k];
   u.cd = K.cd * 0.65 * (u.rage > 0 ? (pkL(G, u.team, 'walhalla') ? 0.4 : 0.6) : 1); u.atk = (u.atk + 1) % 100; u.at = 0;
   const dmg = K.dmg * CFG.possDmg[K.role] * (u.rage > 0 ? 1.5 : 1);
+  if (K.role === 'siege') {
+    const In = G.teams[u.team].posIn; let tx = u.x + Math.sin(u.yaw) * 12, tz = u.z + Math.cos(u.yaw) * 12;
+    if (In && Array.isArray(In.gp) && In.gp.every(Number.isFinite)) { tx = In.gp[0]; tz = In.gp[1]; }
+    const dx = tx - u.x, dz = tz - u.z, dd = Math.hypot(dx, dz) || 1, R = K.range + 3; if (dd > R) { tx = u.x + dx / dd * R; tz = u.z + dz / dd * R; }
+    const dist = Math.min(dd, R); G.proj.push({ t:Math.max(0.5, dist / K.pspeed), dmg:K.dmg * 1.6, tgt:-1, team:u.team, k:u.k, aoe:K.aoe * 1.15, tx, tz, bp:true });
+    u.at = -4; u.shot = [Math.round(tx * 10), Math.round(tz * 10)]; u.run = 0; return;
+  }
   if (K.role === 'ranged' && u.aim) {
     const [dx, dy, dz] = u.aim; G.fpId = (G.fpId + 1) % 10000;
     G.fp.push({ id:G.fpId, x:u.x + dx * 0.5, y:u.y + 1.9 + dy * 0.5, z:u.z + dz * 0.5, dx, dy, dz, t:K.range * 2.5 / CFG.arrowSpeed, team:u.team, k:u.k, dmg });
@@ -905,6 +913,12 @@ function possAttack(G, u, byId) {
 }
 function possSpecial(G, u, byId) {
   const K = KINDS[u.k]; u.spcd = CFG.spCd * pk(G, u.team, 'charge', [1, 0.34]); u.sp = (u.sp + 1) % 10; u.spm = 0;
+  if (K.role === 'siege') {
+    const In = G.teams[u.team].posIn; let tx = u.x + Math.sin(u.yaw) * 12, tz = u.z + Math.cos(u.yaw) * 12;
+    if (In && Array.isArray(In.gp) && In.gp.every(Number.isFinite)) { tx = In.gp[0]; tz = In.gp[1]; }
+    for (let i = 0; i < 3; i++) { const a = i / 3 * TAU, ox = tx + Math.cos(a) * 3, oz = tz + Math.sin(a) * 3; G.proj.push({ t:0.9 + i * 0.25, dmg:K.dmg * 1.2, tgt:-1, team:u.team, k:u.k, aoe:K.aoe, tx:ox, tz:oz, bp:true }); }
+    u.shot = [Math.round(tx * 10), Math.round(tz * 10)]; return;
+  }
   if (u.k === 0) u.rage = pk(G, u.team, 'walhalla', [4, 10]);
   else if ((u.k === 1 || u.k === 3) && u.aim) {
     const vl = pkL(G, u.team, 'volley'), [ax, ay, az] = u.aim, n = (u.k === 1 ? 5 : 6) + 10 * vl, spread = vl ? 0.05 : (u.k === 1 ? 0.075 : 0.11);
@@ -932,7 +946,7 @@ function possStep(G, u, byId) {
   u.hs = 1 + 0.45 * pkL(G, u.team, 'bighead'); u.gcd = (u.gcd || 0) - DT;
   if (u.spinT > 0) { u.spinT -= DT; u.spinP -= DT; if (u.spinP <= 0) { u.spinP = 0.4; enemiesInCone(G, u, 5.5, Math.PI).forEach(c => { hit(G, c.e.id, 30, u.team, byId, u.k, true); if (!(c.e.down > 0.6)) knockFly(c.e, u.x, u.z, 5); }); } }
   if (u.dance > 0) { u.dance -= DT; if (In && In.id === u.id) { u.la = In.a; u.ls = In.s; u.lj = In.j; u.lg = In.g; } u.run = 0; u.ord = { x:u.x, z:u.z, mv:false }; u.tgt = -1; return; }
-  if (u.jumpT > 0) { u.jumpT -= DT; if (u.jumpT <= 0) { for (const e of G.units) if (e.team !== u.team && e.hp > 0 && (e.x - u.x) ** 2 + (e.z - u.z) ** 2 < 2.8 * 2.8) { hit(G, e.id, 35, u.team, byId, -1, true); knockFly(e, u.x, u.z, 4); } u.stomp = (u.stomp || 0) + 1; } }
+  if (u.jumpT > 0) { u.jumpT -= DT; if (u.jumpT <= 0) { for (const e of G.units) if (e.team !== u.team && e.hp > 0 && (e.x - u.x) ** 2 + (e.z - u.z) ** 2 < 3.6 * 3.6) { hit(G, e.id, 45, u.team, byId, -1, true); knockFly(e, u.x, u.z, 9); } u.stomp = (u.stomp || 0) + 1; } }
   if (u.down > 0) {
     u.down -= DT; const kb = u.kb;
     if (kb && kb.left > 0) { const st = Math.min(kb.left, kb.sp * DT); kb.left -= st; const nx = u.x + kb.vx * st, nz = u.z + kb.vz * st; if (walkable(nx, nz)) { u.x = nx; u.z = nz; } else kb.left = 0; }
@@ -953,11 +967,11 @@ function possStep(G, u, byId) {
     }
     if (Number.isFinite(In.y)) u.yaw = In.y;
     if (Array.isArray(In.ad) && In.ad.length === 3 && In.ad.every(Number.isFinite)) { const l = Math.hypot(In.ad[0], In.ad[1], In.ad[2]); u.aim = l > 0.5 ? [In.ad[0] / l, In.ad[1] / l, In.ad[2] / l] : null; } else u.aim = null;
-    const chick = u.chick > 0;
+    const chick = false;
     if (In.a !== u.la) { u.la = In.a; if (u.cd <= 0.15 && !chick) possAttack(G, u, byId); }
     if (In.s !== u.ls) { u.ls = In.s; if (u.spcd <= 0.3 && !chick) possSpecial(G, u, byId); }
     if (u.lj === undefined) { u.lj = In.j; u.lg = In.g; }
-    if (In.j !== u.lj) { u.lj = In.j; if (pkL(G, u.team, 'jump') && !(u.jumpT > 0) && !chick) u.jumpT = 0.7; }
+    if (In.j !== u.lj) { u.lj = In.j; if (pkL(G, u.team, 'jump') && !(u.jumpT > 0) && !chick) u.jumpT = 0.9; }
     if (In.g !== u.lg) { u.lg = In.g; if (pkL(G, u.team, 'dance') && !((u.gcd || 0) > 0) && !chick) { u.gcd = 14; let dist = 10, fx = Math.sin(u.yaw), fz = Math.cos(u.yaw); if (Array.isArray(In.gp) && In.gp.every(Number.isFinite)) { fx = In.gp[0] - u.x; fz = In.gp[1] - u.z; dist = clamp(Math.hypot(fx, fz), 3, 16); } else if (u.aim && u.aim[1] < -0.05) dist = clamp(1.2 / -u.aim[1], 4, 15); const fl = Math.hypot(fx, fz) || 1, p = nearestWalkable(MAP, clampX(u.x + fx / fl * dist), clampZ(u.z + fz / fl * dist)); G.grId = ((G.grId || 0) + 1) % 1000; (G.gr || (G.gr = [])).push({ id:G.grId, x:p.x, z:p.z, sx:u.x, sz:u.z, t:1.0, team:u.team }); } }
   }
   u.ord = { x:u.x, z:u.z, mv:false }; u.tgt = -1;
@@ -980,7 +994,6 @@ function step(G) {
     const K = KINDS[u.k], o = u.ord;
     u.cd -= DT; u.re -= DT; u.vx = 0; u.vz = 0; u.hurt = (u.hurt || 0) - DT;
     if (u.dance > 0) { u.dance -= DT; continue; }
-    if (u.chick > 0) { u.wT = (u.wT || 0) - DT; if (u.wT <= 0) { u.wT = 0.7; u.wA = Math.random() * TAU; } u.vx = Math.sin(u.wA) * K.speed * 1.1; u.vz = Math.cos(u.wA) * K.speed * 1.1; const nx = u.x + u.vx * DT, nz = u.z + u.vz * DT; if (walkable(nx, nz)) { u.x = nx; u.z = nz; } else u.wT = 0; continue; }
     if (u.down > 0) {
       u.down -= DT; const kb = u.kb;
       if (kb && kb.left > 0) { const st = Math.min(kb.left, kb.sp * DT); kb.left -= st; const nx = u.x + kb.vx * st, nz = u.z + kb.vz * st; if (walkable(nx, nz)) { u.x = nx; u.z = nz; } else kb.left = 0; }
@@ -1011,8 +1024,8 @@ function step(G) {
         if (u.cd <= 0) {
           u.cd = K.cd; u.atk = (u.atk + 1) % 100; u.at = tgt ? tgt.id : -2;
           const charge = K.role === 'cav' && u.run > 1.2 ? 1.6 : 1;
-          if (K.proj) G.proj.push({ t:dist / K.pspeed, dmg:K.dmg, tgt:u.at, team:u.team, k:u.k, aoe:K.aoe, tx, tz });
-          else hit(G, u.at, K.dmg * charge, u.team, byId, u.k);
+          if (K.proj) G.proj.push({ t:dist / K.pspeed, dmg:K.dmg * (u.chick > 0 ? 0.6 : 1), tgt:u.at, team:u.team, k:u.k, aoe:K.aoe, tx, tz });
+          else hit(G, u.at, K.dmg * charge * (u.chick > 0 ? 0.6 : 1), u.team, byId, u.k);
           u.run = 0;
         }
       } else steer(G, u, tx, tz, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1));
@@ -1053,7 +1066,7 @@ function step(G) {
     a.y = unitY(a.x, a.z);
   }
   for (const p of G.proj) { p.t -= DT; if (p.t > 0) continue;
-    if (p.aoe) { for (const e of us) if (e.team !== p.team && e.hp > 0 && (e.x - p.tx) ** 2 + (e.z - p.tz) ** 2 < p.aoe * p.aoe) hit(G, e.id, p.dmg, p.team, byId, p.k); const eb = BASES[1 - p.team]; if (Math.hypot(eb.x - p.tx, eb.z - p.tz) < CFG.baseR + p.aoe) hit(G, -2, p.dmg, p.team, byId, p.k); }
+    if (p.aoe) { for (const e of us) if (e.team !== p.team && e.hp > 0 && (e.x - p.tx) ** 2 + (e.z - p.tz) ** 2 < p.aoe * p.aoe) hit(G, e.id, p.dmg, p.team, byId, p.k, p.bp); const eb = BASES[1 - p.team]; if (Math.hypot(eb.x - p.tx, eb.z - p.tz) < CFG.baseR + p.aoe) hit(G, -2, p.dmg, p.team, byId, p.k); }
     else hit(G, p.tgt, p.dmg, p.team, byId, p.k, p.bp); }
   for (const p of G.fp) {
     const n = 8, sd = CFG.arrowSpeed * DT / n, eb = BASES[1 - p.team];
@@ -1113,7 +1126,7 @@ function snapOf(G) {
     gr:(G.gr || []).map(g => [g.id, Math.round(g.x * 10), Math.round(g.z * 10), Math.round(g.sx * 10), Math.round(g.sz * 10), Math.round(g.t * 10), g.team]),
     hq:[T0.hq.slice(), T1.hq.slice()], fp:G.fp.map(p => [p.id, Math.round(p.x * 10), Math.round(p.y * 10), Math.round(p.z * 10), Math.round(p.dx * 100), Math.round(p.dy * 100), Math.round(p.dz * 100), p.team, p.k]),
     u:G.units.map(u => { const e = [u.id, u.k, Math.round(u.x * 10), Math.round(u.z * 10), Math.max(1, Math.round(u.hp / maxHp(u) * 100)), u.at, u.atk, (u.poss ? 1 : 0) | (u.down > 0 ? 2 : 0) | (u.bite > 0 ? 4 : 0) | (u.dance > 0 ? 8 : 0) | (u.chick > 0 ? 16 : 0) | (u.jumpT > 0 ? 32 : 0) | ((u.kbN || 0) << 6)];
-      if (u.poss) e.push(u.sp, Math.round(u.yaw * 100), u.rage > 0 ? 1 : 0, Math.max(0, Math.ceil(u.spcd * 10)), u.spm ? 1 : 0); return e; }),
+      if (u.poss) e.push(u.sp, Math.round(u.yaw * 100), u.rage > 0 ? 1 : 0, Math.max(0, Math.ceil(u.spcd * 10)), u.spm ? 1 : 0, u.shot ? u.shot[0] : 0, u.shot ? u.shot[1] : 0); return e; }),
   };
 }
 const teamOfKind = (k, fa) => KINDS[k].fac === fa[0] ? 0 : 1;
@@ -1514,11 +1527,11 @@ function buildMapView(m) {
     { const parts = [0, 1, 2].map(i => blade.clone().rotateZ((i - 1) * 0.35).rotateY(i * 2.1).translate((i - 1) * 0.06, 0, 0)); const pos = []; parts.forEach(pg => { const nn = pg.toNonIndexed(); pos.push(...nn.attributes.position.array); }); g3.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g3.computeVertexNormals(); }
     const tim = new THREE.InstancedMesh(g3, new THREE.MeshLambertMaterial({ color:0xffffff }), Math.max(1, tufts.length)); tim.count = tufts.length;
     tufts.forEach((t, i) => { q.setFromAxisAngle(up, t.a); mt.compose(p.set(t.x, t.y - 0.02, t.z), q, sc.setScalar(t.s)); tim.setMatrixAt(i, mt); tim.setColorAt(i, col.setHSL(0.24 + t.c * 0.07, 0.5, 0.3 + t.c * 0.1).convertSRGBToLinear()); });
-    tim.receiveShadow = true; mapGroup.add(tim);
+    tim.receiveShadow = true; tim.userData.deco = true; if (PERF.level >= 3) tim.visible = false; mapGroup.add(tim);
     const fcols = [0xffffff, 0xffd84d, 0xff8fb8, 0xb58cff, 0xff6b4a];
     const fim = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.11, 0), new THREE.MeshLambertMaterial({ color:0xffffff, emissive:0x222222 }), Math.max(1, flowers.length)); fim.count = flowers.length;
     flowers.forEach((f, i) => { mt.compose(p.set(f.x, f.y + 0.22, f.z), q.identity(), sc.setScalar(1)); fim.setMatrixAt(i, mt); fim.setColorAt(i, col.set(fcols[Math.floor(f.c * 5) % 5]).convertSRGBToLinear()); });
-    mapGroup.add(fim);
+    fim.userData.deco = true; if (PERF.level >= 3) fim.visible = false; mapGroup.add(fim);
   }
   const rockGeo = flat(new THREE.DodecahedronGeometry(1, 0));
   m.rocks.forEach(R => { const rk = mesh(rockGeo, lam(0x8f918b), R.x, sampleH(m, R.x, R.z) + R.r * 0.3, R.z, mapGroup); rk.scale.set(R.r * 1.1, R.r * 0.8, R.r); rk.rotation.y = R.x; shadows(rk, true, true); });
@@ -1704,8 +1717,8 @@ function buildCatapult(k) {
   if (vik) { mesh(new THREE.DodecahedronGeometry(0.26, 0), lam(0x8f918b), 0, 0.35, -1.95, arm); [-1, 1].forEach(sx => { const h = mesh(new THREE.ConeGeometry(0.1, 0.5, 8), lam(0xf3ead2), sx * 0.7, 0.85, 1.05, rig); h.rotation.z = -sx * 0.6; }); mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.06, 16).rotateX(Math.PI / 2), lam(0xc0392b), 0, 0.8, 1.21, rig); }
   else { mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.2, 14), lam(0xfff1f5), 0, 0.33, -1.95, arm); mesh(new THREE.SphereGeometry(0.07, 8, 6), lam(0xd0213a), 0, 0.48, -1.95, arm); mesh(new THREE.TorusGeometry(0.75, 0.05, 6, 24).rotateX(Math.PI / 2), lam(0xffffff), 0, 0.7, 0, rig); }
   arm.rotation.x = -0.75; U.arm = arm;
-  const torso = new THREE.Group(); rig.add(torso); const neck = new THREE.Group(); torso.add(neck);
-  const head = mesh(new THREE.SphereGeometry(0.01, 4, 3), lam(0xffffff), 0, 0, 0, neck); head.visible = false;
+  const torso = new THREE.Group(); rig.add(torso); const neck = new THREE.Group(); neck.position.set(0, 1.3, 0.75); neck.scale.setScalar(0.001); torso.add(neck);
+  const head = mesh(UG.head, headMat(k === 6 ? 0 : 2), 0, 0.5, 0, neck);
   Object.assign(U, { torso, neck, head, H:new THREE.Group(), armL:new THREE.Group(), armR:new THREE.Group() });
   shadows(g, UNIT_SHADOWS, false);
   const blob = mesh(UG.blob, blobMat, 0, 0.05, 0, g); blob.scale.setScalar(2.6); blob.visible = !UNIT_SHADOWS;
@@ -2145,8 +2158,8 @@ function processSnap(s) {
     const poss = (e[7] & 1) === 1;
     setPossessedLook(u, poss);
     u.yawNet = poss ? e[9] / 100 : null; u.rage = poss && e[10] === 1; u.spcd = poss ? e[11] / 10 : 0; u.spm = poss && e[12] === 1;
-    u.dancing = (e[7] & 8) === 8; const ch = (e[7] & 16) === 16; if (ch !== !!u.chick) setChicken(u, ch); u.bitten = (e[7] & 4) === 4; if ((e[7] & 32) && !(pe && (pe[7] & 32))) { u.jumpT = 0.7; SFX.play('boing', { x:u.g.position.x, z:u.g.position.z }); }
-    if (V.poss && V.poss.id === id) { const dz2 = (e[7] & 8) === 8; if (dz2 && !V.poss.dance) egoHint('Du musst tanzen! Kein Entkommen …', 2200); V.poss.dance = dz2; if (ch && !V.poss.chick) egoHint('Gack! Du bist ein Huhn! Lauf weg!', 2200); V.poss.chick = ch; $('#egoExit').classList.toggle('locked', dz2); }
+    u.dancing = (e[7] & 8) === 8; const ch = (e[7] & 16) === 16; if (ch !== !!u.chick) setChicken(u, ch); u.bitten = (e[7] & 4) === 4; if ((e[7] & 32) && !(pe && (pe[7] & 32))) { u.jumpT = 0.9; SFX.play('boing', { x:u.g.position.x, z:u.g.position.z }); }
+    if (V.poss && V.poss.id === id) { const dz2 = (e[7] & 8) === 8; if (dz2 && !V.poss.dance) egoHint('Du musst tanzen! Kein Entkommen …', 2200); V.poss.dance = dz2;  $('#egoExit').classList.toggle('locked', dz2); }
     if (V.poss && V.poss.id === id) { const dn = (e[7] & 2) === 2; if (dn && !V.poss.down) { egoHint('Umgehauen! Gleich stehst du wieder auf …', 1600); V.poss.dashT = 0; } V.poss.down = dn; V.poss.srv = { x:e[2] / 10, z:e[3] / 10 }; }
     if (pe && (e[7] >> 6) !== (pe[7] >> 6) && (e[7] & 2)) startRagdoll(u, pe[2] / 10, pe[3] / 10);
     if (pe) {
@@ -2157,6 +2170,7 @@ function processSnap(s) {
     u.hpPct = e[4];
   }
   if (prev) for (const [id] of prev) if (!cur.has(id)) {
+    if (V.poss && V.poss.id === id && V.latest && V.latest !== s && unitMap(V.latest).has(id)) { cur.set(id, prev.get(id)); continue; }
     const u = V.units.get(id); if (!u) continue;
     V.units.delete(id); V.selected.delete(id); u.dieT = 0; u.hp.visible = false; u.ring.visible = false; V.dying.push(u);
     puff(u.g.position.x, u.g.position.y + 1, u.g.position.z, 0xf6f1e7, 6); SFX.play('die', { x:u.g.position.x, z:u.g.position.z });
@@ -2181,6 +2195,7 @@ function processSnap(s) {
 function onAttack(u, at, cur, poss) {
   u.atkT = 0; const K = KINDS[u.k];
   if (at === -3) { SFX.play(u.k === 1 ? 'bow' : 'teeth', { x:u.g.position.x, z:u.g.position.z }); return; }
+  if (at === -4) { const e = cur.get(u.id); if (e && e.length > 14) { const tx = e[13] / 10, tz = e[14] / 10, from = u.g.position.clone(); from.y += 3; const to = new THREE.Vector3(tx, unitY(tx, tz), tz); shoot(K.proj, from, to, Math.max(0.5, from.distanceTo(to) / K.pspeed), null); SFX.play('catapult', { x:from.x, z:from.z }); } return; }
   let to = null, follow = null;
   if (at === -2) { const B = BASES[1 - u.team]; to = new THREE.Vector3(B.x, groundY(B.x, B.z) + 2, B.z); }
   else if (at > 0) { follow = V.units.get(at); const te = cur.get(at); if (follow) { to = follow.g.position.clone(); to.y += 1.2; } else if (te) to = new THREE.Vector3(te[2] / 10, groundY(te[2] / 10, te[3] / 10) + 1.2, te[3] / 10); }
@@ -2197,6 +2212,7 @@ function onAttack(u, at, cur, poss) {
 }
 function onSpecial(u, cur) {
   const p = u.g.position, K = KINDS[u.k];
+  if (K.role === 'siege') { const e = cur.get(u.id); if (e && e.length > 14) { const tx = e[13] / 10, tz = e[14] / 10; for (let i = 0; i < 3; i++) setTimeout(() => { const a = i / 3 * TAU, ox = tx + Math.cos(a) * 3, oz = tz + Math.sin(a) * 3, from = u.g.position.clone(); from.y += 3; shoot(K.proj, from, new THREE.Vector3(ox, unitY(ox, oz), oz), 0.9, null); SFX.play('catapult', { x:from.x, z:from.z }); }, i * 250); } word('SALVE!', p.x, p.y + 5, p.z, { color:'#ff9b54', scale:1.3 }); return; }
   word(SP_WORD[u.k], p.x, p.y + 4.6, p.z, { color:'#ff9b54', scale:1.2 });
   SFX.play(u.k === 0 ? 'rage' : 'special', { x:p.x, z:p.z, vol:1.1 }); if (u.k === 4) SFX.play('goat', { x:p.x, z:p.z }); if (u.k === 5) SFX.play('horn', { x:p.x, z:p.z });
   if (u.k === 2) { u.spin = 0.6 + [0, 5][tpk(u.team, 'spin')]; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; puff(p.x + Math.cos(a) * 2.5, p.y + 0.6, p.z + Math.sin(a) * 2.5, 0xf6f1e7, 1, 0.8); } }
@@ -2401,7 +2417,7 @@ function setChicken(u, on) {
   else { if (u.chickM) u.chickM.visible = false; u.rig.visible = true; puff(u.g.position.x, u.g.position.y + 1, u.g.position.z, 0xffffff, 6, 0.6); }
 }
 function updateStatusFx(u, dt, x, y, z) {
-  if (u.chick && u.chickM) { u.chickM.position.y = Math.abs(Math.sin(clock * 14)) * 0.15; u.chickM.rotation.z = Math.sin(clock * 20) * 0.08; if (Math.random() < dt * 0.7) { word(Math.random() < 0.5 ? 'GACK!' : 'BOCK!', x, y + 2.6, z, { color:'#ffffff', scale:0.8 }); SFX.play('chicken', { x, z, vol:0.6 }); } if (Math.random() < dt * 3) puff(x, y + 0.8, z, 0xffffff, 1, 0.3); }
+  if (u.chick && u.chickM) { u.chickM.position.y = Math.abs(Math.sin(clock * 14)) * 0.15; u.chickM.rotation.z = Math.sin(clock * 20) * 0.08; u.chickM.rotation.x = u.atkT < 0.35 ? Math.sin(u.atkT / 0.35 * Math.PI) * 0.7 : 0; if (Math.random() < dt * 0.7) { word(Math.random() < 0.5 ? 'GACK!' : 'BOCK!', x, y + 2.6, z, { color:'#ffffff', scale:0.8 }); SFX.play('chicken', { x, z, vol:0.6 }); } if (Math.random() < dt * 3) puff(x, y + 0.8, z, 0xffffff, 1, 0.3); }
   if (u.bitten) { if (!u.biteM) { u.biteM = projGeo.teeth.clone(); u.g.add(u.biteM); } u.biteM.visible = true; const hb = headBox({ k:u.k, poss:u.isPoss }); u.biteM.position.set(0.25, hb.y + hb.r * 0.6, 0.2); const c = Math.sin(clock * 18); u.biteM.children.forEach((j, i) => j.rotation.x = (i ? -1 : 1) * (0.15 + Math.max(0, c) * 0.5)); if (Math.random() < dt * 2) SFX.play('chomp', { x, z, vol:0.5 }); }
   else if (u.biteM) u.biteM.visible = false;
 }
@@ -2665,15 +2681,15 @@ function drawMini() {
 const EG = { joy:null, look:null, sendT:0, hintShown:false, cam:new THREE.Vector3(), lk:new THREE.Vector3(), camInit:false, intro:0, kick:0 };
 function enterEgo() {
   if (!V.playing || V.selected.size !== 1) return;
-  const id = [...V.selected][0], u = V.units.get(id); if (!u || u.team !== V.myTeam || KINDS[u.k].role === 'siege') return;
+  const id = [...V.selected][0], u = V.units.get(id); if (!u || u.team !== V.myTeam) return;
   sendCmd({ t:'poss', id });
   const K = KINDS[u.k];
   V.poss = { id, k:u.k, x:u.g.position.x, z:u.g.position.z, yaw:u.g.rotation.y, camYaw:u.g.rotation.y, pitch:0.16, a:0, s:0, cdT:0, spT:0, dashT:0, rageT:0, t0:now(), confirmed:false, ad:null };
-  EG.intro = 1.6; EG.kick = 0; $('#xhair').hidden = K.role !== 'ranged'; $('#xhair').className = '';
+  EG.intro = 1.6; EG.kick = 0; $('#xhair').hidden = K.role !== 'ranged' && K.role !== 'siege'; $('#xhair').className = '';
   V.selected.clear(); gest = null; pointers.clear();
   $('#hud').hidden = true; $('#ego').hidden = false; drawLasso(null);
-  $('#egoName').textContent = K.name; $('#spName').textContent = K.sp; $('#egoResIco').innerHTML = ICON[FAC[V.facs[V.myTeam]].icon]; EG.gtxt = '';
-  $('#egoFace').src = FACE.mine ? FACE.mine.url : PORTRAIT[u.k];
+  $('#egoName').textContent = K.name; $('#spName').textContent = K.sp || 'Salve'; $('#egoResIco').innerHTML = ICON[FAC[V.facs[V.myTeam]].icon]; EG.gtxt = '';
+  $('#egoFace').src = FACE.mine ? FACE.mine.url : PORTRAIT[K.role === 'siege' ? FAC[V.facs[V.myTeam]].kinds[0] : u.k];
   EG.camInit = false; setFov();
   if (K.role === 'ranged' && !EG.aimHint) { EG.aimHint = true; setTimeout(() => V.poss && egoHint('Du zielst selbst: Das Kreuz in der Mitte ist dein Ziel. Kopftreffer machen vierfachen Schaden!', 5000), 1900); }
   else if (!EG.hintShown) { EG.hintShown = true; setTimeout(() => V.poss && egoHint(COARSE ? 'Links ziehen zum Laufen, rechts wischen zum Umschauen. Rechts unten angreifen.' : 'WASD laufen, Maus ziehen zum Umschauen, Leertaste oder Klick greift an, E für Spezial.', 5000), 1900); }
@@ -2726,8 +2742,9 @@ function egoAim(P) {
   return { from, dir, pt };
 }
 function egoAttack() {
-  const P = V.poss; if (!P || P.down || P.dance || P.chick || (V.latest && V.latest.pz > 0)) return; const K = KINDS[P.k]; if (P.cdT > 0) return;
+  const P = V.poss; if (!P || P.down || P.dance || (V.latest && V.latest.pz > 0)) return; const K = KINDS[P.k]; if (P.cdT > 0) return;
   P.a = (P.a + 1) % 1000; P.cdT = K.cd * 0.65 * (P.rageT > 0 ? 0.6 : 1);
+  if (K.role === 'siege') { const { pt } = egoAim(P); P.gp = [+pt.x.toFixed(1), +pt.z.toFixed(1)]; EG.kick = Math.max(EG.kick, 0.35); return; }
   if (K.role === 'ranged') {
     const { from, dir } = egoAim(P); P.ad = [+dir.x.toFixed(3), +dir.y.toFixed(3), +dir.z.toFixed(3)];
     const m = freeArrowMesh(P.k); fx.shots.push({ m, p:from.clone().addScaledVector(dir, 0.5), d:dir.clone(), k:P.k, t:0, life:K.range * 2.5 / CFG.arrowSpeed });
@@ -2746,7 +2763,8 @@ function swingFx(P, K) {
   SFX.play('swing', { vol:1.1 });
 }
 function egoSpecial() {
-  const P = V.poss; if (!P || P.spT > 0 || P.down || P.dance || P.chick || (V.latest && V.latest.pz > 0)) return;
+  const P = V.poss; if (!P || P.spT > 0 || P.down || P.dance || (V.latest && V.latest.pz > 0)) return;
+  if (KINDS[P.k].role === 'siege') { const { pt } = egoAim(P); P.gp = [+pt.x.toFixed(1), +pt.z.toFixed(1)]; }
   if (P.k === 1 || P.k === 3) {
     const { from, dir } = egoAim(P), K = KINDS[P.k]; P.ad = [+dir.x.toFixed(3), +dir.y.toFixed(3), +dir.z.toFixed(3)];
     const vl = tpk(V.myTeam, 'volley'), n = (P.k === 1 ? 5 : 6) + 10 * vl, spread = vl ? 0.05 : (P.k === 1 ? 0.075 : 0.11);
@@ -2760,8 +2778,8 @@ function egoSpecial() {
 $('#egoAtk').addEventListener('pointerdown', e => { e.preventDefault(); egoAttack(); });
 $('#egoSp').addEventListener('pointerdown', e => { e.preventDefault(); egoSpecial(); });
 $('#egoExit').addEventListener('click', () => { if (V.poss && V.poss.dance) { egoHint('Du tanzt noch! Verlassen geht erst danach.', 1600); SFX.play('error'); return; } exitEgo(true); });
-function egoJump() { const P = V.poss; if (!P || P.down || P.dance || P.chick || !tpk(V.myTeam, 'jump') || (P.jT || 0) > 0 || (V.latest && V.latest.pz > 0)) return; P.j = (P.j || 0) + 1; P.jT = 2.2; P.jumpT = 0.7; SFX.play('boing'); }
-function egoNade() { const P = V.poss; if (!P || P.down || P.dance || P.chick || !tpk(V.myTeam, 'dance') || (P.gT || 0) > 0 || (V.latest && V.latest.pz > 0)) return; const { dir, pt } = egoAim(P); P.ad = [+dir.x.toFixed(3), +dir.y.toFixed(3), +dir.z.toFixed(3)]; P.gp = [+pt.x.toFixed(1), +pt.z.toFixed(1)]; P.g = (P.g || 0) + 1; P.gT = 14; SFX.play('throw'); }
+function egoJump() { const P = V.poss; if (!P || P.down || P.dance || !tpk(V.myTeam, 'jump') || (P.jT || 0) > 0 || (V.latest && V.latest.pz > 0)) return; P.j = (P.j || 0) + 1; P.jT = 2.2; P.jumpT = 0.9; SFX.play('boing'); }
+function egoNade() { const P = V.poss; if (!P || P.down || P.dance || !tpk(V.myTeam, 'dance') || (P.gT || 0) > 0 || (V.latest && V.latest.pz > 0)) return; const { dir, pt } = egoAim(P); P.ad = [+dir.x.toFixed(3), +dir.y.toFixed(3), +dir.z.toFixed(3)]; P.gp = [+pt.x.toFixed(1), +pt.z.toFixed(1)]; P.g = (P.g || 0) + 1; P.gT = 14; SFX.play('throw'); }
 $('#egoJump').addEventListener('pointerdown', e => { e.preventDefault(); egoJump(); });
 $('#egoNade').addEventListener('pointerdown', e => { e.preventDefault(); egoNade(); });
 $('#egoSelfie').addEventListener('click', () => { if (V.poss && EG.intro <= 0) EG.intro = 1.5; });
@@ -2799,10 +2817,10 @@ function egoUpdate(dt) {
   const u = V.units.get(P.id); if (u) $('#egoHp').style.width = u.hpPct + '%';
   if (V.latest) { const gt = String(V.latest.g[V.myTeam]); if (gt !== EG.gtxt) { EG.gtxt = gt; $('#egoGold').textContent = gt; } }
   if (!P.confirmed && u && u.isPoss) P.confirmed = true;
-  if (!P.confirmed && now() - P.t0 > (V.mode === 'guest' ? 5000 : 3000)) { exitEgo(false); toast('Übernehmen hat nicht geklappt.', 1800); return; }
-  const cav = KINDS[P.k].role === 'cav', back = cav ? 5.6 : 4.6, side = cav ? 1.6 : 1.45, gy = unitY(P.x, P.z) + ((P.jumpT || 0) > 0 ? Math.sin((0.7 - P.jumpT) / 0.7 * Math.PI) * 1.6 : 0);
+  if (!P.confirmed && now() - P.t0 > (V.mode === 'guest' ? 12000 : 4000)) { exitEgo(false); toast('Übernehmen hat nicht geklappt.', 1800); return; }
+  const cav = KINDS[P.k].role === 'cav', sg = KINDS[P.k].role === 'siege', back = sg ? 9 : cav ? 5.6 : 4.6, side = sg ? 0.6 : cav ? 1.6 : 1.45, gy = unitY(P.x, P.z) + ((P.jumpT || 0) > 0 ? Math.sin((0.9 - P.jumpT) / 0.9 * Math.PI) * 3 : 0);
   const rx = -cyz, rz = cy, cp = Math.cos(P.pitch), sp2 = Math.sin(P.pitch);
-  const piv = new THREE.Vector3(P.x + rx * side, gy + (cav ? 2.9 : 2.45), P.z + rz * side);
+  const piv = new THREE.Vector3(P.x + rx * side, gy + (sg ? 4.2 : cav ? 2.9 : 2.45), P.z + rz * side);
   const dir = new THREE.Vector3(cy * cp, -sp2, cyz * cp);
   EG.kick = Math.max(0, EG.kick - dt * 1.6);
   const want = piv.clone().addScaledVector(dir, -(back - EG.kick * 1.2));
@@ -2887,7 +2905,7 @@ function updateHud() {
   { const own = ownUnits(), sz = V.selected.size; const same = list => list.length > 0 && list.length === sz && list.every(u => V.selected.has(u.id));
     $$('.chip[data-sel]').forEach(b => { const w = b.dataset.sel; const on = w === 'none' ? false : w === 'all' ? same(own) : same(own.filter(u => KINDS[u.k].role === w)); b.setAttribute('aria-pressed', String(on)); }); }
   $('#selCount').textContent = V.selected.size; $('#selCount').hidden = !V.selected.size;
-  $('#possBtn').hidden = !(V.selected.size === 1 && V.playing && !V.ending && (() => { const u = V.units.get([...V.selected][0]); return u && KINDS[u.k].role !== 'siege'; })());
+  $('#possBtn').hidden = !(V.selected.size === 1 && V.playing && !V.ending && (() => { const u = V.units.get([...V.selected][0]); return !!u; })());
   const cd = $('#countdown');
   let cdTxt = null;
   if (s.cd > 0 && s.o < 0) cdTxt = String(Math.ceil(s.cd)); else if (s.t < 0.8 && s.o < 0) cdTxt = 'LOS!';
@@ -3132,7 +3150,7 @@ async function hostOnline() {
 function hostReadGuest() {
   const peers = NET.r ? NET.r.peers() || [] : [];
   let g = peers.find(p => p.peer === NET.guestPeer && p.presence && p.presence.role === 'guest');
-  if (!g) { const cand = peers.find(p => !p.isMe && p.presence && p.presence.role === 'guest' && p.presence.code === NET.code); if (cand) { NET.guestPeer = cand.peer; NET.lastSeq = 0; g = cand; } }
+  if (!g) { const cand = peers.find(p => !p.isMe && p.presence && p.presence.role === 'guest' && p.presence.code === NET.code); if (cand) { if (!NET.guestPeer) NET.lastSeq = 0; NET.guestPeer = cand.peer; g = cand; } }
   const wasGone = NET.gone; NET.gone = !g;
   if (NET.gone && !wasGone) netWarn('Dein Gegner ist weg. Warte auf seine Rückkehr …');
   if (!NET.gone && wasGone) $('#netwarn').hidden = true;
@@ -3171,7 +3189,7 @@ async function joinOnline(code) {
     if (fp !== undefined || got) r.presence(Object.assign({ fc:fp && fp.fc ? fp.fc : null }, got || {})).catch(() => {});
     if (V.mode === 'guest') {
       $('#netwarn').hidden = true;
-      if (P.snap && (P.snap.t !== lastT || P.snap.cd !== (V.latest && V.latest.cd) || P.snap.pz !== (V.latest && V.latest.pz) || String(P.snap.pn) !== String(V.latest && V.latest.pn) || String(P.snap.of) !== String(V.latest && V.latest.of))) { lastT = P.snap.t; pushSnap(P.snap); }
+      if (P.snap && (P.snap.t !== lastT || P.snap.cd !== (V.latest && V.latest.cd) || P.snap.pz !== (V.latest && V.latest.pz) || String(P.snap.pn) !== String(V.latest && V.latest.pn) || String(P.snap.of) !== String(V.latest && V.latest.of))) { if (P.snap.t !== lastT) { const tn = now(); if (NET.lastArr) { (NET.gaps || (NET.gaps = [])).push((tn - NET.lastArr) / 1000); if (NET.gaps.length > 30) NET.gaps.shift(); const g2 = NET.gaps.slice().sort((a, b) => a - b); V.delay = clamp(g2[Math.floor(g2.length * 0.9)] + 0.08, 0.18, 0.5); } NET.lastArr = tn; } lastT = P.snap.t; pushSnap(P.snap); }
       if (typeof P.ack === 'number' && NET.pending.length && NET.pending[0].s <= P.ack) { NET.pending = NET.pending.filter(c => c.s > P.ack); r.presence({ cmds:NET.pending }).catch(() => {}); }
     }
   }, 50);
@@ -3341,7 +3359,7 @@ let lastFrame = now(), clock = 0;
 function animateRig(u, dt, moving, attacking) {
   if (u.rag) { ragdollRig(u, dt); return; }
   if (u.dancing && !u.arm) { danceRig(u, dt); return; } else if (u.wasDance !== !!u.dancing) { u.wasDance = !!u.dancing; if (u.armL) { u.armL.rotation.z = 0; u.armR.rotation.z = 0; } u.rig.rotation.z = 0; }
-  if (u.arm) { u.wheels.forEach(w => w.rotation.x += dt * (moving ? 3 : 0)); u.atkT += dt; const p = u.atkT; u.arm.rotation.x = p < 0.25 ? lerp(-0.75, 0.7, sstep(0, 0.25, p)) : p < 1.6 ? lerp(0.7, -0.75, sstep(0.25, 1.6, p)) : -0.75; u.rig.rotation.x = p < 0.3 ? -Math.sin(p / 0.3 * Math.PI) * 0.06 : 0; if (u.pop !== undefined) { u.pop += dt; const s2 = Math.min(1, u.pop / 0.4); u.g.scale.setScalar(Math.max(0.01, s2)); if (s2 >= 1) delete u.pop; } return; }
+  if (u.arm) { u.wheels.forEach(w => w.rotation.x += dt * (moving ? 3 : 0)); u.atkT += dt; const p = u.atkT; u.arm.rotation.x = p < 0.25 ? lerp(-0.75, 0.7, sstep(0, 0.25, p)) : p < 1.6 ? lerp(0.7, -0.75, sstep(0.25, 1.6, p)) : -0.75; u.rig.rotation.x = p < 0.3 ? -Math.sin(p / 0.3 * Math.PI) * 0.06 : 0; if (u.pop !== undefined) { u.pop += dt; const s2 = Math.min(1, u.pop / 0.4); u.g.scale.setScalar(Math.max(0.01, s2)); if (s2 >= 1) delete u.pop; } if (u.headTarget !== undefined) u.neck.scale.setScalar(lerp(u.neck.scale.x, u.isPoss ? u.headTarget : 0.001, Math.min(1, dt * 6))); return; }
   const K = KINDS[u.k], cav = K.role === 'cav';
   if (u.ph === undefined) { u.ph = Math.random() * 10; u.mb = 0; }
   u.ph += dt;
@@ -3388,9 +3406,21 @@ function animateRig(u, dt, moving, attacking) {
   if (u.headTarget !== undefined) u.neck.scale.setScalar(lerp(u.neck.scale.x, u.headTarget, Math.min(1, dt * 6)));
   if (u.pop !== undefined) { u.pop += dt; const s = Math.min(1, u.pop / 0.3); u.g.scale.setScalar(s < 1 ? s * (1 + 0.35 * Math.sin(s * Math.PI)) : 1); u.rig.position.y += Math.sin(s * Math.PI) * 0.5; if (s >= 1) delete u.pop; }
 }
+const PERF = { acc:0, n:0, level:0, t:0 };
+function perfTick(rawDt) {
+  if (V.mode === 'menu') return; PERF.acc += rawDt; PERF.n++; PERF.t += rawDt;
+  if (PERF.t < 3) return; const avg = PERF.acc / PERF.n; PERF.acc = 0; PERF.n = 0; PERF.t = 0;
+  if (avg > 0.042 && PERF.level < 3) {
+    PERF.level++;
+    if (PERF.level === 1) renderer.setPixelRatio(Math.max(0.8, renderer.getPixelRatio() * 0.75));
+    if (PERF.level === 2) { sun.castShadow = false; renderer.shadowMap.autoUpdate = false; }
+    if (PERF.level === 3) { renderer.setPixelRatio(Math.max(0.65, renderer.getPixelRatio() * 0.8)); if (mapGroup) mapGroup.children.forEach(o => { if (o.userData.deco) o.visible = false; }); }
+    resize();
+  }
+}
 function frame() {
   requestAnimationFrame(frame);
-  const t = now(), dt = Math.min(0.1, (t - lastFrame) / 1000); lastFrame = t; clock += dt;
+  const t = now(), rawDt = (t - lastFrame) / 1000, dt = Math.min(0.1, rawDt); lastFrame = t; clock += dt; if (rawDt < 1) perfTick(rawDt);
   if (V.mode === 'menu') { camS.yaw = Math.PI + Math.sin(clock * 0.1) * 0.3; applyCam(); menuUnits.forEach((u, i) => { u.atkT = (clock * 0.8 + i * 0.9) % 2.4; animateRig(u, dt, false, false); }); }
   else {
     if (V.ending) endingTick(dt);
@@ -3470,8 +3500,8 @@ function renderUnits(t, dt) {
     if (wet && Math.random() < dt * (u.speed > 0.6 ? 10 : 2)) puff(x + (Math.random() - .5) * 1.2, WL + 0.1, z + (Math.random() - .5) * 1.2, 0xe8f6ff, 1, 0.5);
     const jt = mine ? (V.poss.jumpT || 0) : (u.jumpT || 0);
     if (!mine && u.jumpT > 0) u.jumpT = Math.max(0, u.jumpT - dt);
-    const jh = jt > 0 ? Math.sin((0.7 - jt) / 0.7 * Math.PI) * 2.4 : 0;
-    if (u.wasJ && jt <= 0) { for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; puff(x + Math.cos(a) * 2.2, y + 0.2, z + Math.sin(a) * 2.2, 0xd8c48f, 1, 0.9); } SFX.play('stomp', { x, z }); }
+    const jh = jt > 0 ? Math.sin((0.9 - jt) / 0.9 * Math.PI) * 4.8 : 0;
+    if (u.wasJ && jt <= 0) { for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; puff(x + Math.cos(a) * 3.4, y + 0.2, z + Math.sin(a) * 3.4, 0xd8c48f, 1, 1.2); } SFX.play('stomp', { x, z }); }
     u.wasJ = jt > 0;
     u.g.position.set(x, y + jh, z);
     updateStatusFx(u, dt, x, y, z);
