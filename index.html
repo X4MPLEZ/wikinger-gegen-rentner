@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0d1526">
 <meta name="description" content="Wikinger gegen Rentner: 3D-Strategiespiel fürs Handy, online zu zweit.">
 <style>*,*::before,*::after{box-sizing:border-box}html{color-scheme:dark}:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -27,7 +27,8 @@ body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body);ov
 #game{position:fixed;inset:0;overflow:hidden;touch-action:none}
 #c,#lasso{position:absolute;inset:0;width:100%;height:100%;display:block}
 #lasso{pointer-events:none}
-button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;border:0}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;border:0;touch-action:manipulation}
+#hud,#hud *,#ego,#ego *,#tut,#tut *,#c,#lasso,#rush,#coinLayer{touch-action:none}
 button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 svg.i{width:1em;height:1em;display:block;flex:none}
 .btn{display:flex;align-items:center;justify-content:center;gap:.5em;border-radius:12px;padding:.8em 1em;font-weight:600;font-size:1rem;background:var(--panel-2);border:1px solid var(--line);transition:transform .08s,background .15s}
@@ -2116,10 +2117,17 @@ function finishLasso(pts) {
 }
 function marker(x, z, col) { const m = mesh(new THREE.RingGeometry(0.5, 0.8, 28).rotateX(-Math.PI / 2), basic(col, 0.9), x, groundY(x, z) + 0.15, z); scene.add(m); V.markers.push({ m, t:0 }); }
 const pointers = new Map(); let gest = null;
+function resetInput() {
+  pointers.clear(); if (gest && gest.lp) clearTimeout(gest.lp); gest = null; drawLasso(null);
+  if (typeof EG !== 'undefined') { EG.joy = null; EG.look = null; const j = $('#joy'); if (j) j.hidden = true; }
+  keys.clear(); miniDrag = false;
+}
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('pointerdown', e => {
   if (V.mode === 'menu') return;
-  canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  if (e.isPrimary && pointers.size) resetInput();
+  try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+  pointers.set(e.pointerId, { x:e.clientX, y:e.clientY, t:now() });
   if (V.poss) { egoDown(e); return; }
   if (gest && gest.lp) clearTimeout(gest.lp);
   if (e.pointerType === 'mouse') {
@@ -2135,7 +2143,7 @@ canvas.addEventListener('pointerdown', e => {
 });
 canvas.addEventListener('pointermove', e => {
   const p = pointers.get(e.pointerId); if (!p) return;
-  p.x = e.clientX; p.y = e.clientY;
+  p.x = e.clientX; p.y = e.clientY; p.t = now();
   if (V.poss) { egoMove(e); return; }
   if (!gest) return;
   const far = Math.hypot(e.clientX - gest.sx, e.clientY - gest.sy) > 9;
@@ -2165,6 +2173,15 @@ function endPointer(e) {
   if (!pointers.size) gest = null; drawLasso(null);
 }
 canvas.addEventListener('pointerup', endPointer); canvas.addEventListener('pointercancel', endPointer);
+canvas.addEventListener('lostpointercapture', e => { if (pointers.has(e.pointerId)) endPointer({ pointerId:e.pointerId, type:'pointercancel', clientX:e.clientX, clientY:e.clientY, pointerType:e.pointerType }); });
+document.addEventListener('touchend', e => { if (e.touches && e.touches.length === 0) setTimeout(() => { if (pointers.size) resetInput(); }, 150); }, { passive:true });
+addEventListener('blur', resetInput);
+document.addEventListener('visibilitychange', () => { if (document.hidden) resetInput(); });
+['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
+document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
+let lastTouchEnd = 0;
+document.addEventListener('touchend', e => { const t = now(); if (t - lastTouchEnd < 350 && e.target.closest && e.target.closest('#game') && !e.target.closest('button,input,canvas,.screen')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
+(() => { let m = document.querySelector('meta[name=viewport]'); if (!m) { m = document.createElement('meta'); m.name = 'viewport'; document.head.appendChild(m); } m.content = 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover'; })();
 canvas.addEventListener('wheel', e => { e.preventDefault(); if (V.poss) return; const before = planeAt(e.clientX, e.clientY); camS.dist *= Math.exp(e.deltaY * 0.0012); applyCam(); if (before) panTo(before, e.clientX, e.clientY); }, { passive:false });
 const keys = new Set();
 addEventListener('keydown', e => {
@@ -2223,7 +2240,7 @@ function enterEgo() {
 function exitEgo(send) {
   if (!V.poss) return;
   if (send) sendCmd({ t:'unposs' });
-  const p = V.poss; V.poss = null; EG.joy = null; EG.look = null; $('#joy').hidden = true; $('#xhair').hidden = true;
+  const p = V.poss; V.poss = null; resetInput(); $('#xhair').hidden = true;
   if (V.mode === 'ai' || V.mode === 'host') G.teams[V.myTeam].posIn = null;
   fx.swings.forEach(w => scene.remove(w.m)); fx.swings.length = 0; EG.intro = 0;
   $('#ego').hidden = true; $('#hud').hidden = !V.playing;
