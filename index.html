@@ -93,6 +93,7 @@ details.help ul{margin:8px 0 2px;padding-left:1.1em;line-height:1.5;font-size:.8
 #hud,#ego{position:absolute;inset:0;z-index:10;pointer-events:none}
 #hud *,#ego *{pointer-events:none}
 #hud button,#hud .stat,#hud .hp,#hud #mini,#ego button{pointer-events:auto}
+#perkPick button{pointer-events:auto;touch-action:manipulation}
 .panel{background:var(--panel);border:1px solid var(--line);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .hud-tl{position:absolute;left:10px;top:calc(env(safe-area-inset-top,0px) + 8px);display:flex;gap:6px;align-items:center}
 .stat{display:flex;align-items:center;gap:6px;border-radius:10px;padding:5px 9px;font-variant-numeric:tabular-nums}
@@ -192,6 +193,21 @@ body.zoomed #game,body.zoomed #game *{touch-action:pinch-zoom!important}
 .lvl{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:12px}
 .lvl button{background:none;border-radius:9px;padding:9px 2px;font-size:.78rem;font-weight:600;color:var(--dim)}
 .lvl button[aria-pressed="true"]{background:var(--gold);color:#2a1c04}
+.lvl.modes{grid-template-columns:1fr 1fr}.lvl.modes small{font-weight:500;opacity:.75}
+.lvl.modes button[data-mode="chaos"][aria-pressed="true"]{background:linear-gradient(90deg,#f6cc63,#ff8a5c,#c07aa8);color:#2a1c04}
+#perkPick{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 54px);transform:translateX(-50%);z-index:17;width:min(560px,94vw);border-radius:16px;padding:10px 12px 12px;background:rgba(13,21,38,.92);border:1px solid rgba(240,191,76,.5);box-shadow:0 10px 30px rgba(0,0,0,.45);animation:tutIn .35s cubic-bezier(.2,1.4,.4,1)}
+#perkPick .ph{display:flex;justify-content:space-between;align-items:center;font-family:var(--display);font-size:1.15rem;color:var(--gold);margin-bottom:6px}
+#perkPick .ph small{font-family:var(--body);font-size:.75rem;color:var(--dim)}
+#perkPick .bar{height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:8px}#perkPick .bar i{display:block;height:100%;background:var(--gold);transition:width .3s linear}
+#perkPick .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pcard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 6px 8px;border-radius:12px;background:linear-gradient(180deg,#26365a,#18243f);border:2px solid rgba(255,255,255,.12);text-align:center;min-width:0}
+.pcard:active{transform:scale(.96)}.pcard .pi{font-size:1.9rem;line-height:1}.pcard b{font-size:.84rem;line-height:1.1}
+.pcard .lv{display:flex;gap:3px}.pcard .lv i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.18)}.pcard .lv i.on{background:var(--gold)}.pcard .lv i.new{background:#ff8a5c;box-shadow:0 0 6px #ff8a5c}
+.pcard span{font-size:.68rem;color:#cfd6e4;line-height:1.25}
+.pcard.up{border-color:rgba(255,138,92,.7)}
+#perkBar{position:absolute;left:10px;top:calc(env(safe-area-inset-top,0px) + 94px);display:flex;flex-wrap:wrap;gap:4px;max-width:min(330px,60vw);pointer-events:none}
+#perkBar .pb{display:flex;align-items:center;gap:2px;border-radius:8px;padding:2px 6px;font-size:.78rem;font-weight:700;background:rgba(13,21,38,.8);border:1px solid rgba(240,191,76,.35)}
+#perkBar .pb.next{color:var(--dim);font-weight:500;border-color:var(--line)}
 .btn{position:relative}
 .badge{position:absolute;top:-9px;left:10px;background:var(--rentner);color:#fff;font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:999px;letter-spacing:.03em}
 .ibrow{display:flex;gap:6px}
@@ -250,6 +266,7 @@ body.zoomed #game,body.zoomed #game *{touch-action:pinch-zoom!important}
       <div class="hp panel"><div class="lbl"><span id="myBaseName">Deine Basis</span><span id="myHpTxt"></span></div><div class="track"><i id="myHp"></i></div></div>
       <div class="hp panel"><div class="lbl"><span id="enBaseName">Gegner</span><span id="enHpTxt"></span></div><div class="track"><i id="enHp"></i></div></div>
     </div>
+    <div id="perkBar"></div>
     <div class="hud-tr">
       <div class="ibrow"><button class="ibtn panel muteBtn" aria-label="Ton an oder aus"></button><button class="ibtn panel" id="menuBtn" aria-label="Pause"></button></div>
       <canvas id="mini" aria-label="Übersichtskarte"></canvas>
@@ -329,6 +346,10 @@ body.zoomed #game,body.zoomed #game *{touch-action:pinch-zoom!important}
       </div>
       <input type="file" id="inCam" accept="image/*" capture="user" hidden>
       <input type="file" id="inGal" accept="image/*" hidden>
+      <div class="label">Spielmodus</div>
+      <div class="lvl modes panel" role="group" aria-label="Spielmodus">
+        <button data-mode="classic" aria-pressed="true">Klassisch</button><button data-mode="chaos" aria-pressed="false">Chaos <small>mit Perks</small></button>
+      </div>
       <div class="label">Gegen den Computer</div>
       <div class="lvl panel" role="group" aria-label="Schwierigkeit">
         <button data-lvl="easy" aria-pressed="false">Einfach</button><button data-lvl="medium" aria-pressed="true">Mittel</button><button data-lvl="hard" aria-pressed="false">Schwer</button><button data-lvl="insane" aria-pressed="false">Sehr schwer</button>
@@ -395,6 +416,7 @@ body.zoomed #game,body.zoomed #game *{touch-action:pinch-zoom!important}
     </div>
   </div>
 
+ <div id="perkPick" hidden><div class="ph"><span>Wähle einen Perk</span><small id="perkInfo"></small></div><div class="bar"><i id="perkTimer"></i></div><div class="cards" id="perkCards"></div></div>
   <div id="zoomwarn" class="panel" hidden><span>Die Seite ist vergrößert. Mit zwei Fingern zusammenziehen oder neu laden.</span><button class="btn small gold" id="zoomReload">Neu laden</button></div>
   <div id="netwarn" hidden><div class="card"><p class="status" id="netwarnTxt"></p><button class="btn" id="btnNetQuit">Zum Menü</button></div></div>
 </div>
@@ -451,7 +473,28 @@ const FAC = {
 const CFG = { startGold:220, baseInc:5, flagInc:0.9, comebackInc:1.2, kill:4, pop:30, queueMax:5, baseHp:1800, baseR:5.5,
   towerRange:15, towerDmg:14, towerCd:1.0, towerSpeed:24, flagR:6, capTime:5, leash:11, hillBonus:3, spCd:8, possDmg:{ melee:3.2, cav:2.6, ranged:1.4 }, possArmor:0.6, possHp:2.0, headMul:4.2, downT:1.75, arrowSpeed:46, rush:150, healR:16, heal:6 };
 const maxHp = u => u.mhp || KINDS[u.k].hp;
-function headBox(e) { const s = e.poss ? 1.35 : 0.62, b = e.k === 4 ? 0.6 : e.k === 5 ? 0.25 : 0; return { y:(b + 1.3 + 0.5 * s) * 1.25, r:0.58 * s * 1.25 }; }
+const PERKS = {
+  arrows: { ic:'🏹', n:'Scharfe Pfeile', d:['Fernkämpfer +20 % Schaden', 'Fernkämpfer +35 % Schaden', 'Fernkämpfer +50 % Schaden'] },
+  ram:    { ic:'💥', n:'Rammbock',       d:['Reiter-Anlauf schleudert 1,6× so weit', 'Reiter-Anlauf schleudert 2,2× so weit, +15 % Schaden', 'Reiter-Anlauf schleudert 3× so weit, +30 % Schaden'] },
+  turbo:  { ic:'⚡', n:'Turbo-Held',     d:['Ego-Krieger +20 % Tempo', 'Ego-Krieger +35 % Tempo', 'Ego-Krieger +50 % Tempo'] },
+  fire:   { ic:'☄️', n:'Feuerregen',     d:['Alle 20 s ein Feuerball auf eine gegnerische Fahne', 'Alle 15 s ein stärkerer Feuerball', 'Alle 10 s ein riesiger Feuerball'] },
+  volley: { ic:'🎯', n:'Salvenmeister',  d:['Pfeilfächer und Gebiss-Salve: +2 Geschosse', '+4 Geschosse', '+6 Geschosse'] },
+  spin:   { ic:'🌪️', n:'Dauerwirbel',    d:['Stockwirbel dreht 1,5 s und haut mehrfach um', 'Stockwirbel dreht 2,2 s', 'Stockwirbel dreht 3 s'] },
+  gold:   { ic:'💰', n:'Geldregen',      d:['+12 % Einkommen', '+22 % Einkommen', '+35 % Einkommen'] },
+  armor:  { ic:'🛡️', n:'Eiserne Haut',   d:['Deine Krieger nehmen 10 % weniger Schaden', '18 % weniger Schaden', '25 % weniger Schaden'] },
+  fast:   { ic:'🏭', n:'Fließband',      d:['Ausbildung 20 % schneller', 'Ausbildung 35 % schneller', 'Ausbildung 50 % schneller'] },
+  vamp:   { ic:'🧛', n:'Vampir',         d:['Ego-Krieger heilt sich um 15 % seines Schadens', '25 % Lebensraub', '35 % Lebensraub'] },
+  bighead:{ ic:'🎃', n:'Dickschädel',    d:['Ego-Krieger: größerer Kopf, +25 % Schaden', 'Noch größer, +40 % Schaden', 'Riesig, +60 % Schaden'] },
+  charge: { ic:'🔋', n:'Spezial-Akku',   d:['Spezialfähigkeit lädt 25 % schneller', '40 % schneller', '55 % schneller'] },
+  flagger:{ ic:'🚩', n:'Fahnenträger',   d:['Fahnen 30 % schneller erobern', '50 % schneller', '70 % schneller'] },
+  tower:  { ic:'🗼', n:'Turmwache',      d:['Basisturm +40 % Schaden', '+80 % Schaden', '+120 % Schaden'] },
+  cavspd: { ic:'💨', n:'Galopp',         d:['Reiter +15 % Tempo', 'Reiter +25 % Tempo', 'Reiter +35 % Tempo'] },
+  bounty: { ic:'👑', n:'Kopfgeld',       d:['Gold- und Pfandrausch +50 %', 'Rausch +100 %', 'Rausch +150 %'] },
+};
+const PERK_IDS = Object.keys(PERKS), PERK_EVERY = 30, PERK_MAX = 7, PERK_TIME = 12;
+const pkL = (G, team, id) => G && G.chaos ? (G.teams[team].pk[id] || 0) : 0;
+const pk = (G, team, id, arr) => arr[pkL(G, team, id)];
+function headBox(e) { const s = e.poss ? 1.35 * (e.hs || 1) : 0.62, b = e.k === 4 ? 0.6 : e.k === 5 ? 0.25 : 0; return { y:(b + 1.3 + 0.5 * s) * 1.25, r:0.58 * s * 1.25 }; }
 function setPoss(u, on) { if (!!u.poss === on) return; const K = KINDS[u.k]; if (on) { u.poss = true; u.mhp = K.hp * CFG.possHp; u.hp = Math.min(u.mhp, u.hp * CFG.possHp); } else { u.poss = false; u.hp = Math.max(1, Math.min(K.hp, u.hp / CFG.possHp)); delete u.mhp; u.aim = null; } }
 const HALF_W = 34, HALF_H = 74;
 const ISLAND = { w:96, h:178 };
@@ -536,11 +579,28 @@ function tryMap(seed, noForest, force) {
     if (ok && m.bases.some(b => (x - b.x) ** 2 + (z - b.z) ** 2 < (CFG.baseR - 0.3) ** 2)) ok = false;
     walk[j * GW + i] = ok ? 1 : 0;
   }
+  for (let pass = 0; pass < 2; pass++) {
+    const add = [];
+    for (let j = 1; j < GH - 1; j++) for (let i = 1; i < GW - 1; i++) {
+      const c = j * GW + i; if (walk[c]) continue;
+      const x = -HALF_W + (i + .5) * CELL, z = -HALF_H + (j + .5) * CELL;
+      if (sampleH(m, x, z) <= WL + 0.35 || slopeAt(m, x, z) > 1.7) continue;
+      if (blockers.some(b => (x - b.x) ** 2 + (z - b.z) ** 2 < b.r * b.r) || m.bases.some(b => (x - b.x) ** 2 + (z - b.z) ** 2 < (CFG.baseR - 0.3) ** 2)) continue;
+      let n = 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if ((di || dj) && walk[c + dj * GW + di]) n++;
+      if (n >= 5) add.push(c);
+    }
+    add.forEach(c => walk[c] = 1);
+  }
   m.walk = walk;
   const fronts = m.bases.map((b, i) => nearestWalkable(m, b.x, b.z + (i ? 8 : -8)));
   { const seen = new Uint8Array(GW * GH), st = [cellOf(fronts[0].x, fronts[0].z)]; seen[st[0]] = 1;
     while (st.length) { const c = st.pop(), ci = c % GW, cj = (c / GW) | 0; for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { if (!di && !dj) continue; const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= GW || nj >= GH) continue; const n = nj * GW + ni; if (seen[n] || !walk[n]) continue; if (di && dj && (!walk[cj * GW + ni] || !walk[nj * GW + ci])) continue; seen[n] = 1; st.push(n); } }
     for (let c = 0; c < walk.length; c++) if (walk[c] && !seen[c]) walk[c] = 0; }
+  if (!force) for (const f of m.flags) {
+    let tot = 0, ok = 0;
+    for (let dz = -5; dz <= 5; dz += CELL) for (let dx = -5; dx <= 5; dx += CELL) { if (dx * dx + dz * dz > 25) continue; tot++; const c = cellOf(f.x + dx, f.z + dz); if (c >= 0 && walk[c]) ok++; }
+    const cc = cellOf(f.x, f.z); if (cc < 0 || !walk[cc] || ok < tot * 0.6) return null;
+  }
   if (!force && m.br.some(B => [B.z0 + 0.5, (B.z0 + B.z1) / 2, B.z1 - 0.5].some(z => !walk[cellOf(B.x, z)]))) return null;
   m.roads = [];
   for (const fr of fronts) for (const f of m.flags) {
@@ -639,10 +699,10 @@ function setMap(m) { MAP = m; BASES = m.bases; FLAGS = m.flags; }
 /* =====================================================================
    SIMULATION (host / single player)
    ===================================================================== */
-function newGame(facs, seed) {
+function newGame(facs, seed, chaos) {
   setMap(genMap(seed));
   return { t:0, cd:3, seed, nextId:1, over:-1, ai:aiNew('medium'), astarBudget:0, towerOff:[false, false], towerMul:[1, 1],
-    fp:[], fpId:0, teams:[0,1].map(i => ({ hq:[], hqS:0, autoI:0, fac:facs[i], gold:CFG.startGold, q:[], qt:0, rally:frontOf(i, 12), hp:CFG.baseHp, tcd:1, tatk:0, ttgt:-1, kills:0, maxFlags:0, auto:{}, pos:null, posIn:null, rush:0, rushAt:[0, 0], incMul:1 })),
+    chaos:!!chaos, offerN:0, nextOffer:0.3, fb:[], fbId:0, fp:[], fpId:0, teams:[0,1].map(i => ({ pk:{}, offer:null, offerDl:0, pkN:0, lastPk:null, fireT:0, hq:[], hqS:0, autoI:0, fac:facs[i], gold:CFG.startGold, q:[], qt:0, rally:frontOf(i, 12), hp:CFG.baseHp, tcd:1, tatk:0, ttgt:-1, kills:0, maxFlags:0, auto:{}, pos:null, posIn:null, rush:0, rushAt:[0, 0], incMul:1 })),
     units:[], flags:FLAGS.map(() => ({ owner:-1, p:0 })), proj:[] };
 }
 function frontOf(team, d) { const b = BASES[team]; return nearestWalkable(MAP, b.x, b.z + (team ? d : -d)); }
@@ -670,6 +730,8 @@ function applyCmd(G, team, c) {
     const ids = new Set(c.ids.slice(0, 40));
     const us = G.units.filter(u => u.team === team && ids.has(u.id) && !u.poss);
     if (us.length) formation(us, c.x, c.z, c.m === 1);
+  } else if (c.t === 'perk') {
+    if (!T.offer || !T.offer.includes(c.id)) return; pickPerk(T, c.id);
   } else if (c.t === 'rally') {
     if (!Number.isFinite(c.x) || !Number.isFinite(c.z)) return;
     T.rally = nearestWalkable(MAP, clampX(c.x), clampZ(c.z));
@@ -682,8 +744,28 @@ function applyCmd(G, team, c) {
     T.pos = null; T.posIn = null;
   }
 }
-function buildTime(G, team, k) { const diff = flagsOf(G, 1 - team) - flagsOf(G, team); return KINDS[k].build * (diff > 0 ? Math.max(0.6, 1 - 0.13 * diff) : 1); }
-function incomeOf(G, team) { const mine = flagsOf(G, team), diff = flagsOf(G, 1 - team) - mine; return (CFG.baseInc + CFG.flagInc * mine + (diff > 0 ? CFG.comebackInc * diff : 0)) * G.teams[team].incMul; }
+function pickPerk(T, id) { T.pk[id] = Math.min(3, (T.pk[id] || 0) + 1); T.offer = null; T.pkN = (T.pkN + 1) % 100; T.lastPk = id; }
+function makeOffer(G, T) {
+  const avail = PERK_IDS.filter(id => (T.pk[id] || 0) < 3), owned = avail.filter(id => T.pk[id]);
+  for (let i = avail.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [avail[i], avail[j]] = [avail[j], avail[i]]; }
+  let o = avail.slice(0, 3);
+  if (owned.length && !o.some(id => T.pk[id]) && Math.random() < 0.6) o[2] = owned[Math.floor(Math.random() * owned.length)];
+  T.offer = o; T.offerDl = G.t + PERK_TIME;
+}
+function perkStep(G) {
+  if (!G.chaos) return;
+  if (G.t >= G.nextOffer && G.offerN < PERK_MAX) { G.offerN++; G.nextOffer += PERK_EVERY; for (const T of G.teams) { if (T.offer) pickPerk(T, T.offer[0]); makeOffer(G, T); } }
+  for (let i = 0; i < 2; i++) {
+    const T = G.teams[i]; if (T.offer && G.t > T.offerDl) pickPerk(T, T.offer[Math.floor(Math.random() * T.offer.length)]);
+    const fl = pkL(G, i, 'fire');
+    if (fl) { T.fireT += DT; const iv = [0, 20, 15, 10][fl]; if (T.fireT >= iv) { const tg = G.flags.map((f, fi) => fi).filter(fi => G.flags[fi].owner === 1 - i); if (tg.length) { T.fireT = 0; const F = FLAGS[tg[Math.floor(Math.random() * tg.length)]]; G.fbId = (G.fbId + 1) % 1000; G.fb.push({ id:G.fbId, x:F.x + (Math.random() - .5) * 3, z:F.z + (Math.random() - .5) * 3, t:1.4, team:i, lvl:fl, fi:FLAGS.indexOf(F) }); } else T.fireT = iv; } }
+  }
+  const byId = new Map(G.units.map(u => [u.id, u]));
+  for (const b of G.fb) { b.t -= DT; if (b.t <= 0) { const dm = [0, 35, 50, 65][b.lvl], R = 5 + b.lvl; for (const e of G.units) if (e.team !== b.team && (e.x - b.x) ** 2 + (e.z - b.z) ** 2 < R * R) hit(G, e.id, dm, b.team, byId, -1); const f = G.flags[b.fi]; if (f) { const k = 0.2 + 0.12 * b.lvl; f.p = f.p > 0 ? Math.max(0, f.p - k) : Math.min(0, f.p + k); if (f.owner === 0 && f.p <= 0) f.owner = -1; if (f.owner === 1 && f.p >= 0) f.owner = -1; } } }
+  G.fb = G.fb.filter(b => b.t > 0);
+}
+function buildTime(G, team, k) { const diff = flagsOf(G, 1 - team) - flagsOf(G, team); return KINDS[k].build * (diff > 0 ? Math.max(0.6, 1 - 0.13 * diff) : 1) * pk(G, team, 'fast', [1, 0.8, 0.65, 0.5]); }
+function incomeOf(G, team) { const mine = flagsOf(G, team), diff = flagsOf(G, 1 - team) - mine; return (CFG.baseInc + CFG.flagInc * mine + (diff > 0 ? CFG.comebackInc * diff : 0)) * G.teams[team].incMul * pk(G, team, 'gold', [1, 1.12, 1.22, 1.35]); }
 function spawnUnit(G, team, k) {
   const T = G.teams[team], f = frontOf(team, 8), a = Math.random() * TAU, rr = Math.random() * 2.5;
   const o = nearestWalkable(MAP, clampX(T.rally.x + Math.cos(a) * rr), clampZ(T.rally.z + Math.sin(a) * rr));
@@ -697,11 +779,17 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   const e = byId.get(tgt); if (!e || e.hp <= 0 || (e.tutDummy && !bp)) return;
   let d = attK >= 0 ? dmg * dmgMult(attK, e.k) : dmg;
   if (e.poss) d *= CFG.possArmor;
+  if (G.chaos) {
+    if (attK >= 0 && KINDS[attK].role === 'ranged') d *= pk(G, team, 'arrows', [1, 1.2, 1.35, 1.5]);
+    if (bp) d *= pk(G, team, 'bighead', [1, 1.25, 1.4, 1.6]);
+    d *= pk(G, e.team, 'armor', [1, 0.9, 0.82, 0.75]);
+    const vl = bp ? pkL(G, team, 'vamp') : 0; if (vl && G.teams[team].pos) { const a = byId.get(G.teams[team].pos); if (a) a.hp = Math.min(maxHp(a), a.hp + d * [0, 0.15, 0.25, 0.35][vl]); }
+  }
   e.hp -= d; e.hurt = 2.5;
   if (bp) { const T = G.teams[team]; T.hqS = (T.hqS + 1) % 1000; T.hq.push([T.hqS, Math.round(e.x * 10), Math.round(e.z * 10), Math.round(d), head ? 1 : 0, Math.round((e.y + (head ? headBox(e).y : 1.2)) * 10)]); if (T.hq.length > 4) T.hq.shift(); }
   if (e.hp <= 0) {
     const T = G.teams[team]; T.gold += CFG.kill; T.kills++;
-    if (e.poss && bp) { T.gold += CFG.rush; T.rush = (T.rush + 1) % 100; T.rushAt = [Math.round(e.x * 10), Math.round(e.z * 10)]; }
+    if (e.poss && bp) { T.gold += CFG.rush * pk(G, team, 'bounty', [1, 1.5, 2, 2.5]); T.rush = (T.rush + 1) % 100; T.rushAt = [Math.round(e.x * 10), Math.round(e.z * 10)]; }
   }
 }
 function knockFly(e, fx, fz, dist) {
@@ -743,7 +831,7 @@ function possAttack(G, u, byId) {
   const dmg = K.dmg * CFG.possDmg[K.role] * (u.rage > 0 ? 1.5 : 1);
   if (K.role === 'ranged' && u.aim) {
     const [dx, dy, dz] = u.aim; G.fpId = (G.fpId + 1) % 10000;
-    G.fp.push({ id:G.fpId, x:u.x + dx * 0.5, y:u.y + 1.9 + dy * 0.5, z:u.z + dz * 0.5, dx, dy, dz, t:K.range * 1.8 / CFG.arrowSpeed, team:u.team, k:u.k, dmg });
+    G.fp.push({ id:G.fpId, x:u.x + dx * 0.5, y:u.y + 1.9 + dy * 0.5, z:u.z + dz * 0.5, dx, dy, dz, t:K.range * 2.5 / CFG.arrowSpeed, team:u.team, k:u.k, dmg });
     u.at = -3;
   } else if (K.role === 'ranged') {
     const c = enemiesInCone(G, u, K.range + 2, 0.45).sort((a, b) => a.a * 8 + a.d * 0.1 - (b.a * 8 + b.d * 0.1))[0];
@@ -759,15 +847,15 @@ function possAttack(G, u, byId) {
   u.run = 0;
 }
 function possSpecial(G, u, byId) {
-  const K = KINDS[u.k]; u.spcd = CFG.spCd; u.sp = (u.sp + 1) % 10; u.spm = 0;
+  const K = KINDS[u.k]; u.spcd = CFG.spCd * pk(G, u.team, 'charge', [1, 0.75, 0.6, 0.45]); u.sp = (u.sp + 1) % 10; u.spm = 0;
   if (u.k === 0) u.rage = 4;
   else if ((u.k === 1 || u.k === 3) && u.aim) {
-    const [ax, ay, az] = u.aim, n = u.k === 1 ? 5 : 6, spread = u.k === 1 ? 0.075 : 0.11;
-    for (let i = 0; i < n; i++) { const a = (i - (n - 1) / 2) * spread, c = Math.cos(a), sn = Math.sin(a), dx = ax * c + az * sn, dz = -ax * sn + az * c; G.fpId = (G.fpId + 1) % 10000; G.fp.push({ id:G.fpId, x:u.x + dx * 0.5, y:u.y + 1.9 + ay * 0.5, z:u.z + dz * 0.5, dx, dy:ay + (i % 2 ? 0.02 : -0.01), dz, t:K.range * 1.6 / CFG.arrowSpeed, team:u.team, k:u.k, dmg:u.k === 1 ? 24 : 26 }); }
+    const [ax, ay, az] = u.aim, n = (u.k === 1 ? 5 : 6) + 2 * pkL(G, u.team, 'volley'), spread = (u.k === 1 ? 0.075 : 0.11) * (u.k === 1 ? 5 : 6) / n * (1 + 0.15 * pkL(G, u.team, 'volley'));
+    for (let i = 0; i < n; i++) { const a = (i - (n - 1) / 2) * spread, c = Math.cos(a), sn = Math.sin(a), dx = ax * c + az * sn, dz = -ax * sn + az * c; G.fpId = (G.fpId + 1) % 10000; G.fp.push({ id:G.fpId, x:u.x + dx * 0.5, y:u.y + 1.9 + ay * 0.5, z:u.z + dz * 0.5, dx, dy:ay + (i % 2 ? 0.02 : -0.01), dz, t:K.range * 2.2 / CFG.arrowSpeed, team:u.team, k:u.k, dmg:u.k === 1 ? 24 : 26 }); }
     u.spm = 1;
   }
   else if (u.k === 1) enemiesInCone(G, u, K.range + 2, 0.42).slice(0, 6).forEach(c => G.proj.push({ t:c.d / K.pspeed, dmg:24, tgt:c.e.id, team:u.team, k:u.k, bp:true }));
-  else if (u.k === 2) enemiesInCone(G, u, 3.4, Math.PI).forEach(c => { hit(G, c.e.id, 40, u.team, byId, u.k, true); knockFly(c.e, u.x, u.z, 3.2); });
+  else if (u.k === 2) { enemiesInCone(G, u, 3.4, Math.PI).forEach(c => { hit(G, c.e.id, 40, u.team, byId, u.k, true); knockFly(c.e, u.x, u.z, 3.2); }); u.spinT = [0, 1.5, 2.2, 3][pkL(G, u.team, 'spin')]; u.spinP = 0.45; }
   else if (u.k === 3) enemiesInCone(G, u, K.range + 1, Math.PI).sort((a, b) => a.d - b.d).slice(0, 3).forEach(c => G.proj.push({ t:c.d / K.pspeed, dmg:30, tgt:c.e.id, team:u.team, k:u.k, bp:true }));
   else {
     const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw);
@@ -775,7 +863,7 @@ function possSpecial(G, u, byId) {
       if (e.team === u.team || e.hp <= 0) continue;
       const dx = e.x - u.x, dz = e.z - u.z, along = dx * fx + dz * fz;
       if (along < -0.5 || along > 10.5) continue;
-      if (Math.abs(dx * fz - dz * fx) < 2.5) { hit(G, e.id, 52, u.team, byId, u.k, true); knockFly(e, u.x + fx * along - fz * 0.01, u.z + fz * along + fx * 0.01, 6); }
+      if (Math.abs(dx * fz - dz * fx) < 2.5) { hit(G, e.id, (KINDS[e.k].role === "ranged" ? 38 : 52) * pk(G, u.team, "ram", [1, 1.15, 1.3, 1.45]), u.team, byId, -1, true); knockFly(e, u.x + fx * along - fz * 0.01, u.z + fz * along + fx * 0.01, 6 * pk(G, u.team, 'ram', [1, 1.6, 2.2, 3])); }
     }
   }
 }
@@ -783,6 +871,8 @@ function possStep(G, u, byId) {
   const T = G.teams[u.team], In = T.posIn, K = KINDS[u.k];
   u.cd -= DT; u.spcd -= DT; u.rage -= DT;
   u.hp = Math.min(maxHp(u), u.hp + 4 * CFG.possHp * DT);
+  u.hs = 1 + 0.15 * pkL(G, u.team, 'bighead');
+  if (u.spinT > 0) { u.spinT -= DT; u.spinP -= DT; if (u.spinP <= 0) { u.spinP = 0.45; enemiesInCone(G, u, 3.6, Math.PI).forEach(c => { hit(G, c.e.id, 16, u.team, byId, u.k, true); if (!(c.e.down > 0.6)) knockFly(c.e, u.x, u.z, 3); }); } }
   if (u.down > 0) {
     u.down -= DT; const kb = u.kb;
     if (kb && kb.left > 0) { const st = Math.min(kb.left, kb.sp * DT); kb.left -= st; const nx = u.x + kb.vx * st, nz = u.z + kb.vz * st; if (walkable(nx, nz)) { u.x = nx; u.z = nz; } else kb.left = 0; }
@@ -811,7 +901,7 @@ function possStep(G, u, byId) {
 function step(G) {
   if (G.over >= 0) return;
   if (G.cd > 0) { G.cd = Math.max(0, G.cd - DT); return; }
-  G.t += DT; G.astarBudget = 8;
+  G.t += DT; G.astarBudget = 8; perkStep(G);
   const byId = new Map(G.units.map(u => [u.id, u]));
   for (let i = 0; i < 2; i++) {
     const T = G.teams[i];
@@ -857,8 +947,8 @@ function step(G) {
           else hit(G, u.at, K.dmg * charge, u.team, byId, u.k);
           u.run = 0;
         }
-      } else steer(G, u, tx, tz, K.speed);
-    } else if (Math.hypot(o.x - u.x, o.z - u.z) > 0.3) steer(G, u, o.x, o.z, K.speed);
+      } else steer(G, u, tx, tz, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.15, 1.25, 1.35]) : 1));
+    } else if (Math.hypot(o.x - u.x, o.z - u.z) > 0.3) steer(G, u, o.x, o.z, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.15, 1.25, 1.35]) : 1));
     const ox = u.x, oz = u.z;
     u.x += u.vx * DT; u.z += u.vz * DT;
     if (!walkable(u.x, u.z)) {
@@ -919,7 +1009,7 @@ function step(G) {
     if (T.tcd <= 0 && !G.towerOff[i]) {
       let best = null, bd = CFG.towerRange * CFG.towerRange;
       for (const e of us) { if (e.team === i || e.hp <= 0) continue; const d = (e.x - b.x) ** 2 + (e.z - b.z) ** 2; if (d < bd) { bd = d; best = e; } }
-      if (best) { T.tcd = CFG.towerCd; T.tatk = (T.tatk + 1) % 100; T.ttgt = best.id; G.proj.push({ t:Math.sqrt(bd) / CFG.towerSpeed, dmg:CFG.towerDmg * G.towerMul[i], tgt:best.id, team:i, k:-1 }); }
+      if (best) { T.tcd = CFG.towerCd; T.tatk = (T.tatk + 1) % 100; T.ttgt = best.id; G.proj.push({ t:Math.sqrt(bd) / CFG.towerSpeed, dmg:CFG.towerDmg * G.towerMul[i] * pk(G, i, 'tower', [1, 1.4, 1.8, 2.2]), tgt:best.id, team:i, k:-1 }); }
     }
   }
   G.units = us.filter(u => u.hp > 0);
@@ -928,8 +1018,8 @@ function step(G) {
     const F = FLAGS[fi]; let c0 = 0, c1 = 0;
     for (const u of G.units) if ((u.x - F.x) ** 2 + (u.z - F.z) ** 2 < CFG.flagR * CFG.flagR) u.team ? c1++ : c0++;
     const rate = n => DT / (CFG.capTime * 1.8 / Math.pow(Math.min(n, 12), 0.75));
-    if (c0 && !c1) f.p = Math.min(1, f.p + rate(c0));
-    else if (c1 && !c0) f.p = Math.max(-1, f.p - rate(c1));
+    if (c0 && !c1) f.p = Math.min(1, f.p + rate(c0) * pk(G, 0, 'flagger', [1, 1.3, 1.5, 1.7]));
+    else if (c1 && !c0) f.p = Math.max(-1, f.p - rate(c1) * pk(G, 1, 'flagger', [1, 1.3, 1.5, 1.7]));
     else if (!c0 && !c1) { const home = f.owner === 0 ? 1 : f.owner === 1 ? -1 : 0; f.p += clamp(home - f.p, -DT / 10, DT / 10); }
     if (f.p >= 1) f.owner = 0; else if (f.p <= -1) f.owner = 1;
     if (f.owner === 0 && f.p <= 0) f.owner = -1;
@@ -949,6 +1039,7 @@ function snapOf(G) {
     b:[Math.ceil(T0.hp), Math.ceil(T1.hp)], f:G.flags.map(f => [f.owner, Math.round(f.p * 100)]),
     r:[Math.round(T0.rally.x), Math.round(T0.rally.z), Math.round(T1.rally.x), Math.round(T1.rally.z)],
     tw:[T0.tatk, T0.ttgt, T1.tatk, T1.ttgt], k:[T0.kills, T1.kills], mf:[T0.maxFlags, T1.maxFlags], ru:[T0.rush, T1.rush], rp:[T0.rushAt, T1.rushAt],
+    ...(G.chaos ? { ch:1, pk:[Object.assign({}, T0.pk), Object.assign({}, T1.pk)], of:[T0.offer, T1.offer], od:[Math.max(0, Math.ceil(T0.offerDl - G.t)), Math.max(0, Math.ceil(T1.offerDl - G.t))], pn:[T0.pkN, T1.pkN], lp:[T0.lastPk, T1.lastPk], no:Math.max(0, Math.ceil(G.nextOffer - G.t)), on:G.offerN, fb:G.fb.map(b => [b.id, Math.round(b.x * 10), Math.round(b.z * 10), Math.round(b.t * 10), b.team, b.lvl]) } : {}),
     hq:[T0.hq.slice(), T1.hq.slice()], fp:G.fp.map(p => [p.id, Math.round(p.x * 10), Math.round(p.y * 10), Math.round(p.z * 10), Math.round(p.dx * 100), Math.round(p.dy * 100), Math.round(p.dz * 100), p.team, p.k]),
     u:G.units.map(u => { const e = [u.id, u.k, Math.round(u.x * 10), Math.round(u.z * 10), Math.max(1, Math.round(u.hp / maxHp(u) * 100)), u.at, u.atk, (u.poss ? 1 : 0) | (u.down > 0 ? 2 : 0) | ((u.kbN || 0) << 2)];
       if (u.poss) e.push(u.sp, Math.round(u.yaw * 100), u.rage > 0 ? 1 : 0, Math.max(0, Math.ceil(u.spcd * 10)), u.spm ? 1 : 0); return e; }),
@@ -1141,6 +1232,9 @@ function aiThink(G, team) {
   if (G.cd > 0 || G.over >= 0) return;
   const mine = G.units.filter(u => u.team === team), foes = G.units.filter(u => u.team !== team);
   aiPossess(G, team, A, L, mine, foes);
+  const T = G.teams[team];
+  if (T.offer) { A.pkWait = (A.pkWait || 0) + DT; if (A.pkWait > 1.5) { A.pkWait = 0; const pref = ['gold', 'armor', 'fast', 'flagger', 'arrows', 'fire', 'cavspd', 'tower', 'ram', 'spin', 'bighead', 'vamp', 'charge', 'bounty', 'volley', 'turbo'];
+    const sc = id => (pref.length - pref.indexOf(id)) + (T.pk[id] ? 4 * L.counter : 0) + Math.random() * (10 - 9 * L.counter); applyCmd(G, team, { t:'perk', id:T.offer.slice().sort((a, b) => sc(b) - sc(a))[0] }); } }
   A.tick -= DT; if (A.tick > 0) return; A.tick = L.think;
   aiRecruit(G, team, A, L, mine, foes);
   const free = mine.filter(u => !u.poss);
@@ -1597,7 +1691,7 @@ function unitIcon(k) {
 }
 
 /* ---------- effects ---------- */
-const fx = { puffs:[], projs:[], words:[], coins:[], shots:[], swings:[] };
+const fx = { puffs:[], projs:[], words:[], coins:[], shots:[], swings:[], debris:[] };
 const puffGeo = new THREE.IcosahedronGeometry(0.35, 1);
 function puff(x, y, z, col = 0xffffff, n = 5, size = 1) {
   for (let i = 0; i < n; i++) {
@@ -1706,6 +1800,10 @@ const SFX = (() => {
     base(b, t) { tone(b, 'sine', 90, 38, t, 0.28, 0.5); noise(b, 'lowpass', 500, 150, t, 0.2, 0.3); },
     count(b, t) { tone(b, 'square', 660, 660, t, 0.1, 0.09, { lp:2500 }); },
     go(b, t) { tone(b, 'square', 990, 990, t, 0.32, 0.11, { lp:3000 }); tone(b, 'square', 495, 495, t, 0.32, 0.05, { lp:2000 }); },
+    boom(b, t) { noise(b, 'lowpass', 1800, 120, t, 0.9, 0.7); tone(b, 'sine', 110, 30, t, 0.8, 0.8); noise(b, 'bandpass', 600, 200, t + 0.05, 0.5, 0.3, 0.8); },
+    fireball(b, t) { noise(b, 'bandpass', 2400, 400, t, 1.3, 0.22, 1.2); tone(b, 'sawtooth', 300, 90, t, 1.2, 0.05, { lp:900 }); },
+    rumble(b, t) { noise(b, 'lowpass', 300, 120, t, 1.1, 0.5); tone(b, 'sine', 55, 40, t, 1.1, 0.5, { vib:9, vibD:6 }); },
+    collapse(b, t) { noise(b, 'lowpass', 2500, 100, t, 1.6, 0.8); tone(b, 'sine', 80, 25, t, 1.4, 0.9); for (let i = 0; i < 8; i++) noise(b, 'bandpass', R(800, 2500), R(300, 600), t + 0.1 + i * R(0.08, 0.16), 0.12, 0.25, 2); },
     headshot(b, t) { tone(b, 'square', 1900, 1300, t, 0.05, 0.12, { lp:5000 }); tone(b, 'sine', 2637, 2637, t + 0.02, 0.35, 0.16); tone(b, 'sine', 3951, 3951, t + 0.05, 0.3, 0.07); noise(b, 'lowpass', 2500, 500, t, 0.08, 0.35); tone(b, 'sine', 140, 60, t, 0.16, 0.5); },
     hitmark(b, t) { tone(b, 'triangle', 2400, 2000, t, 0.035, 0.14); },
     whoosh(b, t) { noise(b, 'bandpass', 350, 1800, t, 0.32, 0.32, 1.6); tone(b, 'sine', 180, 620, t + 0.05, 0.25, 0.14); },
@@ -1858,7 +1956,7 @@ function resetView() {
   fx.words.forEach(w => scene.remove(w.s)); fx.words.length = 0;
   fx.puffs.forEach(p => scene.remove(p.m)); fx.puffs.length = 0;
   fx.coins.forEach(c => scene.remove(c.m)); fx.coins.length = 0;
-  if (typeof clearFreeArrows === 'function') clearFreeArrows(); fx.swings.forEach(w => scene.remove(w.m)); fx.swings.length = 0;
+  if (typeof clearFreeArrows === 'function') clearFreeArrows(); fx.debris.forEach(d => scene.remove(d.m)); fx.debris.length = 0; if (typeof fbView !== 'undefined') { fbView.forEach(v => scene.remove(v.g)); fbView.clear(); } V.ending = null; V.pkKey = null; V.pkPicked = null; V.lastPn = null; fx.swings.forEach(w => scene.remove(w.m)); fx.swings.length = 0;
   V.hqLast = [0, 0]; V.buf.length = 0; V.offset = null; V.evT = -1; V.prevMap = null; V.prevSnap = null; V.latest = null; V.selected.clear(); V.poss = null;
 }
 function disposeUnit(u) { scene.remove(u.g); hpGroup.remove(u.hp); }
@@ -1946,7 +2044,7 @@ function onSpecial(u, cur) {
   const p = u.g.position, K = KINDS[u.k];
   word(SP_WORD[u.k], p.x, p.y + 4.6, p.z, { color:'#ff9b54', scale:1.2 });
   SFX.play(u.k === 0 ? 'rage' : 'special', { x:p.x, z:p.z, vol:1.1 }); if (u.k === 4) SFX.play('goat', { x:p.x, z:p.z }); if (u.k === 5) SFX.play('horn', { x:p.x, z:p.z });
-  if (u.k === 2) { for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; puff(p.x + Math.cos(a) * 2.5, p.y + 0.6, p.z + Math.sin(a) * 2.5, 0xf6f1e7, 1, 0.8); } u.spin = 0.6; }
+  if (u.k === 2) { u.spin = 0.6 + [0, 1.5, 2.2, 3][tpk(u.team, 'spin')]; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; puff(p.x + Math.cos(a) * 2.5, p.y + 0.6, p.z + Math.sin(a) * 2.5, 0xf6f1e7, 1, 0.8); } u.spin = 0.6; }
   else if (u.k === 0) puff(p.x, p.y + 1.5, p.z, 0xff5a3c, 8, 0.9);
   else if (u.k === 4 || u.k === 5) { u.dashFx = 0.5; }
   else if ((u.k === 1 || u.k === 3) && (u.spm || (V.poss && V.poss.id === u.id))) { /* manual fan: arrows come from free projectiles */ }
@@ -2006,6 +2104,99 @@ function updateFreeArrows(dt) {
 }
 function orientProj(m, d, k, dt) { if (k === 3) { m.rotation.x += dt * 14; m.rotation.y += dt * 9; } else m.lookAt(m.position.x + d.x, m.position.y + d.y, m.position.z + d.z); }
 function clearFreeArrows() { for (const [, v] of fpView) scene.remove(v.m); fpView.clear(); fx.shots.forEach(a => scene.remove(a.m)); fx.shots.length = 0; }
+/* ---------- chaos mode: perks, fireballs ---------- */
+const tpk = (team, id) => { const s = V.latest; return s && s.ch && s.pk ? (s.pk[team][id] || 0) : 0; };
+const ROMAN = ['', 'I', 'II', 'III'];
+function perkUi() {
+  const s = V.latest, me = V.myTeam, box = $('#perkPick'), bar = $('#perkBar');
+  if (!s || !s.ch || !V.playing || V.ending) { box.hidden = true; if (bar.innerHTML) bar.innerHTML = ''; return; }
+  const of = s.of && s.of[me], key = of ? of.join(',') + '#' + s.on : null, mine = s.pk[me] || {};
+  if (of && V.pkPicked !== key) {
+    if (V.pkKey !== key) {
+      V.pkKey = key; SFX.play('ding');
+      $('#perkCards').innerHTML = of.map(id => { const P = PERKS[id], L = mine[id] || 0; return `<button class="pcard${L ? ' up' : ''}" data-perk="${id}"><span class="pi">${P.ic}</span><b>${P.n}</b><span class="lv">${[1, 2, 3].map(i => `<i class="${i <= L ? 'on' : i === L + 1 ? 'new' : ''}"></i>`).join('')}</span><span>${L ? 'Upgrade: ' : ''}${P.d[L]}</span></button>`; }).join('');
+      $$('#perkCards .pcard').forEach(b => b.addEventListener('click', () => { const id = b.dataset.perk, L = (mine[id] || 0) + 1; sendCmd({ t:'perk', id }); V.pkPicked = key; box.hidden = true; SFX.play('capture'); toast(PERKS[id].ic + ' ' + PERKS[id].n + ' Stufe ' + ROMAN[L] + '!', 1800); }));
+    }
+    box.hidden = false; $('#perkTimer').style.width = (s.od[me] / PERK_TIME * 100) + '%'; $('#perkInfo').textContent = 'Runde ' + s.on + ' von ' + PERK_MAX + ' · noch ' + s.od[me] + ' s';
+  } else box.hidden = true;
+  const html = Object.keys(mine).map(id => `<span class="pb">${PERKS[id].ic}${ROMAN[mine[id]]}</span>`).join('') + (s.on < PERK_MAX && s.no > 0 ? `<span class="pb next">Perk in ${s.no} s</span>` : '');
+  if (bar.dataset.h !== html) { bar.dataset.h = html; bar.innerHTML = html; }
+  if (V.lastPn) for (let t = 0; t < 2; t++) if (s.pn[t] !== V.lastPn[t] && s.lp[t] && t !== me) { const id = s.lp[t]; toast('Gegner wählt: ' + PERKS[id].ic + ' ' + PERKS[id].n + ' ' + ROMAN[(s.pk[t] || {})[id] || 1], 2200); }
+  V.lastPn = s.pn.slice();
+}
+const fbView = new Map(), fbCore = new THREE.SphereGeometry(1, 14, 10);
+function updateFireballs(dt) {
+  const s = V.latest, seen = new Set();
+  if (s && s.fb) for (const f of s.fb) {
+    seen.add(f[0]);
+    if (!fbView.has(f[0])) {
+      const g = new THREE.Group(), sc = 0.7 + 0.25 * f[5];
+      mesh(fbCore, new THREE.MeshBasicMaterial({ color:lin(0xffb347) }), 0, 0, 0, g).scale.setScalar(sc);
+      const glow = mesh(fbCore, new THREE.MeshBasicMaterial({ color:lin(0xff5a1f), transparent:true, opacity:0.45, blending:THREE.AdditiveBlending, depthWrite:false }), 0, 0, 0, g); glow.scale.setScalar(sc * 1.8);
+      scene.add(g); const tx = f[1] / 10, tz = f[2] / 10;
+      fbView.set(f[0], { g, tx, tz, ty:groundY(tx, tz), tl:f[3] / 10, t0:now(), lvl:f[5], team:f[4] }); SFX.play('fireball', { x:tx, z:tz });
+    }
+  }
+  for (const [id, v] of fbView) {
+    const rem = Math.max(0, v.tl - (now() - v.t0) / 1000), k = rem / 1.4;
+    v.g.position.set(v.tx + 12 * k, v.ty + 0.6 + 36 * k, v.tz + 7 * k); v.g.rotation.y += dt * 6;
+    if (Math.random() < dt * 40) puff(v.g.position.x, v.g.position.y, v.g.position.z, Math.random() < 0.6 ? 0xff8a3c : 0x777777, 1, 0.9 + 0.3 * v.lvl);
+    if (!seen.has(id) && (rem <= 0.05 || !s || !s.fb || rem < 1.2)) {
+      const R = 5 + v.lvl; for (let i = 0; i < 18; i++) { const a = i / 18 * TAU; puff(v.tx + Math.cos(a) * R * 0.6 * Math.random(), v.ty + 0.6, v.tz + Math.sin(a) * R * 0.6 * Math.random(), i % 3 ? 0xff7a2a : 0x555555, 1, 1.6); }
+      puff(v.tx, v.ty + 1.5, v.tz, 0xffd27a, 8, 2.2); word('BUMM!', v.tx, v.ty + 3.5, v.tz, { color:'#ff9b54', scale:1.4 }); SFX.play('boom', { x:v.tx, z:v.tz, vol:1.3 });
+      scene.remove(v.g); fbView.delete(id);
+    }
+  }
+}
+/* ---------- base collapse cinematic ---------- */
+function startBaseFall(s) {
+  if (V.ending) return; V.ending = { t:0, lost:1 - s.o, s, crumbled:false, shake:0 };
+  if (V.poss) exitEgo(false);
+  V.selected.clear(); setRallyMode(false); $('#hud').hidden = true; $('#ego').hidden = true; $('#perkPick').hidden = true; $('#tut').hidden = true; $('#tutRing').hidden = true; drawLasso(null);
+  SFX.play('rumble');
+}
+function crumbleBase(i) {
+  const bv = baseViews[i]; if (!bv) return; bv.g.updateMatrixWorld(true);
+  const B = BASES[i], meshes = []; bv.g.traverse(o => { if (o.isMesh) meshes.push(o); });
+  const sz = new THREE.Vector3(), cols = [];
+  for (const m of meshes) {
+    scene.attach(m); m.geometry.computeBoundingBox(); m.geometry.boundingBox.getSize(sz); sz.multiply(m.scale);
+    const big = Math.max(sz.x, sz.y, sz.z) > 2.2, dx = m.position.x - B.x, dz = m.position.z - B.z, d = Math.hypot(dx, dz) || 1, pw = 2 + Math.random() * 5;
+    if (m.material && m.material.color && cols.length < 6) cols.push(m.material.color.getHex());
+    if (big) fx.debris.push({ m, big:true, vx:dx / d * 0.6, vy:0, vz:dz / d * 0.6, rx:(Math.random() - .5) * 0.5, rz:(Math.random() - .5) * 0.5, t:0, delay:Math.random() * 0.3, sink:1.4 + Math.random() });
+    else fx.debris.push({ m, vx:dx / d * pw + (Math.random() - .5) * 3, vy:3 + Math.random() * 7, vz:dz / d * pw + (Math.random() - .5) * 3, rx:(Math.random() - .5) * 8, rz:(Math.random() - .5) * 8, t:0, delay:Math.random() * 0.5 * Math.max(0, m.position.y - bv.y) / 6 });
+  }
+  const brick = new THREE.BoxGeometry(0.45, 0.3, 0.3);
+  for (let k = 0; k < 60; k++) {
+    const m = new THREE.Mesh(brick, lam(cols.length ? cols[k % cols.length] : 0xb9ad9a)), a = Math.random() * TAU, r = Math.random() * 4;
+    m.position.set(B.x + Math.cos(a) * r, bv.y + 1 + Math.random() * 5, B.z + Math.sin(a) * r); m.castShadow = UNIT_SHADOWS; scene.add(m);
+    const pw = 3 + Math.random() * 7; fx.debris.push({ m, vx:Math.cos(a) * pw, vy:4 + Math.random() * 9, vz:Math.sin(a) * pw, rx:(Math.random() - .5) * 14, rz:(Math.random() - .5) * 14, t:0, delay:Math.random() * 0.4 });
+  }
+  scene.remove(bv.g);
+  for (let k = 0; k < 30; k++) puff(B.x + (Math.random() - .5) * 10, bv.y + Math.random() * 4, B.z + (Math.random() - .5) * 10, k % 2 ? 0x8a7a66 : 0xb9ad9a, 1, 2.6);
+  word('EINGESTÜRZT!', B.x, bv.y + 9, B.z, { color:'#ff9b54', scale:2.2 });
+  SFX.play('collapse'); setTimeout(() => SFX.play('base', { vol:1.2 }), 250); setTimeout(() => SFX.play('base', { vol:1 }), 600);
+}
+function endingTick(dt) {
+  const E = V.ending; E.t += dt; const i = E.lost, B = BASES[i], bv = baseViews[i];
+  const yaw = i === 0 ? Math.PI : 0, f = Math.min(1, dt * 2.2);
+  camS.x = lerp(camS.x, B.x, f); camS.z = lerp(camS.z, B.z + (i === 0 ? -6 : 6), f); camS.dist = lerp(camS.dist, 30, f); camS.pitch = lerp(camS.pitch, 0.5, f); camS.yaw += angDiff(yaw, camS.yaw) * f;
+  applyCam();
+  if (E.t < 1.0 && bv) { bv.g.position.x = B.x + Math.sin(E.t * 60) * 0.15 * E.t; bv.g.rotation.z = Math.sin(E.t * 40) * 0.02 * E.t; if (Math.random() < dt * 20) puff(B.x + (Math.random() - .5) * 8, bv.y + 1, B.z + (Math.random() - .5) * 8, 0x9a8b76, 1, 1.4); }
+  if (E.t >= 1.0 && !E.crumbled) { E.crumbled = true; E.shake = 0.9; crumbleBase(i); }
+  if (E.shake > 0) { E.shake -= dt; camera.position.x += (Math.random() - .5) * E.shake * 0.9; camera.position.y += (Math.random() - .5) * E.shake * 0.6; }
+  if (E.t >= 3.8 && !E.done) { E.done = true; endGame(E.s); }
+}
+function debrisTick(dt) {
+  for (let k = fx.debris.length - 1; k >= 0; k--) {
+    const d = fx.debris[k], m = d.m; d.t += dt; if (d.t < d.delay) continue;
+    if (d.big) { m.position.x += d.vx * dt; m.position.z += d.vz * dt; m.position.y -= d.sink * dt * Math.min(1, d.t); m.rotation.x += d.rx * dt; m.rotation.z += d.rz * dt; if (Math.random() < dt * 6) puff(m.position.x + (Math.random() - .5) * 3, groundY(m.position.x, m.position.z) + 0.5, m.position.z + (Math.random() - .5) * 3, 0x9a8b76, 1, 1.6); if (d.t > 6) { scene.remove(m); fx.debris.splice(k, 1); } continue; }
+    d.vy -= 18 * dt; m.position.x += d.vx * dt; m.position.y += d.vy * dt; m.position.z += d.vz * dt; m.rotation.x += d.rx * dt; m.rotation.z += d.rz * dt;
+    const gy = groundY(m.position.x, m.position.z); if (m.position.y < gy + 0.1) { m.position.y = gy + 0.1; d.vy = Math.abs(d.vy) * 0.25; d.vx *= 0.5; d.vz *= 0.5; d.rx *= 0.5; d.rz *= 0.5; }
+    if (d.t > 3.5) m.position.y -= dt * 0.8;
+    if (d.t > 6) { scene.remove(m); fx.debris.splice(k, 1); }
+  }
+}
 /* ---------- gold rush ---------- */
 const coinGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.06, 18).rotateX(Math.PI / 2);
 const bottleGeo = new THREE.LatheGeometry([[0, 0], [0.12, 0], [0.13, 0.05], [0.13, 0.3], [0.06, 0.42], [0.05, 0.56], [0.055, 0.6], [0, 0.6]].map(([a, b]) => new THREE.Vector2(a, b)), 12).translate(0, -0.3, 0);
@@ -2294,7 +2485,7 @@ function egoAim(P) {
   for (let t = 1; t < 90 && !hitP; t += 0.35) {
     q.copy(o).addScaledVector(d, t);
     if (q.y < groundY(q.x, q.z)) { hitP = q.clone(); break; }
-    for (const u of V.units.values()) { if (u.team === V.myTeam) continue; const dx = q.x - u.g.position.x, dz = q.z - u.g.position.z, h2 = dx * dx + dz * dz; if (h2 > 4) continue; const hb = headBox({ k:u.k, poss:u.isPoss }), hy = u.g.position.y + hb.y; if (h2 + (q.y - hy) ** 2 < hb.r * hb.r || (h2 < 0.3 && q.y > u.g.position.y && q.y < hy)) { hitP = q.clone(); break; } }
+    for (const u of V.units.values()) { if (u.team === V.myTeam) continue; const dx = q.x - u.g.position.x, dz = q.z - u.g.position.z, h2 = dx * dx + dz * dz; if (h2 > 4) continue; const hb = headBox({ k:u.k, poss:u.isPoss, hs:u.isPoss ? 1 + 0.15 * tpk(u.team, 'bighead') : 1 }), hy = u.g.position.y + hb.y; if (h2 + (q.y - hy) ** 2 < hb.r * hb.r || (h2 < 0.3 && q.y > u.g.position.y && q.y < hy)) { hitP = q.clone(); break; } }
   }
   if (!hitP) hitP = o.clone().addScaledVector(d, 90);
   const from = new THREE.Vector3(P.x, groundY(P.x, P.z) + 1.9, P.z), dir = hitP.sub(from).normalize();
@@ -2305,7 +2496,7 @@ function egoAttack() {
   P.a = (P.a + 1) % 1000; P.cdT = K.cd * 0.65 * (P.rageT > 0 ? 0.6 : 1);
   if (K.role === 'ranged') {
     const { from, dir } = egoAim(P); P.ad = [+dir.x.toFixed(3), +dir.y.toFixed(3), +dir.z.toFixed(3)];
-    const m = freeArrowMesh(P.k); fx.shots.push({ m, p:from.clone().addScaledVector(dir, 0.5), d:dir.clone(), k:P.k, t:0, life:K.range * 1.8 / CFG.arrowSpeed });
+    const m = freeArrowMesh(P.k); fx.shots.push({ m, p:from.clone().addScaledVector(dir, 0.5), d:dir.clone(), k:P.k, t:0, life:K.range * 2.5 / CFG.arrowSpeed });
     EG.kick = Math.max(EG.kick, 0.12);
   } else {
     P.ad = null; swingFx(P, K); EG.kick = Math.max(EG.kick, 0.18);
@@ -2324,11 +2515,11 @@ function egoSpecial() {
   const P = V.poss; if (!P || P.spT > 0 || P.down) return;
   if (P.k === 1 || P.k === 3) {
     const { from, dir } = egoAim(P), K = KINDS[P.k]; P.ad = [+dir.x.toFixed(3), +dir.y.toFixed(3), +dir.z.toFixed(3)];
-    const n = P.k === 1 ? 5 : 6, spread = P.k === 1 ? 0.075 : 0.11;
-    for (let i = 0; i < n; i++) { const a = (i - (n - 1) / 2) * spread, c = Math.cos(a), sn = Math.sin(a), d = new THREE.Vector3(dir.x * c + dir.z * sn, dir.y + (i % 2 ? 0.02 : -0.01), -dir.x * sn + dir.z * c).normalize(); fx.shots.push({ m:freeArrowMesh(P.k), p:from.clone().addScaledVector(d, 0.5), d, k:P.k, t:-i * 0.0, life:K.range * 1.6 / CFG.arrowSpeed }); }
+    const vl = tpk(V.myTeam, 'volley'), n0 = P.k === 1 ? 5 : 6, n = n0 + 2 * vl, spread = (P.k === 1 ? 0.075 : 0.11) * n0 / n * (1 + 0.15 * vl);
+    for (let i = 0; i < n; i++) { const a = (i - (n - 1) / 2) * spread, c = Math.cos(a), sn = Math.sin(a), d = new THREE.Vector3(dir.x * c + dir.z * sn, dir.y + (i % 2 ? 0.02 : -0.01), -dir.x * sn + dir.z * c).normalize(); fx.shots.push({ m:freeArrowMesh(P.k), p:from.clone().addScaledVector(d, 0.5), d, k:P.k, t:0, life:K.range * 2.2 / CFG.arrowSpeed }); }
     EG.kick = Math.max(EG.kick, 0.3);
   }
-  P.s = (P.s + 1) % 1000; P.spT = CFG.spCd;
+  P.s = (P.s + 1) % 1000; P.spT = CFG.spCd * [1, 0.75, 0.6, 0.45][tpk(V.myTeam, 'charge')];
   if (P.k === 0) P.rageT = 4;
   if (P.k === 4 || P.k === 5) P.dashT = 0.42;
 }
@@ -2349,10 +2540,12 @@ function egoUpdate(dt) {
   const fwd = -jy, str = jx, cy = Math.sin(P.camYaw), cyz = Math.cos(P.camYaw);
   if (P.down && P.srv) { P.x = lerp(P.x, P.srv.x, Math.min(1, dt * 12)); P.z = lerp(P.z, P.srv.z, Math.min(1, dt * 12)); jx = 0; jy = 0; P.dashT = 0; }
   let vx = (cy * fwd - cyz * str), vz = (cyz * fwd + cy * str);
-  let speed = K.speed * 1.15 * (P.rageT > 0 ? 1.4 : 1);
+  let speed = K.speed * 1.15 * (P.rageT > 0 ? 1.4 : 1) * [1, 1.2, 1.35, 1.5][tpk(V.myTeam, 'turbo')] * (K.role === 'cav' ? [1, 1.15, 1.25, 1.35][tpk(V.myTeam, 'cavspd')] : 1);
   if (P.dashT > 0) { P.dashT -= dt; vx = cy; vz = cyz; speed = 27; }
   const nx = P.x + vx * speed * dt * (P.down ? 0 : 1), nz = P.z + vz * speed * dt * (P.down ? 0 : 1);
-  if (walkable(nx, nz)) { P.x = nx; P.z = nz; } else if (walkable(nx, P.z)) P.x = nx; else if (walkable(P.x, nz)) P.z = nz;
+  if (walkable(nx, nz)) { P.x = nx; P.z = nz; } else if (walkable(nx, P.z) && Math.abs(nx - P.x) > 1e-4) P.x = nx; else if (walkable(P.x, nz) && Math.abs(nz - P.z) > 1e-4) P.z = nz;
+  else { const mx = nx - P.x, mz = nz - P.z; for (const ang of [0.5, -0.5, 1.0, -1.0, 1.45, -1.45]) { const c = Math.cos(ang), sn = Math.sin(ang), f = Math.cos(ang) * 0.9, tx = P.x + (mx * c - mz * sn) * f, tz = P.z + (mx * sn + mz * c) * f; if (walkable(tx, tz)) { P.x = tx; P.z = tz; break; } } }
+  if (!walkable(P.x, P.z)) { const q = nearestWalkable(MAP, P.x, P.z); P.x = q.x; P.z = q.z; }
   P.x = clampX(P.x); P.z = clampZ(P.z);
   P.yaw = P.camYaw;
   P.moving = jl > 0.15 || P.dashT > 0;
@@ -2462,7 +2655,8 @@ function updateHud() {
   if (cdTxt !== V.cdLast) { V.cdLast = cdTxt; if (cdTxt) SFX.play(cdTxt === 'LOS!' ? 'go' : 'count'); }
   cd.hidden = !cdTxt; if (cdTxt) cd.textContent = cdTxt;
   drawMini();
-  if (s.o >= 0 && V.playing) endGame(s);
+  perkUi();
+  if (s.o >= 0 && V.playing && !V.ending) startBaseFall(s);
 }
 function spawnSlot(i) {
   const b = $$('.spawn')[i]; if (!b) return;
@@ -2546,7 +2740,7 @@ function robotFace() {
 function playAi() {
   leaveNet(); FACE.other = { crop:robotFace(), url:null };
   const facs = [myFac, FAC[myFac].other], seed = newSeed();
-  G = newGame(facs, seed); G.ai = aiNew(aiLvl); G.teams[1].incMul = AI_LVL[aiLvl].inc; G.teams[1].gold += AI_LVL[aiLvl].bonus || 0;
+  G = newGame(facs, seed, gameMode === 'chaos'); G.ai = aiNew(aiLvl); G.teams[1].incMul = AI_LVL[aiLvl].inc; G.teams[1].gold += AI_LVL[aiLvl].bonus || 0;
   V.tut = false; beginMatch('ai', facs, 0, seed); pushSnap(snapOf(G)); startSim(true);
 }
 function endGame(s) {
@@ -2561,7 +2755,7 @@ function endGame(s) {
   $('#btnAgain').hidden = V.mode !== 'ai';
   if (V.tut) { $('#endTitle').textContent = won ? 'Geschafft!' : 'Fast!'; $('#endSub').textContent = 'Du kennst jetzt alle Tricks. Ab gegen den Computer!'; $('#btnAgain').hidden = true; store.set('wvr-tut', '1'); $('#tutBadge').hidden = true; endTutorial(); }
   if (V.mode === 'host') { hostBroadcast(); setTimeout(() => leaveNet(), 4000); }
-  setTimeout(() => { $('#hud').hidden = true; showScreen('end'); }, 1600);
+  setTimeout(() => { $('#hud').hidden = true; showScreen('end'); }, V.ending ? 200 : 1600);
 }
 
 /* ---------- room transport ---------- */
@@ -2686,7 +2880,7 @@ async function hostOnline() {
   let r; try { r = await openRoom(code, 'host'); } catch (e) { setLobbyStatus(netErrMsg(e), false); $('#lobbyCodeWrap').hidden = true; return; }
   NET.r = r; NET.code = code; NET.role = 'host';
   const facs = [myFac, FAC[myFac].other], seed = newSeed();
-  G = newGame(facs, seed);
+  G = newGame(facs, seed, gameMode === 'chaos');
   await r.presence({ role:'host', code, fa:facs, sd:seed, st:'wait', gp:null }).catch(() => {});
   setLobbyStatus('Warte auf deinen Gegner', true);
   if (NET.local) $('#lobbyNote').textContent = 'Testmodus: Verbindung nur zwischen zwei Tabs in diesem Browser.';
@@ -2782,9 +2976,13 @@ $('#btnMenu').addEventListener('click', toMenu);
 $('#btnNetQuit').addEventListener('click', toMenu);
 $('#rallyIco').innerHTML = ICON.flag; $('#menuBtn').innerHTML = ICON.pause; $('#armyIco').innerHTML = ICON.army; $('#exitIco').innerHTML = ICON.exit;
 $('#egoAtk').innerHTML = ICON.sword; $('#spIco').innerHTML = ICON.star; $('#possIco').innerHTML = ICON.enter;
+let gameMode = store.get('wvr-mode') === 'chaos' ? 'chaos' : 'classic';
+function syncMode() { $$('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === gameMode))); }
+$$('[data-mode]').forEach(b => b.addEventListener('click', () => { gameMode = b.dataset.mode; store.set('wvr-mode', gameMode); syncMode(); }));
+syncMode();
 let aiLvl = AI_LVL[store.get('wvr-lvl')] ? store.get('wvr-lvl') : 'medium';
-function syncLvl() { $$('.lvl button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lvl === aiLvl))); }
-$$('.lvl button').forEach(b => b.addEventListener('click', () => { aiLvl = b.dataset.lvl; store.set('wvr-lvl', aiLvl); syncLvl(); }));
+function syncLvl() { $$('.lvl button[data-lvl]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lvl === aiLvl))); }
+$$('.lvl button[data-lvl]').forEach(b => b.addEventListener('click', () => { aiLvl = b.dataset.lvl; store.set('wvr-lvl', aiLvl); syncLvl(); }));
 syncLvl();
 ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => SFX.unlock(), { capture:true, passive:true }));
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('button'); if (b) SFX.play('click'); }, true);
@@ -2953,7 +3151,8 @@ function frame() {
   const t = now(), dt = Math.min(0.1, (t - lastFrame) / 1000); lastFrame = t; clock += dt;
   if (V.mode === 'menu') { camS.yaw = Math.PI + Math.sin(clock * 0.1) * 0.3; applyCam(); menuUnits.forEach((u, i) => { u.atkT = (clock * 0.8 + i * 0.9) % 2.4; animateRig(u, dt, false, false); }); }
   else {
-    if (V.poss) egoUpdate(dt);
+    if (V.ending) endingTick(dt);
+    else if (V.poss) egoUpdate(dt);
     else {
       let mx = 0, mz = 0;
       if (keys.has('w') || keys.has('arrowup')) mz -= 1; if (keys.has('s') || keys.has('arrowdown')) mz += 1;
@@ -2961,7 +3160,7 @@ function frame() {
       if (mx || mz) { const c = Math.cos(camS.yaw), s = Math.sin(camS.yaw), sp = camS.dist * 0.9 * dt; camS.x += (mx * c + mz * s) * sp; camS.z += (-mx * s + mz * c) * sp; }
       applyCam();
     }
-    renderUnits(t, dt); updateFreeArrows(dt);
+    renderUnits(t, dt); updateFreeArrows(dt); updateFireballs(dt); debrisTick(dt);
   }
   flagViews.forEach((F, i) => { const pos = F.cloth.geometry.attributes.position, a = pos.array; for (let v = 0; v < a.length; v += 3) { const x = F.base[v]; a[v + 2] = Math.sin(clock * 5 + x * 2.2 + i) * 0.12 * x; } pos.needsUpdate = true; });
   water.position.y = WL + Math.sin(clock * 0.8) * 0.05;
@@ -3033,7 +3232,8 @@ function renderUnits(t, dt) {
     else if (u.atkT < 1.2 && (ea[5] > 0 || ea[5] === -2)) { const tg = ea[5] === -2 ? BASES[1 - u.team] : V.units.get(ea[5]); if (tg) { const tx = tg.g ? tg.g.position.x : tg.x, tz = tg.g ? tg.g.position.z : tg.z; want = Math.atan2(tx - x, tz - z); } }
     if (!u.rag) u.g.rotation.y += angDiff(want, u.g.rotation.y) * Math.min(1, dt * (mine ? 20 : 12));
     animateRig(u, dt, moving && !u.rag, u.atkT < 1.5);
-    if (mine) u.headTarget = EG.intro > 0.35 ? BIG_HEAD : 0.95; else if (u.isPoss) u.headTarget = BIG_HEAD;
+    if (mine) u.headTarget = EG.intro > 0.35 ? BIG_HEAD : 0.95; else if (u.isPoss) u.headTarget = BIG_HEAD * (1 + 0.15 * tpk(u.team, 'bighead'));
+    if (u.spin > 0.6 && Math.random() < dt * 14) puff(x + (Math.random() - .5) * 4, y + 0.5, z + (Math.random() - .5) * 4, 0xf6f1e7, 1, 0.8);
     if (!mine && V.poss && EG.intro > 0) { const c = camera.position, P = V.poss; u.g.visible = segDist(x, z, { x:c.x, z:c.z }, { x:P.x, z:P.z }) > 1.3 || Math.hypot(x - P.x, z - P.z) < 0.3; } else u.g.visible = true;
     if (mine && V.poss.rageT > 0 && Math.random() < dt * 8) puff(x, y + 1.5, z, 0xff5a3c, 1, 0.5);
     if (u.dashFx > 0) { u.dashFx -= dt; if (Math.random() < dt * 30) puff(x, y + 0.4, z, 0xd8c48f, 1, 0.7); }
