@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wikinger">
 <meta name="theme-color" content="#0d1526">
 <meta name="description" content="Wikinger gegen Rentner: 3D-Strategiespiel fürs Handy, online zu zweit.">
 <style>*,*::before,*::after{box-sizing:border-box}html{color-scheme:dark}:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
@@ -137,6 +141,8 @@ details.help ul{margin:8px 0 2px;padding-left:1.1em;line-height:1.5;font-size:.8
 .spawn .prog{position:absolute;left:0;bottom:0;height:4px;background:var(--gold);width:0}
 .spawn.poor .main{opacity:.45}
 #countdown{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-size:clamp(5rem,26vw,8rem);color:var(--gold);text-shadow:0 5px 0 rgba(0,0,0,.4)}
+body.zoomed #game,body.zoomed #game *{touch-action:pinch-zoom!important}
+#zoomwarn{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:10px;border-radius:12px;padding:8px 10px 8px 14px;font-size:.82rem;max-width:min(92vw,460px)}
 #netwarn{position:absolute;inset:0;display:grid;place-items:center;z-index:16;background:rgba(13,21,38,.7)}
 #netwarn .card{max-width:340px;text-align:center}
 
@@ -389,6 +395,7 @@ details.help ul{margin:8px 0 2px;padding-left:1.1em;line-height:1.5;font-size:.8
     </div>
   </div>
 
+  <div id="zoomwarn" class="panel" hidden><span>Die Seite ist vergrößert. Mit zwei Fingern zusammenziehen oder neu laden.</span><button class="btn small gold" id="zoomReload">Neu laden</button></div>
   <div id="netwarn" hidden><div class="card"><p class="status" id="netwarnTxt"></p><button class="btn" id="btnNetQuit">Zum Menü</button></div></div>
 </div>
 
@@ -442,7 +449,7 @@ const FAC = {
   rentner: { name:'Rentner',  res:'Pfand', base:'Haus Abendrot', css:'#c07aa8', col:0xa0628f, kinds:[2,3,5], other:'viking', icon:'bottle' },
 };
 const CFG = { startGold:220, baseInc:5, flagInc:0.9, comebackInc:1.2, kill:4, pop:30, queueMax:5, baseHp:1800, baseR:5.5,
-  towerRange:15, towerDmg:14, towerCd:1.0, towerSpeed:24, flagR:6, capTime:5, leash:11, hillBonus:3, spCd:8, possDmg:{ melee:3.2, cav:2.6, ranged:1.4 }, possArmor:0.6, possHp:2.5, headMul:4.2, downT:1.75, arrowSpeed:46, rush:150, healR:16, heal:6 };
+  towerRange:15, towerDmg:14, towerCd:1.0, towerSpeed:24, flagR:6, capTime:5, leash:11, hillBonus:3, spCd:8, possDmg:{ melee:3.2, cav:2.6, ranged:1.4 }, possArmor:0.6, possHp:2.0, headMul:4.2, downT:1.75, arrowSpeed:46, rush:150, healR:16, heal:6 };
 const maxHp = u => u.mhp || KINDS[u.k].hp;
 function headBox(e) { const s = e.poss ? 1.35 : 0.62, b = e.k === 4 ? 0.6 : e.k === 5 ? 0.25 : 0; return { y:(b + 1.3 + 0.5 * s) * 1.25, r:0.58 * s * 1.25 }; }
 function setPoss(u, on) { if (!!u.poss === on) return; const K = KINDS[u.k]; if (on) { u.poss = true; u.mhp = K.hp * CFG.possHp; u.hp = Math.min(u.mhp, u.hp * CFG.possHp); } else { u.poss = false; u.hp = Math.max(1, Math.min(K.hp, u.hp / CFG.possHp)); delete u.mhp; u.aim = null; } }
@@ -2177,10 +2184,19 @@ canvas.addEventListener('lostpointercapture', e => { if (pointers.has(e.pointerI
 document.addEventListener('touchend', e => { if (e.touches && e.touches.length === 0) setTimeout(() => { if (pointers.size) resetInput(); }, 150); }, { passive:true });
 addEventListener('blur', resetInput);
 document.addEventListener('visibilitychange', () => { if (document.hidden) resetInput(); });
-['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => e.preventDefault(), { passive:false }));
+['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, e => { if (!document.body.classList.contains('zoomed')) e.preventDefault(); }, { passive:false }));
 document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = now(); if (t - lastTouchEnd < 350 && e.target.closest && e.target.closest('#game') && !e.target.closest('button,input,canvas,.screen')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
+function zoomCheck() {
+  const vv = window.visualViewport; if (!vv) return;
+  const zoomed = vv.scale > 1.02;
+  if (zoomed && !zoomCheck.tried) { zoomCheck.tried = true; const m = document.querySelector('meta[name=viewport]'); if (m) { const c = m.content; m.content = c + ',minimum-scale=1'; setTimeout(() => { m.content = c; }, 60); } }
+  if (!zoomed) zoomCheck.tried = false;
+  $('#zoomwarn').hidden = !zoomed; document.body.classList.toggle('zoomed', zoomed);
+}
+if (window.visualViewport) { visualViewport.addEventListener('resize', zoomCheck); setInterval(zoomCheck, 1500); }
+$('#zoomReload').addEventListener('click', () => location.reload());
 (() => { let m = document.querySelector('meta[name=viewport]'); if (!m) { m = document.createElement('meta'); m.name = 'viewport'; document.head.appendChild(m); } m.content = 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover'; })();
 canvas.addEventListener('wheel', e => { e.preventDefault(); if (V.poss) return; const before = planeAt(e.clientX, e.clientY); camS.dist *= Math.exp(e.deltaY * 0.0012); applyCam(); if (before) panTo(before, e.clientX, e.clientY); }, { passive:false });
 const keys = new Set();
