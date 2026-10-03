@@ -195,11 +195,11 @@ body.zoomed #game,body.zoomed #game *{touch-action:pinch-zoom!important}
 .lvl button[aria-pressed="true"]{background:var(--gold);color:#2a1c04}
 .lvl.modes{grid-template-columns:1fr 1fr}.lvl.modes small{font-weight:500;opacity:.75}
 .lvl.modes button[data-mode="chaos"][aria-pressed="true"]{background:linear-gradient(90deg,#f6cc63,#ff8a5c,#c07aa8);color:#2a1c04}
-#perkPick{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 54px);transform:translateX(-50%);z-index:17;width:min(560px,94vw);border-radius:16px;padding:10px 12px 12px;background:rgba(13,21,38,.92);border:1px solid rgba(240,191,76,.5);box-shadow:0 10px 30px rgba(0,0,0,.45);animation:tutIn .35s cubic-bezier(.2,1.4,.4,1)}
+#perkPick{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 54px);transform:translateX(-50%);z-index:17;width:min(420px,92vw);border-radius:16px;padding:10px 12px 12px;background:rgba(13,21,38,.92);border:1px solid rgba(240,191,76,.5);box-shadow:0 10px 30px rgba(0,0,0,.45);animation:tutIn .35s cubic-bezier(.2,1.4,.4,1)}
 #perkPick .ph{display:flex;justify-content:space-between;align-items:center;font-family:var(--display);font-size:1.15rem;color:var(--gold);margin-bottom:6px}
 #perkPick .ph small{font-family:var(--body);font-size:.75rem;color:var(--dim)}
 #perkPick .bar{height:4px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:8px}#perkPick .bar i{display:block;height:100%;background:var(--gold);transition:width .3s linear}
-#perkPick .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#perkPick .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .pcard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 6px 8px;border-radius:12px;background:linear-gradient(180deg,#26365a,#18243f);border:2px solid rgba(255,255,255,.12);text-align:center;min-width:0}
 .pcard:active{transform:scale(.96)}.pcard .pi{font-size:1.9rem;line-height:1}.pcard b{font-size:.84rem;line-height:1.1}
 .pcard .lv{display:flex;gap:3px}.pcard .lv i{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.18)}.pcard .lv i.on{background:var(--gold)}.pcard .lv i.new{background:#ff8a5c;box-shadow:0 0 6px #ff8a5c}
@@ -748,8 +748,8 @@ function pickPerk(T, id) { T.pk[id] = Math.min(3, (T.pk[id] || 0) + 1); T.offer 
 function makeOffer(G, T) {
   const avail = PERK_IDS.filter(id => (T.pk[id] || 0) < 3), owned = avail.filter(id => T.pk[id]);
   for (let i = avail.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [avail[i], avail[j]] = [avail[j], avail[i]]; }
-  let o = avail.slice(0, 3);
-  if (owned.length && !o.some(id => T.pk[id]) && Math.random() < 0.6) o[2] = owned[Math.floor(Math.random() * owned.length)];
+  let o = avail.slice(0, 2);
+  if (owned.length && !o.some(id => T.pk[id]) && Math.random() < 0.6) o[1] = owned[Math.floor(Math.random() * owned.length)];
   T.offer = o; T.offerDl = G.t + PERK_TIME;
 }
 function perkStep(G) {
