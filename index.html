@@ -1418,7 +1418,7 @@ const clouds = (() => {
   const c = cnv(128, 64), x = c.getContext('2d');
   for (const [cx, cy, r] of [[40, 38, 22], [64, 30, 28], [90, 38, 22], [64, 42, 22]]) { const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.6, 'rgba(255,255,255,0.7)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, TAU); x.fill(); }
   const mat = new THREE.SpriteMaterial({ map:new THREE.CanvasTexture(c), transparent:true, depthWrite:false, fog:false, opacity:0.85 });
-  const list = []; for (let i = 0; i < 14; i++) { const sp = new THREE.Sprite(mat); const s2 = 26 + Math.random() * 30; sp.scale.set(s2, s2 / 2, 1); sp.position.set((Math.random() - .5) * 260, 70 + Math.random() * 25, (Math.random() - .5) * 360); scene.add(sp); list.push(sp); }
+  const list = []; for (let i = 0; i < 14; i++) { const sp = new THREE.Sprite(mat); const s2 = 26 + Math.random() * 30; sp.scale.set(s2, s2 / 2, 1); sp.position.set((Math.random() - .5) * 320, 150 + Math.random() * 30, (Math.random() - .5) * 420); sp.scale.multiplyScalar(1.6); scene.add(sp); list.push(sp); }
   return list;
 })();
 const matCache = {};
@@ -1810,7 +1810,12 @@ function word(text, x, y, z, opt = {}) {
 function say(uv, list) { const t = now(); if (!list || !list.length || t - lastBubble < 1400) return; lastBubble = t; word(pick(list), uv.g.position.x, uv.g.position.y + 4, uv.g.position.z, { bubble:true, follow:uv }); }
 const projGeo = {
   arrow:(() => { const g = new THREE.Group(); mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.9, 5).rotateX(Math.PI / 2), lam(0x6b4423), 0, 0, 0, g); mesh(new THREE.ConeGeometry(0.06, 0.2, 6).rotateX(Math.PI / 2), lam(0xc9ced4), 0, 0, 0.5, g); mesh(new THREE.BoxGeometry(0.16, 0.02, 0.16), lam(0xf1ead6), 0, 0, -0.4, g); return g; })(),
-  teeth:(() => { const g = new THREE.Group(); mesh(new THREE.TorusGeometry(0.2, 0.09, 8, 12, Math.PI), lam(0xf08a9e), 0, 0.03, 0, g); const t = mesh(new THREE.TorusGeometry(0.18, 0.07, 8, 12, Math.PI), lam(0xffffff), 0, -0.04, 0, g); t.rotation.z = Math.PI; return g; })(),
+  teeth:(() => { const g = new THREE.Group(), gum = lam(0xe86f8a), tooth = new THREE.MeshLambertMaterial({ color:lin(0xfffbf0), emissive:lin(0x3a3a34) });
+    [1, -1].forEach(sy => { const jaw = new THREE.Group(); jaw.position.y = sy * 0.1; jaw.rotation.x = sy * 0.28; g.add(jaw);
+      const arc = mesh(new THREE.TorusGeometry(0.22, 0.05, 8, 18, Math.PI), gum, 0, 0, 0, jaw); arc.rotation.x = Math.PI / 2;
+      mesh(new THREE.BoxGeometry(0.36, 0.025, 0.15), gum, 0, sy * 0.035, 0.06, jaw);
+      for (let i = 0; i < 7; i++) { const a = (i + 0.5) / 7 * Math.PI, t = mesh(new THREE.BoxGeometry(0.085, 0.16, 0.07), tooth, Math.cos(a) * 0.225, -sy * 0.1, Math.sin(a) * 0.225, jaw); t.rotation.y = -a + Math.PI / 2; } });
+    g.scale.setScalar(1.35); return g; })(),
   boulder:(() => { const g = new THREE.Group(); mesh(flat(new THREE.DodecahedronGeometry(0.5, 0)), lam(0x8f918b), 0, 0, 0, g); return g; })(),
   cake:(() => { const g = new THREE.Group(); mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.35, 16), lam(0xf6d7a7), 0, 0, 0, g); mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.12, 16), lam(0xffffff), 0, 0.22, 0, g); mesh(new THREE.SphereGeometry(0.1, 8, 6), lam(0xd0213a), 0, 0.36, 0, g); return g; })(),
   slipper:(() => { const g = new THREE.Group(); mesh(new THREE.BoxGeometry(0.3, 0.12, 0.6), lam(0x9b6b8a), 0, 0, 0, g); mesh(new THREE.SphereGeometry(0.16, 8, 6), lam(0xffd6e6), 0, 0.1, 0.18, g); return g; })(),
@@ -3414,6 +3419,6 @@ function renderUnits(t, dt) {
 document.fonts && document.fonts.load('40px "Lilita One"').then(() => { spriteCache.clear(); if (V.mode === 'menu') buildBases(V.facs); }).catch(() => {});
 menuScene(); applyCam();
 requestAnimationFrame(frame);
-window.__wvr = { V, get G() { return G; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET };
+window.__wvr = { V, get G() { return G; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
 })();
 </script>
