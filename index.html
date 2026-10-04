@@ -4092,10 +4092,37 @@ async function openRoom(code, role) {
   if (!(await roomReady(r))) { try { r.leave(); } catch (_) {} throw new Error('not_connected'); }
   return r;
 }
+/* open every available transport at once (direct P2P + Claude room), so devices that ended up on different ones still meet */
+const NET_VER = 28;
+async function openClaude(code, role) {
+  const vr = await viewerRoom(); if (!vr) return null;
+  let r; try { r = await vr.join('wvr-' + code.toLowerCase(), role); }
+  catch (e) { if (!(vr.presence && vr.peers)) return null; r = { name:'lobby', presence:p => vr.presence(p), peers:() => vr.peers(), connected:() => vr.connected(), onConnection:(h, er) => vr.onConnection(h, er), leave:() => vr.presence({ role:null, code:null, snap:null, cmds:null, in:null, fc:null, fgot:null }) }; }
+  if (!(await roomReady(r))) { try { r.leave(); } catch (_) {} return null; }
+  return r;
+}
+async function loadPeer() { for (const src of ['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js', 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js']) { if (window.Peer) break; try { await loadScript(src); } catch (_) {} } return !!window.Peer; }
+async function openMulti(code, role) {
+  const subs = [], W = { multi:true, subs, lock:null, closed:false, err:null };
+  W.presence = p => { W.last = Object.assign(W.last || {}, p); for (const k in W.last) if (W.last[k] === null) delete W.last[k]; (W.lock ? [W.lock] : subs).forEach(sb => { try { const q = sb.r.presence(p); if (q && q.catch) q.catch(() => {}); } catch (_) {} }); return Promise.resolve(); };
+  W.peers = () => { const out = []; let me = false; for (const sb of (W.lock ? [W.lock] : subs)) { let ps = []; try { ps = sb.r.peers() || []; } catch (_) {} for (const pr of ps) { if (pr.isMe) { if (!me) { out.push(Object.assign({}, pr, { _sub:sb })); me = true; } continue; } out.push(Object.assign({}, pr, { _sub:sb })); } } return out; };
+  W.meOn = sb => { try { const m = (sb.r.peers() || []).find(pr => pr.isMe); return m ? m.peer : null; } catch (_) { return null; } };
+  W.lockTo = pr => { if (!pr || !pr._sub || W.lock === pr._sub) return; W.lock = pr._sub; NET.p2p = !!pr._sub.p2p; NET.via = pr._sub.kind; subs.filter(sb => sb !== W.lock).forEach(sb => { try { sb.r.leave(); } catch (_) {} }); subs.splice(0, subs.length, W.lock); };
+  W.leave = () => { W.closed = true; subs.forEach(sb => { try { sb.r.leave(); } catch (_) {} }); return Promise.resolve(); };
+  const add = (r, kind) => { if (W.closed || W.lock) { try { r.leave(); } catch (_) {} return; } const sb = { r, kind, p2p:kind === 'p2p' }; subs.push(sb); if (W.last) { try { const q = r.presence(W.last); if (q && q.catch) q.catch(() => {}); } catch (_) {} } };
+  const tryP2P = async () => { if (!(await loadPeer())) return; try { const r = await peerTransport().join('wvr-' + code.toLowerCase(), role); add(r, 'p2p'); } catch (e) { W.err = e; if (role === 'guest' && e && (e.code === 'not_found' || e.code === 'timeout') && !W.closed && !W.lock && (W.tries = (W.tries || 0) + 1) < 25) setTimeout(() => { if (!W.closed && !W.lock) tryP2P(); }, 3000); } };
+  const tryClaude = async () => { try { const r = await openClaude(code, role); if (r) add(r, 'claude'); } catch (_) {} };
+  const p1 = tryP2P(), p2 = tryClaude();
+  // ready as soon as one transport is up (guests keep retrying the others in the background)
+  await new Promise(res => { let n = 0; const done = () => { if (++n >= 2) res(); }; const t = setInterval(() => { if (subs.length) { clearInterval(t); res(); } }, 100); p1.finally(done); p2.finally(done); setTimeout(res, role === 'guest' ? 30000 : 26000); });
+  if (!subs.length && role === 'guest' && W.err && W.err.code === 'not_found') { /* keep searching in background */ return W; }
+  if (!subs.length) { if ('BroadcastChannel' in window && !(window.Peer) && !(await viewerRoom())) { const lr = await localRoom().join('wvr-' + code.toLowerCase()); NET.local = true; add(lr, 'local'); return W; } throw (W.err || new Error('none')); }
+  NET.p2p = subs.every(sb => sb.p2p); return W;
+}
 function leaveNet() {
   if (NET.poll) clearInterval(NET.poll); NET.poll = null;
   if (NET.r) { try { NET.r.leave(); } catch (_) {} }
-  Object.assign(NET, { r:null, role:null, code:null, guestPeer:null, pending:[], seq:0, lastSeq:0, gone:false, chunks:{}, gotId:null, fcIdx:0, fcDone:null, guestPres:null });
+  Object.assign(NET, { verWarn:false, via:null, r:null, role:null, code:null, guestPeer:null, pending:[], seq:0, lastSeq:0, gone:false, chunks:{}, gotId:null, fcIdx:0, fcDone:null, guestPres:null });
 }
 // face exchange via presence chunks
 const FC_SIZE = 700;
@@ -4120,17 +4147,17 @@ const genCode = () => Array.from({ length:4 }, () => CODE_CHARS[Math.floor(Math.
 async function hostOnline() {
   leaveNet(); FACE.other = null;
   const code = genCode(); showLobby(true, code, 'Verbinde', true);
-  let r; try { r = await openRoom(code, 'host'); } catch (e) { setLobbyStatus(netErrMsg(e), false); $('#lobbyCodeWrap').hidden = true; return; }
+  let r; try { r = await openMulti(code, 'host'); } catch (e) { setLobbyStatus(netErrMsg(e), false); $('#lobbyCodeWrap').hidden = true; return; }
   NET.r = r; NET.code = code; NET.role = 'host';
   const facs = [myFac, FAC[myFac].other], seed = newSeed();
   G = newGame(facs, seed, gameMode === 'chaos');
-  await r.presence({ role:'host', code, fa:facs, sd:seed, st:'wait', gp:null }).catch(() => {});
+  await r.presence({ role:'host', code, v:NET_VER, fa:facs, sd:seed, st:'wait', gp:null }).catch(() => {});
   setLobbyStatus('Warte auf deinen Gegner', true);
   if (NET.local) $('#lobbyNote').textContent = 'Testmodus: Verbindung nur zwischen zwei Tabs in diesem Browser.';
   NET.poll = setInterval(() => {
     if (V.mode === 'host') return;
     const guest = (r.peers() || []).find(p => !p.isMe && p.presence && p.presence.role === 'guest' && p.presence.code === code);
-    if (guest) { NET.guestPeer = guest.peer; NET.lastSeq = 0; beginMatch('host', facs, 0, seed); pushSnap(snapOf(G)); startSim(false); hostBroadcast(); }
+    if (guest) { if (r.lockTo) r.lockTo(guest); NET.guestPeer = guest.peer; NET.lastSeq = 0; beginMatch('host', facs, 0, seed); pushSnap(snapOf(G)); startSim(false); hostBroadcast(); }
   }, 150);
 }
 function hostReadGuest() {
@@ -4147,7 +4174,7 @@ function hostReadGuest() {
 }
 function hostBroadcast() {
   if (!NET.r || !G) return;
-  const patch = { role:'host', code:NET.code, fa:G.teams.map(t => t.fac), sd:G.seed, st:'play', gp:NET.guestPeer, ack:NET.lastSeq, snap:snapOf(G) };
+  const patch = { role:'host', code:NET.code, v:NET_VER, fa:G.teams.map(t => t.fac), sd:G.seed, st:'play', gp:NET.guestPeer, ack:NET.lastSeq, snap:snapOf(G) };
   const fp = faceChunkPatch(NET.guestPres); patch.fc = fp && fp.fc ? fp.fc : null;
   const got = faceChunkRecv(NET.guestPres); if (got) Object.assign(patch, got);
   if (patch.fc && JSON.stringify(patch).length > 3500) patch.fc = null;
@@ -4159,15 +4186,16 @@ async function joinOnline(code) {
   code = (code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (code.length !== 4) { $('#codeIn').focus(); toastMenu('Bitte gib den 4-stelligen Code ein.'); return; }
   showLobby(false, code, 'Suche Spiel', true);
-  let r; try { r = await openRoom(code, 'guest'); } catch (e) { setLobbyStatus(netErrMsg(e), false); return; }
+  let r; try { r = await openMulti(code, 'guest'); } catch (e) { setLobbyStatus(netErrMsg(e), false); return; }
   NET.r = r; NET.code = code; NET.role = 'guest'; NET.joinT = now();
   await r.presence({ role:'guest', code, cmds:[] }).catch(() => {});
   let lastT = -1;
   NET.poll = setInterval(() => {
     const peers = r.peers() || [];
-    const me = peers.find(p => p.isMe && p.sameTab); if (me) NET.myPeer = me.peer;
     const host = peers.find(p => !p.isMe && p.presence && p.presence.role === 'host' && p.presence.code === code);
-    if (!host) { if (V.mode === 'guest' && V.playing) netWarn('Verbindung zum Gegner verloren …'); else if (now() - NET.joinT > 9000) setLobbyStatus('Kein Spiel mit diesem Code gefunden. Stimmt der Code, und habt ihr beide denselben Spiel-Link geöffnet?', false); return; }
+    if (host && r.lockTo) { r.lockTo(host); const mp = r.meOn(host._sub); if (mp) NET.myPeer = mp; } else { const me = peers.find(p => p.isMe && p.sameTab); if (me) NET.myPeer = me.peer; }
+    if (!host) { if (V.mode === 'guest' && V.playing) netWarn('Verbindung zum Gegner verloren …'); else if (now() - NET.joinT > 35000) setLobbyStatus('Kein Spiel mit diesem Code gefunden. Stimmt der Code? Tipp: Beide Geräte neu laden (damit beide die neueste Version haben) und neu erstellen.', true); return; }
+    if (host.presence.v !== NET_VER && !NET.verWarn && V.mode !== 'guest') { NET.verWarn = true; toast('Hinweis: Dein Gegner hat eine andere Spielversion. Bitte beide Geräte neu laden.', 4000); }
     const P = host.presence;
     if (P.gp && NET.myPeer && P.gp !== NET.myPeer && V.mode !== 'guest') { setLobbyStatus('Dieses Spiel ist schon voll.', false); return; }
     if (V.mode !== 'guest' && P.st === 'play' && P.gp === NET.myPeer && Array.isArray(P.fa) && Number.isFinite(P.sd)) beginMatch('guest', P.fa, 1, P.sd);
@@ -4870,6 +4898,6 @@ function renderUnits(t, dt) {
 document.fonts && document.fonts.load('40px "Lilita One"').then(() => { spriteCache.clear(); if (V.mode === 'menu') buildBases(V.facs); }).catch(() => {});
 menuScene(); applyCam();
 requestAnimationFrame(frame);
-window.__wvr = { PADV:()=>PADV, clawLife:v=>{ CLAW_LIFE = v; }, clawStreak:(...a)=>clawStreak(...a), holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, breakIce:(G,u)=>breakIce(G,u), onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
+window.__wvr = { get NETS() { return NET; }, PADV:()=>PADV, clawLife:v=>{ CLAW_LIFE = v; }, clawStreak:(...a)=>clawStreak(...a), holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, breakIce:(G,u)=>breakIce(G,u), onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
 })();
 </script>
