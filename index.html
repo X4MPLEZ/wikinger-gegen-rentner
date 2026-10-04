@@ -173,6 +173,8 @@ details.help ul{margin:8px 0 2px;padding-left:1.1em;line-height:1.5;font-size:.8
 #countdown{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-size:clamp(5rem,26vw,8rem);color:var(--gold);text-shadow:0 5px 0 rgba(0,0,0,.4)}
 body.zoomed #game,body.zoomed #game *{touch-action:pinch-zoom!important}
 #zoomwarn{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:10px;border-radius:12px;padding:8px 10px 8px 14px;font-size:.82rem;max-width:min(92vw,460px)}
+#netBadge{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 6px);transform:translateX(-50%);z-index:9;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:8px;background:rgba(13,21,38,.7);color:#cfe3ff;pointer-events:none;letter-spacing:.02em}
+#netBadge.slow{color:#ffd34d}
 #netwarn{position:absolute;inset:0;display:grid;place-items:center;z-index:16;background:rgba(13,21,38,.7)}
 #netwarn .card{max-width:340px;text-align:center}
 
@@ -549,6 +551,7 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
   <div id="foePerk" hidden></div>
   <div id="perkPick" hidden><div class="ph"><span>Pause · Wähle einen Perk</span><small id="perkInfo"></small></div><div class="bar"><i id="perkTimer"></i></div><div class="cards" id="perkCards"></div></div>
   <div id="zoomwarn" class="panel" hidden><span>Die Seite ist vergrößert. Mit zwei Fingern zusammenziehen oder neu laden.</span><button class="btn small gold" id="zoomReload">Neu laden</button></div>
+  <div id="netBadge" hidden></div>
   <div id="netwarn" hidden><div class="card"><p class="status" id="netwarnTxt"></p><button class="btn" id="btnNetQuit">Zum Menü</button></div></div>
 </div>
 
@@ -4015,9 +4018,9 @@ const ROOM_HELP = 'Keine Online-Verbindung. Das klappt nur, wenn ihr beide in Cl
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
 function peerTransport() {
   // STUN + public TURN relays: phones on mobile data sit behind carrier NAT and need a relay to reach a laptop
-  const ICE = [{ urls:['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
+  const ICE = [{ urls:['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302', 'stun:stun.cloudflare.com:3478', 'stun:stun.nextcloud.com:443', 'stun:global.stun.twilio.com:3478'] },
     { urls:['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp', 'turns:openrelay.metered.ca:443'], username:'openrelayproject', credential:'openrelayproject' }];
-  const opts = Object.assign({ debug:0, config:{ iceServers:ICE, sdpSemantics:'unified-plan' } }, window.WVR_PEER || {});
+  const opts = Object.assign({ debug:0, config:{ iceServers:ICE, sdpSemantics:'unified-plan', iceCandidatePoolSize:4 } }, window.WVR_PEER || {});
   return { p2p:true, async join(name, role) {
     const hostId = name + '-wvr7';
     const peer = role === 'host' ? new Peer(hostId, opts) : new Peer(opts);
@@ -4093,7 +4096,7 @@ async function openRoom(code, role) {
   return r;
 }
 /* open every available transport at once (direct P2P + Claude room), so devices that ended up on different ones still meet */
-const NET_VER = 29;
+const NET_VER = 30;
 async function openClaude(code, role) {
   const vr = await viewerRoom(); if (!vr) return null;
   let r; try { r = await vr.join('wvr-' + code.toLowerCase(), role); }
@@ -4136,7 +4139,7 @@ async function openMulti(code, role) {
   W.peers = () => { const out = []; let me = false; for (const sb of (W.lock ? [W.lock] : subs)) { let ps = []; try { ps = sb.r.peers() || []; } catch (_) {} for (const pr of ps) { if (pr.isMe) { if (!me) { out.push(Object.assign({}, pr, { _sub:sb })); me = true; } continue; } out.push(Object.assign({}, pr, { _sub:sb })); } } return out; };
   W.meOn = sb => { try { const m = (sb.r.peers() || []).find(pr => pr.isMe); return m ? m.peer : null; } catch (_) { return null; } };
   W.rank = pr => pr && pr._sub ? ({ p2p:0, relay:1, claude:2, local:0 }[pr._sub.kind] ?? 3) : 9;
-  W.pick = (list, key) => { if (!list.length) return null; list.sort((a, b) => W.rank(a) - W.rank(b)); const best = list[0]; if (W.rank(best) === 0 || W.lock) return best; W.seen = W.seen || {}; const t0 = W.seen[key] || (W.seen[key] = now()); return now() - t0 > 5000 ? best : null; };
+  W.pick = (list, key) => { if (!list.length) return null; list.sort((a, b) => W.rank(a) - W.rank(b)); const best = list[0]; if (W.rank(best) === 0 || W.lock) return best; W.seen = W.seen || {}; const t0 = W.seen[key] || (W.seen[key] = now()); return now() - t0 > 9000 ? best : null; };
   W.lockTo = pr => { if (!pr || !pr._sub || W.lock === pr._sub) return; W.lock = pr._sub; NET.p2p = !!pr._sub.p2p; NET.via = pr._sub.kind; subs.filter(sb => sb !== W.lock).forEach(sb => { try { sb.r.leave(); } catch (_) {} }); subs.splice(0, subs.length, W.lock); };
   W.leave = () => { W.closed = true; subs.forEach(sb => { try { sb.r.leave(); } catch (_) {} }); return Promise.resolve(); };
   const add = (r, kind) => { if (W.closed || W.lock) { try { r.leave(); } catch (_) {} return; } const sb = { r, kind, p2p:kind !== 'claude' }; subs.push(sb); if (W.last) { try { const q = r.presence(W.last); if (q && q.catch) q.catch(() => {}); } catch (_) {} } };
@@ -4202,11 +4205,11 @@ function hostReadGuest() {
   if (!g) return;
   for (const c of (Array.isArray(g.presence.cmds) ? g.presence.cmds : [])) if (c && c.s > NET.lastSeq) { NET.lastSeq = c.s; applyCmd(G, 1, c); }
   const In = g.presence.in; G.teams[1].posIn = In && typeof In === 'object' && In.id === G.teams[1].pos ? In : null;
-  NET.guestPres = g.presence;
+  NET.guestPres = g.presence; if (g.presence.hpk && g.presence.hpk !== NET.lastHpk) { NET.lastHpk = g.presence.hpk; NET.rtt = Math.max(0, now() - g.presence.hpk); }
 }
 function hostBroadcast() {
   if (!NET.r || !G) return;
-  const patch = { role:'host', code:NET.code, v:NET_VER, fa:G.teams.map(t => t.fac), sd:G.seed, st:'play', gp:NET.guestPeer, ack:NET.lastSeq, snap:snapOf(G) };
+  const patch = { hp:Math.round(now()), pk:NET.guestPres ? NET.guestPres.gp2 : 0, role:'host', code:NET.code, v:NET_VER, fa:G.teams.map(t => t.fac), sd:G.seed, st:'play', gp:NET.guestPeer, ack:NET.lastSeq, snap:snapOf(G) };
   const fp = faceChunkPatch(NET.guestPres); patch.fc = fp && fp.fc ? fp.fc : null;
   const got = faceChunkRecv(NET.guestPres); if (got) Object.assign(patch, got);
   if (patch.fc && JSON.stringify(patch).length > 3500) patch.fc = null;
@@ -4236,6 +4239,8 @@ async function joinOnline(code) {
     if (fp !== undefined || got) r.presence(Object.assign({ fc:fp && fp.fc ? fp.fc : null }, got || {})).catch(() => {});
     if (V.mode === 'guest') {
       $('#netwarn').hidden = true;
+      if (P.pk && P.pk !== NET.lastPk) { NET.lastPk = P.pk; NET.rtt = Math.max(0, now() - P.pk); }
+      if (P.hp && now() - (NET.pingT || 0) > 1000) { NET.pingT = now(); r.presence({ gp2:Math.round(now()), hpk:P.hp }).catch(() => {}); }
       if (P.snap && (P.snap.t !== lastT || P.snap.cd !== (V.latest && V.latest.cd) || P.snap.pz !== (V.latest && V.latest.pz) || String(P.snap.pn) !== String(V.latest && V.latest.pn) || String(P.snap.of) !== String(V.latest && V.latest.of))) { if (P.snap.t !== lastT) { const tn = now(); if (NET.lastArr) { (NET.gaps || (NET.gaps = [])).push((tn - NET.lastArr) / 1000); if (NET.gaps.length > 30) NET.gaps.shift(); const g2 = NET.gaps.slice().sort((a, b) => a - b); V.delay = clamp(g2[Math.floor(g2.length * 0.9)] + 0.08, 0.18, 0.5); } NET.lastArr = tn; } lastT = P.snap.t; pushSnap(P.snap); }
       if (typeof P.ack === 'number' && NET.pending.length && NET.pending[0].s <= P.ack) { NET.pending = NET.pending.filter(c => c.s > P.ack); r.presence({ cmds:NET.pending }).catch(() => {}); }
     }
@@ -4260,6 +4265,8 @@ function showLobby(isHost, code, status, busy) {
   setLobbyStatus(status, busy); showScreen('lobby');
 }
 function setLobbyStatus(t, busy) { const s = $('#lobbyStatus'); s.textContent = t; s.classList.toggle('dots', !!busy); }
+function netBadgeTick() { const b = $('#netBadge'); if (!b) return; const on = V.playing && (V.mode === 'host' || V.mode === 'guest'); b.hidden = !on; if (!on) return; const via = NET.via === 'relay' ? 'Server' : NET.via === 'claude' ? 'Claude' : 'Direkt', ms = NET.rtt ? Math.round(NET.rtt) : null; b.textContent = via + (ms !== null ? ' · ' + ms + ' ms' : ''); b.classList.toggle('slow', ms !== null && ms > 150); }
+setInterval(netBadgeTick, 500);
 function netWarn(t) { $('#netwarnTxt').textContent = t; $('#netwarn').hidden = false; }
 function toastMenu(t) { const s = $('.sub'); const o = 'Erobere die Fahnen. Reiß die Basis ein.'; s.textContent = t; setTimeout(() => s.textContent = o, 2200); }
 $$('.sic').forEach(e => { e.innerHTML = si(e.dataset.si); });
