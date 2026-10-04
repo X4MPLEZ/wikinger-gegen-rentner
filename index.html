@@ -927,15 +927,16 @@ function deckY(b, z) { const t = clamp((z - b.z0) / (b.z1 - b.z0), 0, 1); return
 function groundY(x, z) { const h = sampleH(MAP, x, z); if (MAP.lift) { const b = bridgeAt(MAP, x, z); return b ? deckY(b, z) : h; } return onBridge(MAP, x, z) ? Math.max(h, 0.6) : h; }
 const onIce = (x, z) => { if (!MAP.ice) return false; const c = cellOf(x, z); return c >= 0 && MAP.ice[c] === 1; };
 const fallZone = (x, z) => !!MAP.cliff && !onBridge(MAP, x, z) && (MAP.lift ? sampleH(MAP, x, z) < MAP.lift - 1.2 : riverDist(MAP, x, z) < MAP.RW + 1 && sampleH(MAP, x, z) < -1.4);
-const edgeSlide = (x, z) => !!MAP.cliff && Math.abs(x) < HALF_W - 1 && Math.abs(z) < HALF_H - 1 && !onBridge(MAP, x, z) && (MAP.lift ? sampleH(MAP, x, z) < MAP.lift + 2.5 : riverDist(MAP, x, z) < MAP.RW + 4.5) && !(MAP.blockers || []).some(b => (x - b.x) ** 2 + (z - b.z) ** 2 < b.r * b.r) && !MAP.bases.some(b => baseGap(b, x, z) < 0.9);
+const edgeSlide = (x, z) => Math.abs(x) < HALF_W - 1 && Math.abs(z) < HALF_H - 1 && !onBridge(MAP, x, z) && (MAP.cliff || sampleH(MAP, x, z) > WL + 0.3) && !(MAP.blockers || []).some(b => (x - b.x) ** 2 + (z - b.z) ** 2 < b.r * b.r) && !MAP.bases.some(b => baseGap(b, x, z) < 0.9);
+function startFall(u, vx, vz) { if (u.fall > 0) return; u.fall = 1.25; u.fvx = vx || 0; u.fvz = vz || 0; u.kb = null; u.down = 0; }
 function kbStep(u, kb) {
   const st = Math.min(kb.left, kb.sp * DT); kb.left -= st; const nx = u.x + kb.vx * st, nz = u.z + kb.vz * st;
-  if (fallZone(nx, nz)) { u.x = nx; u.z = nz; kb.left = 0; u.fall = 1.25; return; }
+  if (fallZone(nx, nz)) { u.x = nx; u.z = nz; kb.left = 0; startFall(u, kb.vx * Math.min(9, kb.sp * 0.6), kb.vz * Math.min(9, kb.sp * 0.6)); return; }
   if (walkable(nx, nz)) { u.x = nx; u.z = nz; }
-  else if (edgeSlide(nx, nz)) { u.x = nx; u.z = nz; kb.left = Math.max(kb.left, 0.6); kb.slid = (kb.slid || 0) + st; if (kb.slid > 5) kb.left = 0; }
+  else if (edgeSlide(nx, nz)) { const down = sampleH(MAP, nx, nz) < sampleH(MAP, u.x, u.z) - 0.05; u.x = nx; u.z = nz; if (down) kb.left = Math.max(kb.left, 0.6); kb.slid = (kb.slid || 0) + st; if (kb.slid > 7) kb.left = 0; }
   else kb.left = 0;
   if (kb.left <= 0 && kb.hard && MAP.ice && SIMG && onIce(u.x, u.z) && !holeAt(u.x, u.z)) breakIce(SIMG, u);
-  if (kb.left <= 0 && MAP.cliff && !walkable(u.x, u.z)) { for (let s = 0.5; s <= 3; s += 0.5) if (fallZone(u.x + kb.vx * s, u.z + kb.vz * s)) { u.x += kb.vx * s; u.z += kb.vz * s; u.fall = 1.25; return; } const p = nearestWalkable(MAP, u.x, u.z); u.x = p.x; u.z = p.z; }
+  if (kb.left <= 0 && !walkable(u.x, u.z)) { for (let s = 0.5; s <= 3; s += 0.5) if (fallZone(u.x + kb.vx * s, u.z + kb.vz * s)) { u.x += kb.vx * s; u.z += kb.vz * s; startFall(u, kb.vx * 5, kb.vz * 5); return; } const p = nearestWalkable(MAP, u.x, u.z); u.x = p.x; u.z = p.z; }
 }
 function cellOf(x, z) { const i = Math.floor((x + HALF_W) / CELL), j = Math.floor((z + HALF_H) / CELL); if (i < 0 || j < 0 || i >= GW || j >= GH) return -1; return j * GW + i; }
 function cellCenter(c) { return { x:-HALF_W + ((c % GW) + .5) * CELL, z:-HALF_H + (((c / GW) | 0) + .5) * CELL }; }
@@ -1031,7 +1032,7 @@ function applyCmd(G, team, c) {
   const T = G.teams[team];
   if (c.t === 'spawn') {
     const k = c.k | 0, K = KINDS[k];
-    if (K && K.role === 'siege' && G.units.filter(u => u.team === team && KINDS[u.k].role === 'siege').length + T.q.filter(q => KINDS[q].role === 'siege').length >= 3) return;
+    if (K && K.role === 'siege' && G.units.filter(u => u.team === team && KINDS[u.k].role === 'siege').length + T.q.filter(q => KINDS[q].role === 'siege').length >= 5) return;
     if (!K || K.fac !== T.fac || !FAC[T.fac].kinds.includes(k) || T.q.length >= CFG.queueMax || T.gold < K.cost || popOf(G, team) >= CFG.pop) return;
     T.gold -= K.cost; T.q.push(k);
   } else if (c.t === 'auto') {
@@ -1203,7 +1204,7 @@ function possSpecial(G, u, byId) {
     const In = G.teams[u.team].posIn; let tx = u.x + Math.sin(u.yaw) * 12, tz = u.z + Math.cos(u.yaw) * 12;
     if (In && Array.isArray(In.gp) && In.gp.every(Number.isFinite)) { tx = In.gp[0]; tz = In.gp[1]; }
     for (let i = 0; i < 3; i++) { const a = i / 3 * TAU, ox = tx + Math.cos(a) * 3, oz = tz + Math.sin(a) * 3; G.proj.push({ t:0.9 + i * 0.25, dmg:K.dmg * 0.95, tgt:-1, team:u.team, k:u.k, aoe:K.aoe * 0.8, tx:ox, tz:oz, bp:true }); }
-    u.spcd = 14;
+    u.spcd = 14 * pk(G, u.team, 'charge', [1, 0.34]);
     u.shot = [Math.round(tx * 10), Math.round(tz * 10)]; return;
   }
   if (K.bear) { u.clawT = 1.25; u.clawP = 0; u.spcd = 6; return; }
@@ -1217,7 +1218,7 @@ function possSpecial(G, u, byId) {
   else if (u.k === 2) { enemiesInCone(G, u, 3.4, Math.PI).forEach(c => { hit(G, c.e.id, 40, u.team, byId, u.k, true); knockFly(c.e, u.x, u.z, 3.2); }); if (baseGap(BASES[1 - u.team], u.x, u.z) < 3.4) hit(G, -2, 60, u.team, byId, -1); for (const b of G.bears.slice()) if (Math.hypot(b.x - u.x, b.z - u.z) < 3.6) hitBear(G, b, 60, u.team, -1, true); u.spinT = pk(G, u.team, 'spin', [0, 2.4]); u.spinP = 0.4; }
   else if (u.k === 3) { enemiesInCone(G, u, K.range + 1, Math.PI).sort((a, b) => a.d - b.d).slice(0, 3).forEach(c => G.proj.push({ t:c.d / K.pspeed, dmg:30, tgt:c.e.id, team:u.team, k:u.k, bp:true })); if (!pkL(G, u.team, 'volley') && baseGap(BASES[1 - u.team], u.x, u.z) < K.range + 1) G.proj.push({ t:0.6, dmg:70, tgt:-2, team:u.team, k:u.k }); }
   else {
-    const In = G.teams[u.team].posIn, U0 = u; u = { x:u.x, z:u.z, yaw:u.yaw, k:u.k, team:u.team }; if (In && Array.isArray(In.dp) && In.dp.length === 2 && In.dp.every(Number.isFinite) && Math.hypot(In.dp[0] - u.x, In.dp[1] - u.z) < 14) { u.x = In.dp[0]; u.z = In.dp[1]; }
+    const In = G.teams[u.team].posIn, U0 = u; if (!(In && Array.isArray(In.dp))) { U0.dashS = 0.42; U0.dfx = Math.sin(U0.yaw); U0.dfz = Math.cos(U0.yaw); } u = { x:u.x, z:u.z, yaw:u.yaw, k:u.k, team:u.team }; if (In && Array.isArray(In.dp) && In.dp.length === 2 && In.dp.every(Number.isFinite) && Math.hypot(In.dp[0] - u.x, In.dp[1] - u.z) < 14) { u.x = In.dp[0]; u.z = In.dp[1]; }
     const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), ebs = BASES[1 - u.team], stp0 = u.k === 4 && pkL(G, u.team, 'stampede');
     for (let a2 = 0; a2 <= (stp0 ? 16 : 10.5); a2 += 1) if (baseGap(ebs, u.x + fx * a2, u.z + fz * a2) < (stp0 ? 4 : 2.2)) { hit(G, -2, 110 * pk(G, u.team, 'ram', [1, 2]), u.team, byId, -1); break; }
     for (const b of G.bears.slice()) { const dx = b.x - u.x, dz = b.z - u.z, al = dx * fx + dz * fz; if (al > -0.5 && al < (stp0 ? 16 : 10.5) && Math.abs(dx * fz - dz * fx) < 2.6) hitBear(G, b, 110, u.team, -1, true); }
@@ -1239,6 +1240,10 @@ function possStep(G, u, byId) {
   if (u.spinT > 0) { u.spinT -= DT; u.spinP -= DT; if (u.spinP <= 0) { u.spinP = 0.4; enemiesInCone(G, u, 5.5, Math.PI).forEach(c => { hit(G, c.e.id, 30, u.team, byId, u.k, true); if (!(c.e.down > 0.6)) knockFly(c.e, u.x, u.z, 5); }); } }
   if (u.dance > 0) { u.dance -= DT; if (In && In.id === u.id) { u.la = In.a; u.ls = In.s; u.lj = In.j; u.lg = In.g; } u.run = 0; u.ord = { x:u.x, z:u.z, mv:false }; u.tgt = -1; return; }
   if (u.jumpT > 0) { u.jumpT -= DT; if (u.jumpT <= 0) { for (const e of G.units) if (e.team !== u.team && e.hp > 0 && (e.x - u.x) ** 2 + (e.z - u.z) ** 2 < 3.6 * 3.6) { hit(G, e.id, 45, u.team, byId, -1, true); knockFly(e, u.x, u.z, 9); } u.stomp = (u.stomp || 0) + 1; } }
+  if (u.dashS > 0) { u.dashS -= DT; const st = 26 * DT, nx = u.x + u.dfx * st, nz = u.z + u.dfz * st;
+    if (fallZone(nx, nz)) { u.x = nx; u.z = nz; u.dashS = 0; startFall(u, u.dfx * 11, u.dfz * 11); }
+    else if (walkable(nx, nz) || edgeSlide(nx, nz)) { u.x = nx; u.z = nz; } else u.dashS = 0;
+    if (In && In.id === u.id) { u.la = In.a; u.ls = In.s; } u.run = 0; return; }
   if (u.down > 0) {
     u.down -= DT; const kb = u.kb;
     if (kb && kb.left > 0) kbStep(u, kb);
@@ -1252,7 +1257,7 @@ function possStep(G, u, byId) {
       const d = Math.hypot(In.x - u.x, In.z - u.z);
       if (d > 0.02) {
         const old = { x:u.x, z:u.z };
-        if (d < 6 && (walkable(In.x, In.z) || (MAP.lift && sampleH(MAP, In.x, In.z) > WL) || (MAP.cliff && (edgeSlide(In.x, In.z) || fallZone(In.x, In.z))))) { u.x = In.x; u.z = In.z; if (MAP.cliff && fallZone(u.x, u.z) && !(u.fall > 0)) u.fall = 1.25; }
+        if (d < 6 && (walkable(In.x, In.z) || (MAP.lift && sampleH(MAP, In.x, In.z) > WL) || edgeSlide(In.x, In.z) || fallZone(In.x, In.z))) { const px = u.x, pz = u.z; u.x = In.x; u.z = In.z; if (MAP.cliff && fallZone(u.x, u.z) && !(u.fall > 0)) startFall(u, (u.x - px) / DT * 0.8, (u.z - pz) / DT * 0.8); }
         else { const s = Math.min(d, K.speed * 3 * DT); const nx = u.x + (In.x - u.x) / d * s, nz = u.z + (In.z - u.z) / d * s; if (walkable(nx, nz)) { u.x = nx; u.z = nz; } }
         u.run = Math.hypot(u.x - old.x, u.z - old.z) > K.speed * 0.5 * DT ? u.run + DT : 0;
       } else u.run = 0;
@@ -1314,9 +1319,9 @@ function iceStep(G) {
     if (u.slipT > 0) u.slipT -= DT;
     if (K.role === 'siege') { u.cold = 0; continue; }
     const hole = holeAt(u.x, u.z), arm = u.poss ? CFG.possArmor : 1;
-    if (hole) { u.cold = 5; u.inHole = 1; u.hp -= 7 * DT * arm; u.hurt = 2.5; continue; }
+    if (hole) { u.cold = 5; u.inHole = 1; u.hp -= 11 * DT * arm; u.hurt = 2.5; continue; }
     u.inHole = 0;
-    if (u.cold > 0) { u.cold -= DT; u.hp -= 3 * DT * arm; }
+    if (u.cold > 0) { u.cold -= DT; u.hp -= 6 * DT * arm; u.hurt = Math.max(u.hurt || 0, 0.5); }
     if (!MAP.ice || !onIce(u.x, u.z) || u.down > 0 || u.dance > 0 || sp < 1.5) continue;
     if (Math.random() < DT * (K.bear ? 0.004 : K.role === 'cav' ? 0.02 : 0.03)) { const d = Math.hypot(mx, mz) || 1; u.slipT = 1.4; u.down = 1.4; u.kb = { vx:mx / d, vz:mz / d, left:Math.min(4, sp * 0.7), sp:Math.max(3, sp) }; u.tgt = -1; u.path = null; continue; }
     if (Math.random() < DT * 0.004) breakIce(G, u);
@@ -1325,9 +1330,9 @@ function iceStep(G) {
 function worldStep(G, byId) {
   if (MAP.frozen || (G.holes && G.holes.length)) iceStep(G);
   if (MAP.pads && MAP.pads.length) padStep(G);
-  if (G.gr) { for (const g of G.gr) { g.t -= DT; if (g.t <= 0) { let n = 0; for (const e of G.units) if (e.team !== g.team && e.hp > 0 && (e.x - g.x) ** 2 + (e.z - g.z) ** 2 < 25) { e.dance = 5; e.tgt = -1; n++; } G.geS = ((G.geS || 0) + 1) % 10000; (G.ge || (G.ge = [])).push([G.geS, g.team, n]); if (G.ge.length > 6) G.ge.shift(); } } G.gr = G.gr.filter(g => g.t > 0); }
+  if (G.gr) { for (const g of G.gr) { g.t -= DT; if (g.t <= 0) { let n = 0; for (const e of G.units) if (e.team !== g.team && e.hp > 0 && (e.x - g.x) ** 2 + (e.z - g.z) ** 2 < 25) { e.dance = 7.5; e.tgt = -1; n++; } G.geS = ((G.geS || 0) + 1) % 10000; (G.ge || (G.ge = [])).push([G.geS, g.team, n]); if (G.ge.length > 6) G.ge.shift(); } } G.gr = G.gr.filter(g => g.t > 0); }
   // falling into chasms
-  for (const u of G.units) if (u.fall > 0) { u.fall -= DT; if (u.fall <= 0) { u.fallen = 1; u.hp = -1; } }
+  for (const u of G.units) if (u.fall > 0) { u.fall -= DT; if (u.fvx || u.fvz) { u.x = clampX(u.x + u.fvx * DT); u.z = clampZ(u.z + u.fvz * DT); u.fvx *= 0.97; u.fvz *= 0.97; } if (u.fall <= 0) { u.fallen = 1; u.hp = -1; } }
   // cacti prick
   if (MAP.cacti && MAP.cacti.length) { G.ct = []; for (const u of G.units) { if (u.hp <= 0) continue; const r0 = KINDS[u.k].r; for (const c of MAP.cacti) { const d = Math.hypot(u.x - c.x, u.z - c.z); if (d < 0.62 * c.s + r0 + 0.25) { u.hp -= 16 * DT * (u.poss ? CFG.possArmor : 1); u.hurt = 2.5; G.ct.push(u.id); break; } } } }
   // polar bears: roam the land, maul whoever comes close; beaten bears join the winner
@@ -1368,7 +1373,7 @@ function step(G) {
     const T = G.teams[i];
     T.gold += incomeOf(G, i) * DT;
     const en = FAC[T.fac].kinds.filter(k => T.auto[k]);
-    if (en.length && T.q.length < 3) { const k = en[T.autoI % en.length], n0 = T.q.length; applyCmd(G, i, { t:'spawn', k }); if (T.q.length > n0 || (KINDS[k].role === 'siege' && sigeOf(G, i) >= 3)) T.autoI = (T.autoI + 1) % 1000; }
+    if (en.length && T.q.length < 3) { const k = en[T.autoI % en.length], n0 = T.q.length; applyCmd(G, i, { t:'spawn', k }); if (T.q.length > n0 || (KINDS[k].role === 'siege' && sigeOf(G, i) >= 5)) T.autoI = (T.autoI + 1) % 1000; }
     if (T.q.length) { T.qt += DT; if (T.qt >= buildTime(G, i, T.q[0])) { const k = T.q.shift(); spawnUnit(G, i, k); if (pkL(G, i, 'twins') && KINDS[k].role !== 'siege') { T.twN = (T.twN || 0) + 1; if (T.twN % 3 === 0) spawnUnit(G, i, k); } T.qt = 0; } } else T.qt = 0;
   }
   for (const u of G.units) {
@@ -1420,7 +1425,7 @@ function step(G) {
       } else steer(G, u, tx, tz, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1));
     } else if (Math.hypot(o.x - u.x, o.z - u.z) > 0.3) steer(G, u, o.x, o.z, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1));
     const ox = u.x, oz = u.z;
-    { const sw = (inWater(u.x, u.z) ? 0.33 : 1) * (u.cold > 0 ? 0.7 : 1); if (MAP.ice && onIce(u.x, u.z)) { u.ivx = lerp(u.ivx ?? u.vx, u.vx, 0.02); u.ivz = lerp(u.ivz ?? u.vz, u.vz, 0.02); u.vx = u.ivx * 1.25; u.vz = u.ivz * 1.25; } else { u.ivx = u.vx; u.ivz = u.vz; } u.x += u.vx * DT * sw; u.z += u.vz * DT * sw; }
+    { const sw = (inWater(u.x, u.z) ? 0.33 : 1) * (u.cold > 0 ? 0.88 : 1); if (MAP.ice && onIce(u.x, u.z)) { u.ivx = lerp(u.ivx ?? u.vx, u.vx, 0.02); u.ivz = lerp(u.ivz ?? u.vz, u.vz, 0.02); u.vx = u.ivx * 1.25; u.vz = u.ivz * 1.25; } else { u.ivx = u.vx; u.ivz = u.vz; } u.x += u.vx * DT * sw; u.z += u.vz * DT * sw; }
     if (!walkable(u.x, u.z)) {
       if (walkable(u.x, oz)) u.z = oz; else if (walkable(ox, u.z)) u.x = ox;
       else {
@@ -1724,7 +1729,7 @@ function aiPossess(G, team, A, L, mine, foes) {
     if (!vsR && (Math.random() < (L.rangedEgo || 0.22) || !cand.length)) cand = byR('ranged').length ? byR('ranged') : cand;
     A.vsR = vsR; A.itemRun = false;
     if (L.items && !vsR && (G.items || []).length) { const own = G.items.filter(i => (i.z - BASES[1 - team].z) ** 2 > (i.z - BASES[team].z) ** 2); if (own.length) { const it = own[0], run = ok.filter(u => KINDS[u.k].role !== 'siege' && !foes.some(e => Math.hypot(e.x - u.x, e.z - u.z) < 12)).sort((a, b) => (KINDS[b.k].speed - KINDS[a.k].speed) * 4 + Math.hypot(a.x - it.x, a.z - it.z) - Math.hypot(b.x - it.x, b.z - it.z))[0]; if (run) { cand = [run]; A.itemRun = true; } } }
-    if (MAP.cliff && L.cliff && !vsR && foes.some(e => edgeNear(e.x, e.z))) { const pushers = ok.filter(u => KINDS[u.k].role === 'cav' || u.k === 2); if (pushers.length && Math.random() < 0.75) cand = pushers; }
+    if (MAP.cliff && (L.cliff || A.cliffRoll) && !vsR && foes.some(e => edgeNear(e.x, e.z))) { const pushers = ok.filter(u => KINDS[u.k].role === 'cav' || u.k === 2); if (pushers.length && Math.random() < 0.75) cand = pushers; }
     let best = null, bs = 1e9;
     if (PS.react > 0.5) best = cand[Math.floor(Math.random() * cand.length)] || null, bs = 0;
     else for (const u of cand) { const e = nearestOf(foes, u.x, u.z); const d = e ? Math.hypot(e.x - u.x, e.z - u.z) : 99; if (d < bs) { bs = d; best = u; } }
@@ -1732,29 +1737,30 @@ function aiPossess(G, team, A, L, mine, foes) {
     return;
   }
   const u = G.units.find(v => v.id === T.pos); if (!u) { A.posCd = 25; return; }
+  A.crT = (A.crT || 0) - DT; if (A.crT <= 0) { A.crT = 3; A.cliffRoll = !L.cliff && Math.random() < ({ easy:0.12, medium:0.25, hard:0.4 }[A.lvl] || 0); }
   const K = KINDS[u.k];
   if (u.down > 0 || u.dance > 0) { A.rt = 0; return; }
   if (PS.flee && u.hp < maxHp(u) * (A.fleeAt ?? PS.flee)) { applyCmd(G, team, { t:'unposs' }); A.posCd = 22; return; }
   if (L.micro >= 3 && K.role === 'melee' && foes.some(e => e.poss && KINDS[e.k].role === 'ranged') && mine.some(m => KINDS[m.k].role === 'cav' || KINDS[m.k].role === 'ranged')) { applyCmd(G, team, { t:'unposs' }); A.posCd = 1.5; return; }
-  if (MAP.cliff && L.cliff && K.role !== 'cav' && u.k !== 2 && Math.random() < DT * 0.08 && mine.some(m => (KINDS[m.k].role === 'cav' || m.k === 2) && !(m.down > 0) && foes.some(e => Math.hypot(e.x - m.x, e.z - m.z) < 18 && edgeNear(e.x, e.z, 4)))) { applyCmd(G, team, { t:'unposs' }); A.posCd = 1; return; }
+  if (MAP.cliff && (L.cliff || A.cliffRoll) && K.role !== 'cav' && u.k !== 2 && Math.random() < DT * 0.08 && mine.some(m => (KINDS[m.k].role === 'cav' || m.k === 2) && !(m.down > 0) && foes.some(e => Math.hypot(e.x - m.x, e.z - m.z) < 18 && edgeNear(e.x, e.z, 4)))) { applyCmd(G, team, { t:'unposs' }); A.posCd = 1; return; }
   const EB = BASES[1 - team], ebHp = G.teams[1 - team].hp, danger = ebHp > CFG.baseHp * 0.2, tr = CFG.towerRange + 2;
   if (danger && Math.hypot(u.x - EB.x, u.z - EB.z) < tr) { const dx = u.x - EB.x, dz = u.z - EB.z, d0 = Math.hypot(dx, dz) || 1, p = nearestWalkable(MAP, clampX(EB.x + dx / d0 * (tr + 6)), clampZ(EB.z + dz / d0 * (tr + 6))); u.vx = 0; u.vz = 0; steer(G, u, p.x, p.z, K.speed * 1.15); T.posIn = { id:u.id, x:u.x + u.vx * DT, z:u.z + u.vz * DT, y:Math.atan2(p.x - u.x, p.z - u.z), a:A.pa, s:A.ps }; return; }
   let best = null, bs = 1e9;
   if (L.micro >= 3) { const ep2 = foes.find(e => e.poss && KINDS[e.k].role === 'ranged'); if (ep2 && Math.hypot(ep2.x - u.x, ep2.z - u.z) < 40 && !(danger && Math.hypot(ep2.x - EB.x, ep2.z - EB.z) < tr)) { best = ep2; bs = 0; } }
-  if (!best) for (const e of foes) { const d = Math.hypot(e.x - u.x, e.z - u.z); if (d > 30 || (danger && Math.hypot(e.x - EB.x, e.z - EB.z) < tr)) continue; const sc = d * (dmgMult(u.k, e.k) > 1 ? 1 - 0.45 * L.counter : 1) * (e.poss ? 1 - 0.6 * PS.hunt : 1) * (e.down > 0 ? 0.8 : 1) * (MAP.cliff && L.cliff && (K.role === 'cav' || u.k === 2) && edgeNear(e.x, e.z, 4) ? 0.45 : 1); if (sc < bs) { bs = sc; best = e; } }
+  if (!best) for (const e of foes) { const d = Math.hypot(e.x - u.x, e.z - u.z); if (d > 30 || (danger && Math.hypot(e.x - EB.x, e.z - EB.z) < tr)) continue; const sc = d * (dmgMult(u.k, e.k) > 1 ? 1 - 0.45 * L.counter : 1) * (e.poss ? 1 - 0.6 * PS.hunt : 1) * (e.down > 0 ? 0.8 : 1) * (MAP.cliff && (L.cliff || A.cliffRoll) && (K.role === 'cav' || u.k === 2) && edgeNear(e.x, e.z, 4) ? 0.45 : 1); if (sc < bs) { bs = sc; best = e; } }
   const calm = !foes.some(e => Math.hypot(e.x - u.x, e.z - u.z) < 14), itm = L.micro >= 2 ? (G.items || []).find(i => Math.hypot(i.x - u.x, i.z - u.z) < (L.items && calm ? 70 : 22) && (!L.items || (i.z - BASES[1 - team].z) ** 2 > (i.z - BASES[team].z) ** 2 || Math.hypot(i.x - u.x, i.z - u.z) < 22)) : null;
   const tg = best && (!itm || Math.hypot(best.x - u.x, best.z - u.z) < 7) ? best : itm ? itm : best ? best : aiBestFlag(G, team, foes, false, u);
   const d = Math.hypot(tg.x - u.x, tg.z - u.z), reach = K.role === 'ranged' ? K.range - 1 : K.range + K.r + 0.5;
   u.vx = 0; u.vz = 0;
   let ap = null; const pusher = K.role === 'cav' || u.k === 2;
-  if (MAP.cliff && pusher && best && tg === best && L.cliff && d < 16 && u.spcd <= 1.5) { const ed = edgeDir(best.x, best.z, 4.5);
+  if (MAP.cliff && pusher && best && tg === best && (L.cliff || A.cliffRoll) && d < 16 && u.spcd <= 1.5) { const ed = edgeDir(best.x, best.z, 4.5);
     if (ed) { if (u.k === 2) ap = { x:best.x - ed.x * 1.6, z:best.z - ed.z * 1.6 }; else { const tx = -ed.z, tz = ed.x, sg = (u.x - best.x) * tx + (u.z - best.z) * tz >= 0 ? 1 : -1; ap = { x:best.x + tx * sg * 5.5 - ed.x * 1.1, z:best.z + tz * sg * 5.5 - ed.z * 1.1 }; }
       if (!walkable(ap.x, ap.z) || Math.hypot(ap.x - u.x, ap.z - u.z) < 0.8) ap = null; } }
   if (ap) steer(G, u, ap.x, ap.z, K.speed * 1.15);
   else if (tg === itm || !best || d > reach * 0.8) steer(G, u, tg.x, tg.z, K.speed * 1.15);
   let yaw = Math.atan2(tg.x - u.x, tg.z - u.z), cliff = false;
-  if (MAP.cliff && best && u.spcd <= 0 && L.cliff && d < 11) {
-    if (K.role === 'cav') { const pl = dashPlan(u, foes, yaw); if (pl) { yaw = pl.yaw; cliff = true; } }
+  if (MAP.cliff && best && u.spcd <= 0 && (L.cliff || A.cliffRoll) && d < 11) {
+    if (K.role === 'cav') { const pl = dashPlan(u, foes, yaw); if (pl) { yaw = pl.yaw + (L.cliff ? 0 : (Math.random() - .5) * 0.9); cliff = true; } }
     else if (u.k === 2) cliff = foes.some(e => Math.hypot(e.x - u.x, e.z - u.z) < 3.3 && knockFalls(e, u.x, u.z, 3.2));
   }
   if (best && d <= reach) { A.rt = (A.rt || 0) + DT; if (u.cd <= 0.1 && A.rt >= (A.react ?? PS.react)) { A.pa++; A.rt = 0; A.react = PS.react * (0.7 + Math.random() * 1.6) + (Math.random() < 0.18 ? 0.45 : 0); } } else A.rt = 0;
@@ -2015,20 +2021,29 @@ function buildMapView(m) {
   }
   const rockGeo = flat(new THREE.DodecahedronGeometry(1, 0));
   if (m.frozen) { // crystal ice sheet with a scratched, cracked texture
-    const c = cnv(512, 512), x = c.getContext('2d'), gr = x.createLinearGradient(0, 0, 512, 512); gr.addColorStop(0, '#4fbdf0'); gr.addColorStop(0.5, '#8edcff'); gr.addColorStop(1, '#3faee6'); x.fillStyle = gr; x.fillRect(0, 0, 512, 512);
-    let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(${rr() < 0.5 ? '40,140,200' : '230,250,255'},${0.08 + rr() * 0.12})`; x.beginPath(); x.ellipse(rr() * 512, rr() * 512, 30 + rr() * 90, 14 + rr() * 40, rr() * 3, 0, TAU); x.fill(); }
-    x.lineCap = 'round'; for (let i = 0; i < 70; i++) { const x0 = rr() * 512, y0 = rr() * 512, a = rr() * TAU, l = 20 + rr() * 90; x.strokeStyle = `rgba(255,255,255,${0.25 + rr() * 0.4})`; x.lineWidth = 0.6 + rr() * 1.4; x.beginPath(); x.moveTo(x0, y0); x.lineTo(x0 + Math.cos(a) * l, y0 + Math.sin(a) * l); x.stroke(); }
-    for (let i = 0; i < 9; i++) { let px = rr() * 512, py = rr() * 512; x.strokeStyle = 'rgba(30,90,140,.45)'; x.lineWidth = 1.2; x.beginPath(); x.moveTo(px, py); for (let k = 0; k < 7; k++) { px += (rr() - .5) * 70; py += (rr() - .5) * 70; x.lineTo(px, py); if (rr() < 0.35) { x.moveTo(px, py); x.lineTo(px + (rr() - .5) * 40, py + (rr() - .5) * 40); x.moveTo(px, py); } } x.stroke(); }
-    const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 4; if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
-    const pos = [], uv = [], al = [], S = 0.75, iceH = (x2, z2) => { const h = sampleH(m, x2, z2); return h < WL + 0.4 ? Math.max(h, WL + 0.1) + 0.04 : h + 0.05; };
+    const N = 1024, c = cnv(N, N), x = c.getContext('2d'); let sd = 7; const rr = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    x.fillStyle = '#6ccdf6'; x.fillRect(0, 0, N, N);
+    // soft cloudy depth (tileable: draw each blob 9x with wrap offsets)
+    const wrap = f => { for (const ox of [-N, 0, N]) for (const oy of [-N, 0, N]) { x.save(); x.translate(ox, oy); f(); x.restore(); } };
+    for (let i = 0; i < 46; i++) { const cx = rr() * N, cy = rr() * N, r = 60 + rr() * 240, light = rr() < 0.5, a = 0.08 + rr() * 0.12; wrap(() => { const g2 = x.createRadialGradient(cx, cy, 0, cx, cy, r); g2.addColorStop(0, light ? `rgba(235,250,255,${a})` : `rgba(20,110,170,${a})`); g2.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g2; x.fillRect(cx - r, cy - r, r * 2, r * 2); }); }
+    // frost grain
+    for (let i = 0; i < 9000; i++) { x.fillStyle = `rgba(255,255,255,${0.04 + rr() * 0.1})`; const r2 = 0.6 + rr() * 1.6; x.fillRect(rr() * N, rr() * N, r2, r2); }
+    // trapped air bubbles
+    for (let i = 0; i < 140; i++) { const bx = rr() * N, by = rr() * N, br = 1.5 + rr() * 4.5; x.strokeStyle = 'rgba(255,255,255,.45)'; x.lineWidth = 1; x.beginPath(); x.arc(bx, by, br, 0, TAU); x.stroke(); x.fillStyle = 'rgba(255,255,255,.18)'; x.beginPath(); x.arc(bx - br * 0.3, by - br * 0.3, br * 0.4, 0, TAU); x.fill(); }
+    // skate scratches
+    x.lineCap = 'round'; for (let i = 0; i < 110; i++) { const x0 = rr() * N, y0 = rr() * N, a = rr() * TAU, l = 40 + rr() * 220, bend = (rr() - .5) * 60; x.strokeStyle = `rgba(255,255,255,${0.12 + rr() * 0.3})`; x.lineWidth = 0.5 + rr() * 1.2; wrap(() => { x.beginPath(); x.moveTo(x0, y0); x.quadraticCurveTo(x0 + Math.cos(a) * l / 2 - Math.sin(a) * bend, y0 + Math.sin(a) * l / 2 + Math.cos(a) * bend, x0 + Math.cos(a) * l, y0 + Math.sin(a) * l); x.stroke(); }); }
+    // cracks: dark core + white edge
+    for (let i = 0; i < 14; i++) { let px = rr() * N, py = rr() * N; const pts = [[px, py]]; for (let k = 0; k < 9; k++) { px += (rr() - .5) * 110; py += (rr() - .5) * 110; pts.push([px, py]); }
+      [['rgba(255,255,255,.55)', 2.4], ['rgba(20,80,130,.55)', 1]].forEach(([col, w]) => { x.strokeStyle = col; x.lineWidth = w; wrap(() => { x.beginPath(); x.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(q => x.lineTo(q[0], q[1])); x.stroke(); pts.forEach((q, k) => { if (k % 3 === 1) { x.beginPath(); x.moveTo(q[0], q[1]); x.lineTo(q[0] + (rr() - .5) * 60, q[1] + (rr() - .5) * 60); x.stroke(); } }); }); }); }
+    const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = renderer.capabilities.getMaxAnisotropy ? Math.min(8, renderer.capabilities.getMaxAnisotropy()) : 4; tex.minFilter = THREE.LinearMipmapLinearFilter; if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+    const pos = [], uv = [], al = [], S = 0.5, iceH = (x2, z2) => { const h = sampleH(m, x2, z2); return h < WL + 0.4 ? Math.max(h, WL + 0.1) + 0.04 : h + 0.05; };
     for (let z2 = -HALF_H; z2 < HALF_H; z2 += S) for (let x2 = -HALF_W; x2 < HALF_W; x2 += S) {
       const cs = [[x2, z2], [x2 + S, z2], [x2 + S, z2 + S], [x2, z2 + S]]; if (!cs.some(([a, b]) => sampleH(m, a, b) < WL + 0.42) || onBridge(m, x2 + S / 2, z2 + S / 2)) continue;
-      [[0, 2, 1], [0, 3, 2]].forEach(t => t.forEach(i => { const [a, b] = cs[i]; pos.push(a, iceH(a, b), b); uv.push(a / 9, b / 9); al.push(sstep(WL + 0.44, WL + 0.18, sampleH(m, a, b))); })); }
-    if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setAttribute('aA', new THREE.Float32BufferAttribute(al, 1)); g.computeVertexNormals();
+      [[0, 2, 1], [0, 3, 2]].forEach(t => t.forEach(i => { const [a, b] = cs[i]; pos.push(a, iceH(a, b), b); uv.push(a / 14, b / 14); al.push(sstep(WL + 0.46, WL + 0.14, sampleH(m, a, b))); })); }
+    if (pos.length) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setAttribute('aA', new THREE.Float32BufferAttribute(al, 1)); g.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(pos.length).map((_, i) => i % 3 === 1 ? 1 : 0), 3));
       const imat = new THREE.MeshPhongMaterial({ map:tex, color:0xffffff, specular:0xffffff, shininess:160, transparent:true, opacity:0.95, emissive:lin(0x08304c), depthWrite:false });
       imat.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aA;\nvarying float vA;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvA = aA;'); sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vA;').replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.a *= vA;'); };
-      const im = new THREE.Mesh(g, imat); im.receiveShadow = true; im.renderOrder = 1; mapGroup.add(im); }
+      const im = new THREE.Mesh(g, imat); im.receiveShadow = false; im.renderOrder = 1; mapGroup.add(im); }
   }
   const iceMat = new THREE.MeshPhongMaterial({ color:lin(0xbfe6f5), emissive:lin(0x1c3a4a), shininess:90, specular:lin(0xffffff), transparent:true, opacity:0.88, flatShading:true }), rockCol = m.type === 'wueste' ? 0xc19a6b : m.type === 'klippen' ? 0x86827a : 0x8f918b;
   m.rocks.forEach(R => { if (R.ice) { const g = new THREE.Group(); g.position.set(R.x, sampleH(m, R.x, R.z), R.z); for (let k = 0; k < 5; k++) { const a = k * 1.3 + R.x, hgt = R.r * (1.6 + (k % 3) * 0.7), sh = mesh(flat(new THREE.ConeGeometry(R.r * 0.45, hgt, 5)), iceMat, Math.cos(a) * R.r * 0.45, hgt / 2, Math.sin(a) * R.r * 0.45, g); sh.rotation.z = Math.cos(a) * 0.25; sh.rotation.x = Math.sin(a) * 0.25; } shadows(g, true, true); mapGroup.add(g); return; }
@@ -2836,7 +2851,7 @@ function processSnap(s) {
     u.hpPct = e[4];
   }
   if (s.ge && s.ge.length) { for (const e of s.ge) { if (V.geSeen !== undefined && ((e[0] - V.geSeen + 10000) % 10000) === 0) continue; if (V.geSeen !== undefined && ((e[0] - V.geSeen + 10000) % 10000) > 5000) continue;
-      if (V.geSeen !== undefined && e[1] === V.myTeam && V.poss) { if (e[2] > 0) { V.discoUntil = now() + 5500; egoHint(e[2] > 1 ? e[2] + ' Gegner tanzen!' : 'Volltreffer, einer tanzt!', 1600); } else { SFX.play('flop'); egoHint('Daneben … keiner tanzt.', 1400); } } V.geSeen = e[0]; } }
+      if (V.geSeen !== undefined && e[1] === V.myTeam && V.poss) { if (e[2] > 0) { V.discoUntil = now() + 8000; egoHint(e[2] > 1 ? e[2] + ' Gegner tanzen!' : 'Volltreffer, einer tanzt!', 1600); } else { SFX.play('flop'); egoHint('Daneben … keiner tanzt.', 1400); } } V.geSeen = e[0]; } }
   else if (V.geSeen === undefined) V.geSeen = 0;
   if (s.dz && s.dz.length) { const m = V.dzCause || (V.dzCause = new Map()); for (const d of s.dz) m.set(d[1], d[2]); if (m.size > 200) m.clear(); }
   if (prev) for (const [id] of prev) if (!cur.has(id)) {
@@ -3652,7 +3667,7 @@ function egoSpecial() {
     for (let i = 0; i < n; i++) { const a = (i - (n - 1) / 2) * spread, c = Math.cos(a), sn = Math.sin(a), d = new THREE.Vector3(dir.x * c + dir.z * sn, dir.y + (i % 2 ? 0.02 : -0.01), -dir.x * sn + dir.z * c).normalize(); fx.shots.push({ m:freeArrowMesh(P.k), p:from.clone().addScaledVector(d, 0.5), d, k:P.k, t:0, life:K.range * 2.2 / CFG.arrowSpeed }); }
     EG.kick = Math.max(EG.kick, 0.3);
   }
-  P.s = (P.s + 1) % 1000; P.spT = CFG.spCd * [1, 0.34][tpk(V.myTeam, 'charge')];
+  P.spSent = now(); P.s = (P.s + 1) % 1000; P.spT = (KINDS[P.k].role === 'siege' ? 14 : KINDS[P.k].bear ? 6 : CFG.spCd) * [1, 0.34][tpk(V.myTeam, 'charge')];
   if (P.k === 0) P.rageT = 4;
   if (P.k === 4 || P.k === 5) { P.dashT = 0.42; P.dp = [+P.x.toFixed(2), +P.z.toFixed(2)]; }
 }
@@ -3693,7 +3708,7 @@ function egoUpdate(dt) {
   const P = V.poss; if (!P) return;
   const K = KINDS[P.k];
   const tn = now(), rdt = Math.min(0.5, (tn - (P.lastT || tn)) / 1000); P.lastT = tn;
-  P.cdT = Math.max(0, P.cdT - rdt); P.spT = Math.max(0, P.spT - rdt); P.rageT = Math.max(0, P.rageT - rdt);
+  P.cdT = Math.max(0, P.cdT - rdt); P.spT = Math.max(0, P.spT - rdt); { const mu = V.units.get(P.id); if (mu && mu.spcd > 0.4 && P.spT < mu.spcd - 0.3 && now() - (P.spSent || 0) > 600) P.spT = mu.spcd; } P.rageT = Math.max(0, P.rageT - rdt);
   let jx = 0, jy = 0;
   if (EG.joy) { jx = EG.joy.dx; jy = EG.joy.dy; }
   if (held('fwd')) jy -= 1; if (held('back')) jy += 1;
@@ -3710,9 +3725,9 @@ function egoUpdate(dt) {
   let speed = K.speed * 1.15 * (P.rageT > 0 ? 1.4 : 1) * [1, 2][tpk(V.myTeam, 'turbo')] * (K.role === 'cav' ? [1, 1.5][tpk(V.myTeam, 'cavspd')] : 1);
   if (P.dashT > 0) { P.dashT -= dt; vx = cy; vz = cyz; speed = 27; }
   const swim = inWater(P.x, P.z) ? 0.36 : 1, fz = frozen ? 0 : swim; let wvx = vx * speed * fz, wvz = vz * speed * fz; if (onIce(P.x, P.z) && !(P.dashT > 0)) { const k = Math.min(1, dt * 0.75); P.ivx = lerp(P.ivx ?? wvx, wvx * 1.3, k); P.ivz = lerp(P.ivz ?? wvz, wvz * 1.3, k); wvx = P.ivx; wvz = P.ivz; if (Math.hypot(wvx, wvz) > 3 && Math.random() < dt * 10) puff(P.x, unitY(P.x, P.z) + 0.1, P.z, 0xe8f6ff, 1, 0.4); } else { P.ivx = wvx; P.ivz = wvz; } const nx = P.x + wvx * dt, nz = P.z + wvz * dt;
-  if (P.pj) { /* flying over the moat */ } else if (P.falling) { P.x = nx * 0.3 + P.x * 0.7; P.z = nz * 0.3 + P.z * 0.7; } else if (walkable(nx, nz)) { P.x = nx; P.z = nz; } else if (MAP.cliff && (fallZone(nx, nz) || edgeSlide(nx, nz) && groundY(nx, nz) < (P.fy ?? groundY(P.x, P.z)) - 0.35)) { P.x = nx; P.z = nz; if (fallZone(nx, nz)) { P.falling = true; egoHint('AAAAH!', 1500); SFX.play('whoosh'); } } else if (walkable(nx, P.z) && Math.abs(nx - P.x) > 1e-4) P.x = nx; else if (walkable(P.x, nz) && Math.abs(nz - P.z) > 1e-4) P.z = nz;
+  if (P.pj) { /* flying over the moat */ } else if (P.falling) { P.x = clampX(P.x + (P.fvx || 0) * dt); P.z = clampZ(P.z + (P.fvz || 0) * dt); P.fvx = (P.fvx || 0) * 0.985; P.fvz = (P.fvz || 0) * 0.985; } else if (walkable(nx, nz) && !fallZone(nx, nz)) { P.x = nx; P.z = nz; } else if (fallZone(nx, nz) || edgeSlide(nx, nz) && (P.dashT > 0 || groundY(nx, nz) < (P.fy ?? groundY(P.x, P.z)) - 0.15)) { const vx = (nx - P.x) / Math.max(dt, 1e-3), vz = (nz - P.z) / Math.max(dt, 1e-3); P.x = nx; P.z = nz; if (fallZone(nx, nz)) { P.falling = true; P.fvx = vx * 0.85; P.fvz = vz * 0.85; P.dashT = 0; egoHint('AAAAH!', 1500); SFX.play('whoosh'); } } else if (walkable(nx, P.z) && Math.abs(nx - P.x) > 1e-4) P.x = nx; else if (walkable(P.x, nz) && Math.abs(nz - P.z) > 1e-4) P.z = nz;
   else { const mx = nx - P.x, mz = nz - P.z; for (const ang of [0.5, -0.5, 1.0, -1.0, 1.45, -1.45]) { const c = Math.cos(ang), sn = Math.sin(ang), f = Math.cos(ang) * 0.9, tx = P.x + (mx * c - mz * sn) * f, tz = P.z + (mx * sn + mz * c) * f; if (walkable(tx, tz)) { P.x = tx; P.z = tz; break; } } }
-  P.slope = !walkable(P.x, P.z) && !!MAP.cliff;
+  P.slope = !walkable(P.x, P.z) && edgeSlide(P.x, P.z);
   if (!walkable(P.x, P.z) && !P.pj && !P.falling && !P.slope) { const q = nearestWalkable(MAP, P.x, P.z); P.x = q.x; P.z = q.z; }
   P.x = clampX(P.x); P.z = clampZ(P.z);
   P.yaw = P.camYaw;
@@ -3846,7 +3861,7 @@ function spawnSlot(i) {
     if (s.g[me] < KINDS[k].cost) { SFX.play('error'); toast('Zu wenig ' + FAC[V.facs[me]].res + '. Fahnen bringen mehr!', 1600); return; }
     if (pop >= CFG.pop) { SFX.play('error'); toast('Deine Armee ist voll (' + CFG.pop + ').', 1600); return; }
     if (s.q[me].length >= CFG.queueMax) { SFX.play('error'); toast('Warteschlange ist voll.', 1400); return; }
-    if (KINDS[k].role === 'siege' && s.u.filter(e => teamOfKind(e[1], s.fa) === me && KINDS[e[1]].role === 'siege').length + s.q[me].filter(q => KINDS[q].role === 'siege').length >= 3) { SFX.play('error'); toast('Höchstens 3 Katapulte gleichzeitig.', 1600); return; }
+    if (KINDS[k].role === 'siege' && s.u.filter(e => teamOfKind(e[1], s.fa) === me && KINDS[e[1]].role === 'siege').length + s.q[me].filter(q => KINDS[q].role === 'siege').length >= 5) { SFX.play('error'); toast('Höchstens 5 Katapulte gleichzeitig.', 1600); return; }
   }
   sendCmd({ t:'spawn', k }); hintDone('spawn');
 }
@@ -4285,7 +4300,7 @@ function tutSteps(nar, adv) {
     return best;
   };
   const cliffStep = () => {
-    clearTut(); G.towerOff[0] = true; const sp = TUT.edge || (TUT.edge = edgeSpot()); if (!sp) return;
+    clearTut(); G.towerOff[0] = true; TUT.dashAt = 0; TUT.cliffT = now(); const sp = TUT.edge || (TUT.edge = edgeSpot()); if (!sp) return;
     const u = tutUnit(0, kOf('cav'), sp.cav.x, sp.cav.z); u.tutPrep = true; u.yaw = TUT.faceYaw = Math.atan2(sp.tx, sp.tz); TUT.egoId = u.id;
     TUT.dIds = sp.ds.map(d => { const e = tutUnit(1, E.kinds[0], d.x, d.z); e.tutStill = true; e.tutDummy = true; e.tutPush = true; e.hp = e.mhp = 900; return e.id; });
     TUT.enterAt = now() + 400; camTo(sp, 22);
@@ -4304,7 +4319,9 @@ function tutSteps(nar, adv) {
     { t:`Konter-Regel: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Und: Reiter zerlegen Katapulte! Gesteuert tötet ein Konter mit einem Schlag.`, next:true },
     { t:`Gegnerisches Katapult! Übernimm den „${nm('cav')}“ und ramm es mit der Spezialfähigkeit (${spc}) – der Dash zerbricht Katapulte sofort.`, start:() => { prep(kOf('cav'), [[0, 12, E.kinds[3]]], 1); TUT.enterAt = now() + 400; }, after:egoKeep, done:dead },
     { t:`Klippen-Trick! Der Reiter-Dash schleudert Gegner zur SEITE. Schau geradeaus an der Kante entlang und dash sofort (${spc}) – die Puppen fliegen in die Schlucht!`, start:cliffStep,
-      after:() => { egoKeep(); const P = V.poss; if (P && TUT.dIds.every(id => G.units.some(u => u.id === id)) && G.units.find(u => u.id === TUT.egoId)?.spcd <= 0 && Math.hypot(P.x - TUT.edge.cav.x, P.z - TUT.edge.cav.z) > 9) { $('#tutText').textContent = 'Lauf zurück zum Pfeil und dash parallel zur Kante!'; } },
+      after:() => { egoKeep(); const u = G.units.find(x => x.id === TUT.egoId), left = TUT.dIds.some(id => G.units.some(x => x.id === id));
+        if (u && u.spcd > 1 && !TUT.dashAt) TUT.dashAt = now();
+        if (left && ((TUT.dashAt && now() - TUT.dashAt > 2800) || (!u && now() - (TUT.cliffT || 0) > 2500))) { const fell = !u; cliffStep(); TUT.cliffT = now(); $('#tutText').textContent = fell ? 'Uups – selbst in die Schlucht gedasht! Nochmal von vorn.' : 'Nicht alle erwischt – nochmal! Schau genau an der Kante entlang und dash sofort.'; SFX.play('error'); } },
       world:() => TUT.edge && !V.poss ? TUT.edge.cav : TUT.edge ? TUT.edge : null, done:dead },
     { t:'Merke: Gesteuerte Reiter und Stock-Opas können Gegner von Klippen stoßen – der Computer weiß das auch! Halte dich von Kanten fern.', start:() => { clearTut(); }, next:true },
     { t:`Ein wilder Eisbär! Er greift alles in der Nähe an und ist stark gegen Nahkämpfer und Reiter – aber Pfeile tun ihm richtig weh. Übernimm die Bogenschützin und erleg ihn!`,
@@ -4398,13 +4415,29 @@ function tutTick() {
 /* ---------- world: polar bears, pickups, cactus pricks ---------- */
 const PADV = [];
 const WV = { bears:[], items:new Map(), peSeen:undefined, prick:new Map(), holes:new Map(), ic:new Map(), fz:new Set() };
-function holeMesh(x, z) {
-  const g = new THREE.Group(), y = Math.max(groundY(x, z), WL + 0.1) + 0.07; g.position.set(x, y, z); g.renderOrder = 2;
-  const w = mesh(new THREE.CircleGeometry(1.12, 20).rotateX(-Math.PI / 2), new THREE.MeshPhongMaterial({ color:lin(0x0e3a5a), emissive:lin(0x06202f), shininess:120, specular:lin(0x9fdcff) }), 0, 0.01, 0, g);
-  const sh = new THREE.MeshPhongMaterial({ color:lin(0xdff6ff), shininess:120, specular:lin(0xffffff), flatShading:true });
-  for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + Math.random() * 0.3, b = mesh(new THREE.BoxGeometry(0.42 + Math.random() * 0.3, 0.07, 0.28), sh, Math.cos(a) * 1.18, 0.03, Math.sin(a) * 1.18, g); b.rotation.set((Math.random() - .5) * 0.6, -a, (Math.random() - .5) * 0.5); }
-  scene.add(g); return { g, w };
+let HOLE_TEX = null;
+function holeTex() {
+  if (HOLE_TEX) return HOLE_TEX; const N = 256, c = cnv(N, N), x = c.getContext('2d'), g = x.createRadialGradient(128, 128, 10, 128, 128, 128);
+  g.addColorStop(0, '#04131f'); g.addColorStop(0.55, '#0b3550'); g.addColorStop(0.85, '#1f7fa8'); g.addColorStop(1, '#7fd6f2'); x.fillStyle = g; x.fillRect(0, 0, N, N);
+  for (let i = 0; i < 8; i++) { x.strokeStyle = `rgba(160,230,255,${0.08 + i * 0.015})`; x.lineWidth = 2; x.beginPath(); x.ellipse(128 + Math.sin(i) * 6, 128, 30 + i * 11, 26 + i * 10, i * 0.4, 0, TAU); x.stroke(); }
+  x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.ellipse(96, 92, 34, 12, -0.6, 0, TAU); x.fill();
+  const crk = cnv(N, N), y = crk.getContext('2d'); y.lineCap = 'round';
+  for (let i = 0; i < 11; i++) { let a = i / 11 * TAU + Math.random() * 0.3, px = 128 + Math.cos(a) * 52, py = 128 + Math.sin(a) * 52; y.strokeStyle = 'rgba(255,255,255,.85)'; y.lineWidth = 2.4; y.beginPath(); y.moveTo(px, py); const L = 30 + Math.random() * 45; for (let k = 0; k < 4; k++) { a += (Math.random() - .5) * 0.7; px += Math.cos(a) * L / 4; py += Math.sin(a) * L / 4; y.lineTo(px, py); } y.stroke(); y.strokeStyle = 'rgba(30,90,140,.6)'; y.lineWidth = 0.9; y.stroke(); }
+  return (HOLE_TEX = { water:new THREE.CanvasTexture(c), crack:new THREE.CanvasTexture(crk) });
 }
+function holeMesh(x, z) {
+  const g = new THREE.Group(), y = Math.max(groundY(x, z), WL + 0.1) + 0.06; g.position.set(x, y, z); g.renderOrder = 2; const T = holeTex();
+  const crack = mesh(new THREE.PlaneGeometry(5.2, 5.2).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map:T.crack, transparent:true, depthWrite:false }), 0, 0.005, 0, g); crack.rotation.y = Math.random() * TAU; crack.renderOrder = 2;
+  const sh = new THREE.Shape(); for (let i = 0; i <= 22; i++) { const a = i / 22 * TAU, r = 1.05 + Math.sin(i * 2.3 + x) * 0.12 + (i % 3 ? 0 : -0.12); const px = Math.cos(a) * r, pz = Math.sin(a) * r; if (i) sh.lineTo(px, pz); else sh.moveTo(px, pz); }
+  const wg = new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2), uv = wg.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.42 + 0.5, uv.getY(i) * 0.42 + 0.5);
+  const w = mesh(wg, new THREE.MeshPhongMaterial({ map:T.water, color:0x8fb0c4, shininess:160, specular:lin(0x6fa8c8), emissive:lin(0x020a10) }), 0, -0.04, 0, g); w.renderOrder = 3;
+  const shMat = new THREE.MeshPhongMaterial({ color:lin(0xdff6ff), emissive:lin(0x0c3a52), shininess:150, specular:lin(0xffffff), flatShading:true, transparent:true, opacity:0.95 });
+  for (let i = 0; i < 13; i++) { const a = i / 13 * TAU + Math.random() * 0.25, r = 1.12 + Math.random() * 0.12, b = mesh(new THREE.DodecahedronGeometry(0.16 + Math.random() * 0.14, 0), shMat, Math.cos(a) * r, 0.03, Math.sin(a) * r, g); b.scale.set(1.6, 0.35 + Math.random() * 0.4, 1); b.rotation.set((Math.random() - .5) * 0.8, -a, (Math.random() - .5) * 0.8); }
+  const chunks = []; for (let i = 0; i < 3; i++) { const ch = mesh(new THREE.BoxGeometry(0.32 + Math.random() * 0.2, 0.08, 0.26 + Math.random() * 0.15), shMat, (Math.random() - .5) * 1.0, -0.02, (Math.random() - .5) * 1.0, g); ch.rotation.y = Math.random() * TAU; chunks.push(ch); }
+  const rip = mesh(new THREE.RingGeometry(0.3, 0.38, 28).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color:0xcff4ff, transparent:true, opacity:0.5, depthWrite:false }), 0, -0.02, 0, g); rip.renderOrder = 4;
+  scene.add(g); return { g, w, chunks, rip, t:Math.random() * 3 };
+}
+
 function bearMesh() {
   const g = new THREE.Group(), fur = lam(0xf3f1ea), dark = lam(0x222222), body = new THREE.Group(); g.add(body);
   mesh(new THREE.SphereGeometry(0.9, 14, 10), fur, 0, 1.1, 0, body).scale.set(1, 0.85, 1.55);
@@ -4433,7 +4466,7 @@ function updateWorld(dt) {
   if (NET.role === 'guest' && MAP) MAP.holes = (s.ih || []).map(h => ({ x:h[1] / 10, z:h[2] / 10 }));
   { const seenH = new Set(); for (const h of s.ih || []) { seenH.add(h[0]); let v = WV.holes.get(h[0]); if (!v) { const x = h[1] / 10, z = h[2] / 10; v = holeMesh(x, z); WV.holes.set(h[0], v);
         if (WV.holeInit) { for (let k = 0; k < 14; k++) puff(x + (Math.random() - .5) * 2, WL + 0.4 + Math.random(), z + (Math.random() - .5) * 2, k % 2 ? 0xdff6ff : 0x7fc9ee, 1, 0.6); SFX.play('splinter', { x, z }); SFX.play('splat', { x, z, vol:0.7 }); word(pick(['KNACKS!', 'EINGEBROCHEN!', 'PLATSCH!']), x, WL + 2.6, z, { color:'#9be7ff', scale:1.2 }); } }
-      v.g.scale.setScalar(h[3] < 3 ? Math.max(0.05, h[3] / 3) : 1); }
+      v.g.scale.setScalar(h[3] < 3 ? Math.max(0.05, h[3] / 3) : 1); v.t += dt; const q = (v.t % 2.2) / 2.2; v.rip.scale.setScalar(1 + q * 2.4); v.rip.material.opacity = 0.5 * (1 - q); v.chunks.forEach((c2, k) => { c2.position.y = -0.02 + Math.sin(v.t * 2 + k * 2) * 0.025; c2.rotation.y += dt * 0.2 * (k % 2 ? 1 : -1); }); }
     for (const [id, v] of WV.holes) if (!seenH.has(id)) { scene.remove(v.g); WV.holes.delete(id); } WV.holeInit = true; }
   (s.pd || []).forEach((e, i) => { const v = PADV[i]; if (!v) return; if (v.n < 0) v.n = e[0]; else if (e[0] !== v.n) { v.n = e[0]; v.t = 0; const p = v.g.position; SFX.play('boing', { x:p.x, z:p.z, vol:1.1 }); SFX.play('creak', { x:p.x, z:p.z, vol:0.6 }); for (let k = 0; k < 8; k++) puff(p.x + (Math.random() - .5) * 3, p.y + 0.3, p.z + (Math.random() - .5) * 2.4, 0xd8c48f, 1, 0.6); word('BOING!', p.x, p.y + 2.2, p.z, { color:'#ffd34d', scale:1.1 });
       const P = V.poss, pd = MAP.pads[i]; if (P && pd && !P.pj && onPad(pd, P.x, P.z)) { const l = padLocal(pd, P.x, P.z), sp = l.ac * 1.1, tx = pd.tx + l.fz * sp, tz = pd.tz - l.fx * sp; P.pj = { sx:P.x, sz:P.z, tx, tz, t:0 }; P.jumpT = PAD_FLY; P.jDur = PAD_FLY; egoHint('Huiii!', 900); } }
@@ -4591,7 +4624,7 @@ function animateRig(u, dt, moving, attacking) {
   else { const idle = Math.sin(ph * 1.3) * 0.05 * (1 - mb); aL = -sw * 0.6 + idle; aR = sw * 0.6 - idle; }
   let look = (1 - mb) * Math.sin(ph * 0.6) * Math.max(0, Math.sin(ph * 0.23)) * 0.6;
   u.atkT += dt;
-  if (u.atkT < (u.pAtk ?? 9)) u.av = Math.random() < 0.15 ? 3 : Math.floor(Math.random() * 3); u.pAtk = u.atkT;
+  if (u.atkT < (u.pAtk ?? 9)) u.av = cav && u.tgtBase ? 0 : Math.random() < 0.15 ? 3 : Math.floor(Math.random() * 3); u.pAtk = u.atkT;
   let zR = 0, hop = 0, armZ = 0;
   if (u.atkT < 0.5) {
     const p = u.atkT / 0.5, av = u.av || 0;
@@ -4604,7 +4637,7 @@ function animateRig(u, dt, moving, attacking) {
         twist = p < 0.35 ? -0.35 * (p / 0.35) : lerp(-0.35, 0.4, Math.min(1, (p - 0.35) / 0.2)) * (1 - Math.max(0, p - 0.55) / 0.45);
         if (p > 0.35 && p < 0.7) lean += 0.18;
       }
-      if (u.k === 4 && av >= 2) u.mount.rotation.x = -Math.sin(p * Math.PI) * 0.35;
+      if (u.k === 4 && av >= 2 && !u.tgtBase) u.mount.rotation.x = -Math.sin(p * Math.PI) * 0.35;
     } else if (u.k === 1) {
       aL = -1.5; aR = p < 0.6 ? -1.5 + 0.1 * (p / 0.6) : -1.2; u.armR.position.z = p < 0.6 ? -0.12 * (p / 0.6) : lerp(-0.12, 0, (p - 0.6) / 0.4); twist = -0.25;
       if (av === 1) { lean -= Math.sin(p * Math.PI) * 0.12; hop = Math.sin(p * Math.PI) * 0.12; }
@@ -4613,7 +4646,7 @@ function animateRig(u, dt, moving, attacking) {
       else if (av === 2) { aR = p < 0.4 ? lerp(-0.2, 0.7, p / 0.4) : lerp(0.7, -1.9, Math.min(1, (p - 0.4) / 0.25)); lean += p > 0.4 && p < 0.7 ? 0.15 : 0; }
       else { aR = p < 0.4 ? -3.0 * sstep(0, 0.4, p) : lerp(-3.0, -0.6, Math.min(1, (p - 0.4) / 0.25)); twist = p < 0.4 ? -0.3 : 0.25 * (1 - p); if (p > 0.4 && p < 0.7) lean += 0.12; }
     }
-    if (u.k === 5) u.mount.rotation.x = -Math.sin(p * Math.PI) * 0.22;
+    if (u.k === 5 && !u.tgtBase) u.mount.rotation.x = -Math.sin(p * Math.PI) * 0.22;
   } else if (u.k === 1) { u.armR.position.z = 0; if (attacking) aL = -1.3; }
   if (u.flinch > 0) { u.flinch -= dt; lean -= u.flinch * 1.6; }
   if (u.wet) { aL = -2.2 + Math.sin(ph * 7) * 1.3; aR = -2.2 + Math.sin(ph * 7 + Math.PI) * 1.3; if (u.legL) { u.legL.rotation.x = Math.sin(ph * 12) * 0.7; u.legR.rotation.x = -Math.sin(ph * 12) * 0.7; } lean = 0.5; }
@@ -4734,6 +4767,8 @@ function renderUnits(t, dt) {
     const mine = V.poss && V.poss.id === u.id;
     if (mine) { x = V.poss.x; z = V.poss.z; }
     const px = u.g.position.x, pz = u.g.position.z, y = mine && V.poss.fy !== undefined ? Math.max(unitY(x, z), V.poss.fy) : unitY(x, z), wet = y > groundY(x, z) + 0.05 || holeAt(x, z);
+    if (wet && !u.wet && u.dryT > 0.4 && !u.arm) { const sy = holeAt(x, z) ? Math.max(groundY(x, z), WL + 0.1) : WL; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, r = 0.3 + Math.random() * 0.6; puff(x + Math.cos(a) * r, sy + 0.2 + Math.random() * 0.9, z + Math.sin(a) * r, i % 3 ? 0xe8f8ff : 0x7fc9ee, 1, 0.55 + Math.random() * 0.3); } if (u.team === V.myTeam || mine) SFX.play('splat', { x, z, vol:0.55 }); }
+    u.dryT = wet ? 0 : (u.dryT || 0) + dt;
     u.wet = wet && !u.arm;
     if (wet && Math.random() < dt * (u.speed > 0.6 ? 10 : 2)) puff(x + (Math.random() - .5) * 1.2, WL + 0.1, z + (Math.random() - .5) * 1.2, 0xe8f6ff, 1, 0.5);
     const jt = mine ? (V.poss.jumpT || 0) : (u.jumpT || 0), jd = mine ? (V.poss.jDur || 0.9) : (u.jDur || 0.9);
@@ -4751,7 +4786,8 @@ function renderUnits(t, dt) {
       else if (u.faceSp) u.faceSp.visible = false; }
     updateStatusFx(u, dt, x, y, z);
     u.speed = lerp(u.speed, Math.hypot(x - px, z - pz) / Math.max(dt, 1e-3), 0.25);
-    const sgR = !!u.arm, moving = mine ? V.poss.moving : u.speed > (sgR ? 1.1 : 0.6);
+    const sgR = !!u.arm, moving = mine ? V.poss.moving : (u.mvH = u.speed > (sgR ? 1.1 : u.mvH ? 0.45 : 1.0) && !(u.atkT < 0.9 && u.speed < 2.2));
+    u.tgtBase = ea[5] === -2;
     let want = u.g.rotation.y;
     if (mine) want = V.poss.yaw;
     else if (u.isPoss && u.yawNet !== null) want = u.yawNet;
@@ -4763,6 +4799,8 @@ function renderUnits(t, dt) {
       if ((ist & 1) && !u.rag && !u.arm) { u.slide = Math.min(1, (u.slide || 0) + dt * 6); } else if (u.slide) u.slide = Math.max(0, u.slide - dt * 4);
       if (u.slide > 0) { const q = u.slide; u.rig.rotation.x = -1.35 * q; u.rig.position.y = lerp(u.rig.position.y, 0.32, q); if (u.armL && !u.bear) { u.armL.rotation.x = lerp(u.armL.rotation.x, -3.0, q); u.armR.rotation.x = lerp(u.armR.rotation.x, -3.0, q); } if (u.legL) { u.legL.rotation.x *= 1 - q; u.legR.rotation.x *= 1 - q; } if ((ist & 1) && Math.random() < dt * 14) puff(x + (Math.random() - .5), y + 0.15, z + (Math.random() - .5), 0xeefaff, 1, 0.35); }
       if ((ist & 1) && !u.slipW) { u.slipW = 1; if (Math.random() < 0.7) word(pick(['HUCH!', 'RUTSCH!', 'UIII!', 'GLATTEIS!']), x, y + 2.6, z, { color:'#bfefff', scale:0.85 }); SFX.play('whoosh', { x, z, vol:0.5 }); } else if (!(ist & 1)) u.slipW = 0;
+      if ((ist & 4) && !u.frost && !u.arm) { const fg = new THREE.Group(), fm = new THREE.MeshPhongMaterial({ color:lin(0xcff4ff), emissive:lin(0x2a7aa8), shininess:160, specular:lin(0xffffff), flatShading:true, transparent:true, opacity:0.85 }); for (let i = 0; i < 9; i++) { const c2 = mesh(new THREE.OctahedronGeometry(0.09 + Math.random() * 0.08, 0), fm, (Math.random() - .5) * 0.55, 0.3 + Math.random() * 1.25, (Math.random() - .5) * 0.45, fg); c2.scale.y = 1.8 + Math.random(); c2.rotation.set(Math.random(), Math.random(), Math.random()); } (u.torso || u.rig).add(fg); u.frost = fg; }
+      if (u.frost) { u.frost.visible = !!(ist & 4); if (u.frost.visible) u.frost.children.forEach((c2, k) => c2.scale.x = c2.scale.z = 0.9 + Math.sin(clock * 3 + k) * 0.15); }
       if (ist & 4) { u.rig.position.x = Math.sin(clock * 55 + u.id) * 0.035; if (Math.random() < dt * 5) puff(x + (Math.random() - .5) * 0.9, y + 0.4 + Math.random() * 1.6, z + (Math.random() - .5) * 0.9, 0xcff4ff, 1, 0.3); if ((u.team === V.myTeam || mine) && Math.random() < dt * 0.35) word(pick(['BRRR!', 'KALT!', 'Zähneklappern …']), x, y + 2.8, z, { color:'#9be7ff', scale:0.8 }); } else if (u.rig.position.x) u.rig.position.x = 0;
       if (mine) { const fr = $('#frost'); if (fr) fr.classList.toggle('on', !!(ist & 4)); } }
     if (mine) u.headTarget = EG.intro > 0.35 ? BIG_HEAD : 0.95; else if (u.isPoss) u.headTarget = BIG_HEAD * (1 + 0.45 * tpk(u.team, 'bighead'));
@@ -4798,6 +4836,6 @@ function renderUnits(t, dt) {
 document.fonts && document.fonts.load('40px "Lilita One"').then(() => { spriteCache.clear(); if (V.mode === 'menu') buildBases(V.facs); }).catch(() => {});
 menuScene(); applyCam();
 requestAnimationFrame(frame);
-window.__wvr = { WV:()=>WV, breakIce:(G,u)=>breakIce(G,u), onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
+window.__wvr = { holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, breakIce:(G,u)=>breakIce(G,u), onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
 })();
 </script>
