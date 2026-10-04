@@ -746,7 +746,6 @@ function tryMap(seed, noForest, force, nf = 5, seed0 = seed) {
   if (m.type === 'klippen') { m.lift = 4; m.cliff = true; m.RW = 2.4 + r() * 0.7; } if (m.type === 'arktis') m.frozen = true;
   const rv = tut ? 0 : rs(); m.river = rv < 0.3 ? 'wavy' : rv < 0.5 ? 'straight' : rv < 0.8 ? 'diagonal' : 'meander';
   const rm = tut ? 1 : rs(); m.rmode = m.type === 'wiesen' ? (rm < 0.38 ? 'island' : rm < 0.55 ? 'ring' : 'band') : rm < 0.3 ? 'ring' : 'band';
-  if (m.rmode === 'island') m.cliff = true;
   if (m.rmode !== 'band') { m.ring = true; m.ringR = (m.rmode === 'island' ? 12 : 14) + rs() * 4; if (m.rmode === 'island') m.RW = 3.4 + rs() * 0.8; }
   if (m.river === 'straight') { m.rA *= 0.25; m.rA2 *= 0.3; } else if (m.river === 'diagonal') { m.rA *= 0.4; m.rT = (rs() < 0.5 ? -1 : 1) * (0.2 + rs() * 0.22); } else if (m.river === 'meander') { m.rA2 = 1.8 + rs() * 1.4; }
   const hs = tut ? 0 : rs(); m.hills = m.type === 'wiesen' ? 'rolling' : m.type === 'wueste' ? 'ridges' : m.type === 'klippen' ? 'plateaus' : hs < 0.5 ? 'rolling' : 'ridges';
@@ -872,7 +871,7 @@ function tryMap(seed, noForest, force, nf = 5, seed0 = seed) {
   const walk = buildWalk(blockers);
   m.walk = walk;
   const wet = new Uint8Array(GW * GH);
-  for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) { const c = j * GW + i; if (walk[c] || m.lift) continue; if (m.rmode === 'island') { const p3 = cellCenter(c); if (riverDist(m, p3.x, p3.z) < m.RW + 2.5) continue; } const x = -HALF_W + (i + .5) * CELL, z = -HALF_H + (j + .5) * CELL, h = sampleH(m, x, z); if (h < WL + 1.3 && !blockers.some(b => (x - b.x) ** 2 + (z - b.z) ** 2 < b.r * b.r) && !m.bases.some(b => baseGap(b, x, z) < 0.9)) wet[c] = 1; }
+  for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) { const c = j * GW + i; if (walk[c] || m.lift) continue; const x = -HALF_W + (i + .5) * CELL, z = -HALF_H + (j + .5) * CELL, h = sampleH(m, x, z); if (h < WL + 1.3 && !blockers.some(b => (x - b.x) ** 2 + (z - b.z) ** 2 < b.r * b.r) && !m.bases.some(b => baseGap(b, x, z) < 0.9)) wet[c] = 1; }
   m.wet = wet;
   if (m.frozen) { m.ice = new Uint8Array(GW * GH); for (let c = 0; c < GW * GH; c++) { const p2 = cellCenter(c); if (walk[c] && sampleH(m, p2.x, p2.z) < WL + 0.45 && !onBridge(m, p2.x, p2.z)) m.ice[c] = 1; } }
   const fronts = m.bases.map((b, i) => nearestWalkable(m, b.x, b.z + (i ? 8 : -8)));
@@ -943,6 +942,7 @@ function cellCenter(c) { return { x:-HALF_W + ((c % GW) + .5) * CELL, z:-HALF_H 
 function walkableIn(m, x, z) { const c = cellOf(x, z); return c >= 0 && (m.walk[c] === 1 || (m.wet && m.wet[c] === 1)); }
 function landIn(m, x, z) { const c = cellOf(x, z); return c >= 0 && m.walk[c] === 1; }
 const holeAt = (x, z) => { const H = MAP.holes; if (!H || !H.length) return false; for (const h of H) if ((x - h.x) ** 2 + (z - h.z) ** 2 < 1.3) return true; return false; };
+const wadeAt = (x, z) => !MAP.frozen && !MAP.lift && !onBridge(MAP, x, z) && sampleH(MAP, x, z) < WL + 0.42;
 const inWater = (x, z) => holeAt(x, z) || (!landIn(MAP, x, z) && !onBridge(MAP, x, z) && sampleH(MAP, x, z) < WL + 0.4);
 const unitY = (x, z) => holeAt(x, z) ? WL - 0.75 : Math.max(groundY(x, z), WL - 0.85);
 const walkable = (x, z) => walkableIn(MAP, x, z);
@@ -1240,7 +1240,7 @@ function possStep(G, u, byId) {
   if (u.spinT > 0) { u.spinT -= DT; u.spinP -= DT; if (u.spinP <= 0) { u.spinP = 0.4; enemiesInCone(G, u, 5.5, Math.PI).forEach(c => { hit(G, c.e.id, 30, u.team, byId, u.k, true); if (!(c.e.down > 0.6)) knockFly(c.e, u.x, u.z, 5); }); } }
   if (u.dance > 0) { u.dance -= DT; if (In && In.id === u.id) { u.la = In.a; u.ls = In.s; u.lj = In.j; u.lg = In.g; } u.run = 0; u.ord = { x:u.x, z:u.z, mv:false }; u.tgt = -1; return; }
   if (u.jumpT > 0) { u.jumpT -= DT; if (u.jumpT <= 0) { for (const e of G.units) if (e.team !== u.team && e.hp > 0 && (e.x - u.x) ** 2 + (e.z - u.z) ** 2 < 3.6 * 3.6) { hit(G, e.id, 45, u.team, byId, -1, true); knockFly(e, u.x, u.z, 9); } u.stomp = (u.stomp || 0) + 1; } }
-  if (u.dashS > 0) { u.dashS -= DT; const st = 26 * DT, nx = u.x + u.dfx * st, nz = u.z + u.dfz * st;
+  if (u.dashS > 0) { u.dashS -= DT; const st = 26 * DT * (inWater(u.x, u.z) || wadeAt(u.x, u.z) ? 0.45 : 1), nx = u.x + u.dfx * st, nz = u.z + u.dfz * st;
     if (fallZone(nx, nz)) { u.x = nx; u.z = nz; u.dashS = 0; startFall(u, u.dfx * 11, u.dfz * 11); }
     else if (walkable(nx, nz) || edgeSlide(nx, nz)) { u.x = nx; u.z = nz; } else u.dashS = 0;
     if (In && In.id === u.id) { u.la = In.a; u.ls = In.s; } u.run = 0; return; }
@@ -1286,9 +1286,9 @@ function hitBear(G, b, dmg, team, attK, bp, head) {
   }
 }
 function bearKillAt(G, x, z, r, team) { for (const b of G.bears.slice()) if (Math.hypot(b.x - x, b.z - z) < r) hitBear(G, b, 99999, team, -1); }
-const PAD_FLY = 1.45, PAD_CD = 4;
+const PAD_FLY = 1.5, PAD_CD = 2.6, PAD_W = 2.7, PAD_D = 1.95, PAD_H = 7;
 function padLocal(pd, x, z) { const dx = pd.tx - pd.x, dz = pd.tz - pd.z, d = Math.hypot(dx, dz) || 1, fx = dx / d, fz = dz / d, rx = x - pd.x, rz = z - pd.z; return { al:rx * fx + rz * fz, ac:rx * fz - rz * fx, fx, fz }; }
-const onPad = (pd, x, z) => { const l = padLocal(pd, x, z); return Math.abs(l.al) < 1.35 && Math.abs(l.ac) < 1.9; };
+const onPad = (pd, x, z) => { const l = padLocal(pd, x, z); return Math.abs(l.al) < PAD_D && Math.abs(l.ac) < PAD_W; };
 function padStep(G) {
   const PS = G.padSt || (G.padSt = MAP.pads.map(() => ({ cd:0, arm:0, n:0 })));
   for (const u of G.units) { if (u.padCd > 0) u.padCd -= DT;
@@ -1296,14 +1296,12 @@ function padStep(G) {
   MAP.pads.forEach((pd, i) => { const st = PS[i]; if (st.cd > 0) { st.cd -= DT; return; }
     const on = G.units.filter(u => !u.pj && !(u.fall > 0) && u.hp > 0 && !(u.padCd > 0) && KINDS[u.k].role !== 'siege' && onPad(pd, u.x, u.z));
     if (!on.length) { st.arm = 0; return; }
-    st.arm += DT; if (st.arm < 0.35) return;
+    st.arm += DT; if (st.arm < 0.2) return;
     st.arm = 0; st.cd = PAD_CD; st.n = (st.n + 1) % 100;
     for (const u of on) { const l = padLocal(pd, u.x, u.z), sp = l.ac * 1.1 + (Math.random() - .5) * 1.2, tx = pd.tx + l.fz * sp, tz = pd.tz - l.fx * sp, q = walkable(tx, tz) ? { x:tx, z:tz } : nearestWalkable(MAP, tx, tz);
-      u.pj = { sx:u.x, sz:u.z, tx:q.x, tz:q.z, t:0 }; u.jumpT = PAD_FLY; u.kb = null; u.down = 0; u.dance = 0; }
+      u.pj = { sx:u.x, sz:u.z, tx:q.x, tz:q.z, t:0 }; u.jumpT = PAD_FLY; u.kb = null; u.down = 0; u.dance = 0; u.path = null;
+      if (u.ord && (Math.hypot(u.ord.x - pd.x, u.ord.z - pd.z) < Math.hypot(u.ord.x - pd.tx, u.ord.z - pd.tz))) u.ord = { x:q.x, z:q.z, mv:false }; }
   });
-  // units waiting in a pad lane over the water hop back onto the pad
-  for (const u of G.units) { if (u.pj || u.poss || u.hp <= 0 || u.fall > 0 || sampleH(MAP, u.x, u.z) > WL + 0.25) continue;
-    const pd = MAP.pads.find(p2 => segDist(u.x, u.z, { x:p2.x, z:p2.z }, { x:p2.tx, z:p2.tz }) < 1.3); if (pd) { const l = padLocal(pd, u.x, u.z); u.x = pd.x + l.fz * clamp(l.ac, -1.5, 1.5); u.z = pd.z - l.fx * clamp(l.ac, -1.5, 1.5); } }
 }
 function breakIce(G, u) {
   if (!G.holes) G.holes = []; G.holeS = ((G.holeS || 0) + 1) % 10000;
@@ -1425,7 +1423,7 @@ function step(G) {
       } else steer(G, u, tx, tz, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1));
     } else if (Math.hypot(o.x - u.x, o.z - u.z) > 0.3) steer(G, u, o.x, o.z, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1));
     const ox = u.x, oz = u.z;
-    { const sw = (inWater(u.x, u.z) ? 0.33 : 1) * (u.cold > 0 ? 0.88 : 1); if (MAP.ice && onIce(u.x, u.z)) { u.ivx = lerp(u.ivx ?? u.vx, u.vx, 0.02); u.ivz = lerp(u.ivz ?? u.vz, u.vz, 0.02); u.vx = u.ivx * 1.25; u.vz = u.ivz * 1.25; } else { u.ivx = u.vx; u.ivz = u.vz; } u.x += u.vx * DT * sw; u.z += u.vz * DT * sw; }
+    { const sw = (inWater(u.x, u.z) ? 0.33 : wadeAt(u.x, u.z) ? 0.65 : 1) * (u.cold > 0 ? 0.88 : 1); if (MAP.ice && onIce(u.x, u.z)) { u.ivx = lerp(u.ivx ?? u.vx, u.vx, 0.02); u.ivz = lerp(u.ivz ?? u.vz, u.vz, 0.02); u.vx = u.ivx * 1.25; u.vz = u.ivz * 1.25; } else { u.ivx = u.vx; u.ivz = u.vz; } u.x += u.vx * DT * sw; u.z += u.vz * DT * sw; }
     if (!walkable(u.x, u.z)) {
       if (walkable(u.x, oz)) u.z = oz; else if (walkable(ox, u.z)) u.x = ox;
       else {
@@ -1539,7 +1537,7 @@ function snapOf(G) {
     tw:[T0.tatk, T0.ttgt, T1.tatk, T1.ttgt], k:[T0.kills, T1.kills], mf:[T0.maxFlags, T1.maxFlags], ru:[T0.rush, T1.rush], rp:[T0.rushAt, T1.rushAt],
     ...(G.chaos ? { ch:1, pk:[Object.assign({}, T0.pk), Object.assign({}, T1.pk)], of:[T0.offer, T1.offer], pn:[T0.pkN, T1.pkN], lp:[T0.lastPk, T1.lastPk], no:Math.max(0, Math.ceil(G.nextOffer - G.t)), on:G.offerN, pz:Math.ceil(G.pz), fb:G.fb.map(b => [b.id, Math.round(b.x * 10), Math.round(b.z * 10), Math.round(b.t * 10), b.team, b.lvl]) } : {}),
     gr:(G.gr || []).map(g => [g.id, Math.round(g.x * 10), Math.round(g.z * 10), Math.round(g.sx * 10), Math.round(g.sz * 10), Math.round(g.t * 10), g.team, Math.round((g.t0 || 1) * 10)]),
-    hq:[T0.hq.slice(), T1.hq.slice()], dz:G.dz ? G.dz.slice() : [], ge:G.ge ? G.ge.slice() : [], it:(G.items || []).map(i => [i.id, i.ty, Math.round(i.x * 10), Math.round(i.z * 10)]), nd:[T0.nades || 0, T1.nades || 0], pe:G.pe ? G.pe.slice() : [], ct:G.ct ? G.ct.slice() : [], br:(G.bears || []).map(b => [Math.round(b.x * 10), Math.round(b.z * 10), Math.round(b.yaw * 100), b.atk, b.mv, Math.round(b.hp / b.mhp * 100), b.id]), bev:G.bev ? G.bev.slice() : [], pd:(G.padSt || []).map(st => [st.n, Math.ceil(st.cd * 10), st.arm > 0 ? 1 : 0]), fz:G.units.filter(u => u.fall > 0).map(u => u.id), ih:(G.holes || []).map(h => [h.id, Math.round(h.x * 10), Math.round(h.z * 10), Math.ceil(h.t)]), ic:G.units.filter(u => u.slipT > 0 || u.inHole || u.cold > 0).map(u => [u.id, (u.slipT > 0 ? 1 : 0) | (u.inHole ? 2 : 0) | (u.cold > 0 ? 4 : 0)]), fp:G.fp.map(p => [p.id, Math.round(p.x * 10), Math.round(p.y * 10), Math.round(p.z * 10), Math.round(p.dx * 100), Math.round(p.dy * 100), Math.round(p.dz * 100), p.team, p.k]),
+    hq:[T0.hq.slice(), T1.hq.slice()], dz:G.dz ? G.dz.slice() : [], ge:G.ge ? G.ge.slice() : [], it:(G.items || []).map(i => [i.id, i.ty, Math.round(i.x * 10), Math.round(i.z * 10)]), nd:[T0.nades || 0, T1.nades || 0], pe:G.pe ? G.pe.slice() : [], ct:G.ct ? G.ct.slice() : [], br:(G.bears || []).map(b => [Math.round(b.x * 10), Math.round(b.z * 10), Math.round(b.yaw * 100), b.atk, b.mv, Math.round(b.hp / b.mhp * 100), b.id]), bev:G.bev ? G.bev.slice() : [], pj:G.units.filter(u => u.pj).map(u => [u.id, Math.round(u.pj.sx * 10), Math.round(u.pj.sz * 10), Math.round(u.pj.tx * 10), Math.round(u.pj.tz * 10), Math.round(u.pj.t * 100)]), pd:(G.padSt || []).map(st => [st.n, Math.ceil(st.cd * 10), st.arm > 0 ? 1 : 0]), fz:G.units.filter(u => u.fall > 0).map(u => u.id), ih:(G.holes || []).map(h => [h.id, Math.round(h.x * 10), Math.round(h.z * 10), Math.ceil(h.t)]), ic:G.units.filter(u => u.slipT > 0 || u.inHole || u.cold > 0).map(u => [u.id, (u.slipT > 0 ? 1 : 0) | (u.inHole ? 2 : 0) | (u.cold > 0 ? 4 : 0)]), fp:G.fp.map(p => [p.id, Math.round(p.x * 10), Math.round(p.y * 10), Math.round(p.z * 10), Math.round(p.dx * 100), Math.round(p.dy * 100), Math.round(p.dz * 100), p.team, p.k]),
     u:G.units.map(u => { const e = [u.id, u.k, Math.round(u.x * 10), Math.round(u.z * 10), Math.max(1, Math.round(u.hp / maxHp(u) * 100)), u.at, u.atk, (u.poss ? 1 : 0) | (u.down > 0 ? 2 : 0) | (u.bite > 0 ? 4 : 0) | (u.dance > 0 ? 8 : 0) | (u.chick > 0 ? 16 : 0) | (u.jumpT > 0 ? 32 : 0) | ((u.kbN || 0) << 6)];
       if (u.poss) e.push(u.sp, Math.round(u.yaw * 100), u.rage > 0 ? 1 : 0, Math.max(0, Math.ceil(u.spcd * 10)), u.spm ? 1 : 0, u.shot ? u.shot[0] : 0, u.shot ? u.shot[1] : 0); return e; }),
   };
@@ -2073,18 +2071,18 @@ function buildMapView(m) {
   }
   PADV.length = 0;
   (m.pads || []).forEach(pd => { const g = new THREE.Group(), y = sampleH(m, pd.x, pd.z); g.position.set(pd.x, y + 0.02, pd.z); g.rotation.y = Math.atan2(pd.tx - pd.x, pd.tz - pd.z);
-    const wood = lam(0x8a5a2b), dark = lam(0x4a3220), metal = lam(0x9aa3ad), red = new THREE.MeshLambertMaterial({ color:lin(0xe0442e), emissive:lin(0x401008) });
-    // pit frame
-    [[-1.95, 0], [1.95, 0]].forEach(([fx]) => mesh(new THREE.BoxGeometry(0.2, 0.3, 3.0), dark, fx, 0.12, 0, g)); [[-1.45], [1.45]].forEach(([fz]) => mesh(new THREE.BoxGeometry(4.1, 0.3, 0.2), dark, 0, 0.12, fz, g));
-    mesh(new THREE.BoxGeometry(3.8, 0.04, 2.8), lam(0x2a2018), 0, 0.02, 0, g);
-    // spring coils under the plank
-    const spring = new THREE.Group(); spring.position.set(0, 0.04, 0.2); g.add(spring); for (let k = 0; k < 7; k++) mesh(new THREE.TorusGeometry(0.42, 0.04, 6, 18).rotateX(Math.PI / 2), metal, 0, 0.03 + k * 0.033, 0, spring);
-    // plank hinged at the back edge, boards across the launch direction
-    const hinge = new THREE.Group(); hinge.position.set(0, 0.32, -1.3); g.add(hinge); const plank = new THREE.Group(); plank.position.z = 1.3; hinge.add(plank);
-    for (let b = 0; b < 5; b++) { const bd = mesh(new THREE.BoxGeometry(3.7, 0.1, 0.5), b % 2 ? wood : lam(0x9a6634), 0, 0, -1.08 + b * 0.54, plank); bd.castShadow = true; }
-    [-1.5, 1.5].forEach(sx => mesh(new THREE.BoxGeometry(0.12, 0.14, 2.7), dark, sx, -0.08, 0, plank));
-    const arr = mesh(new THREE.ShapeGeometry((() => { const sh = new THREE.Shape(); sh.moveTo(0, 0.85); sh.lineTo(0.6, 0.1); sh.lineTo(0.22, 0.1); sh.lineTo(0.22, -0.7); sh.lineTo(-0.22, -0.7); sh.lineTo(-0.22, 0.1); sh.lineTo(-0.6, 0.1); sh.closePath(); return sh; })()).rotateX(-Math.PI / 2).rotateY(Math.PI), red, 0, 0.06, 0, plank); arr.rotation.y = Math.PI;
-    mesh(new THREE.CylinderGeometry(0.06, 0.06, 3.9, 8).rotateZ(Math.PI / 2), metal, 0, 0, 0, hinge);
+    const wood = lam(0x8a5a2b), dark = lam(0x4a3220), metal = lam(0x9aa3ad), red = new THREE.MeshLambertMaterial({ color:lin(0xe0442e), emissive:lin(0x401008) }), W2 = PAD_W, D2 = PAD_D;
+    // pit frame (local +z = launch direction)
+    [-1, 1].forEach(sx => mesh(new THREE.BoxGeometry(0.22, 0.32, D2 * 2 + 0.3), dark, sx * (W2 + 0.12), 0.13, 0, g)); [-1, 1].forEach(sz => mesh(new THREE.BoxGeometry(W2 * 2 + 0.46, 0.32, 0.22), dark, 0, 0.13, sz * (D2 + 0.12), g));
+    mesh(new THREE.BoxGeometry(W2 * 2, 0.04, D2 * 2), lam(0x2a2018), 0, 0.02, 0, g);
+    // two big springs under the free (rear) end
+    const spring = new THREE.Group(); spring.position.set(0, 0.04, -D2 * 0.45); g.add(spring); [-1, 1].forEach(sx => { for (let k = 0; k < 7; k++) mesh(new THREE.TorusGeometry(0.42, 0.045, 6, 18).rotateX(Math.PI / 2), metal, sx * W2 * 0.45, 0.03 + k * 0.033, 0, spring); });
+    // plank hinged at the FRONT edge: the rear end snaps up and flings everyone forward
+    const hinge = new THREE.Group(); hinge.position.set(0, 0.32, D2 - 0.05); g.add(hinge); const plank = new THREE.Group(); plank.position.z = -(D2 - 0.05); hinge.add(plank);
+    const nb = 7; for (let b = 0; b < nb; b++) { const bd = mesh(new THREE.BoxGeometry(W2 * 2 - 0.1, 0.11, D2 * 2 / nb - 0.04), b % 2 ? wood : lam(0x9a6634), 0, 0, -D2 + (b + 0.5) * D2 * 2 / nb, plank); bd.castShadow = true; }
+    [-1, 1].forEach(sx => mesh(new THREE.BoxGeometry(0.14, 0.15, D2 * 2 - 0.2), dark, sx * (W2 - 0.25), -0.09, 0, plank));
+    const arr = mesh(new THREE.ShapeGeometry((() => { const sh = new THREE.Shape(); sh.moveTo(0, 1.1); sh.lineTo(0.8, 0.1); sh.lineTo(0.3, 0.1); sh.lineTo(0.3, -0.9); sh.lineTo(-0.3, -0.9); sh.lineTo(-0.3, 0.1); sh.lineTo(-0.8, 0.1); sh.closePath(); return sh; })()).rotateX(-Math.PI / 2), red, 0, 0.065, 0, plank);
+    mesh(new THREE.CylinderGeometry(0.07, 0.07, W2 * 2 + 0.2, 8).rotateZ(Math.PI / 2), metal, 0, 0, 0, hinge);
     shadows(g, true, true); mapGroup.add(g); PADV.push({ g, hinge, spring, arr, n:-1, t:9, cd:0 }); });
   flagViews = m.flags.map(F => {
     const fg = new THREE.Group(), by = sampleH(m, F.x, F.z); fg.position.set(F.x, by, F.z);
@@ -3750,8 +3748,8 @@ function egoUpdate(dt) {
   let vx = (cy * fwd - cyz * str), vz = (cyz * fwd + cy * str);
   let speed = K.speed * 1.15 * (P.rageT > 0 ? 1.4 : 1) * [1, 2][tpk(V.myTeam, 'turbo')] * (K.role === 'cav' ? [1, 1.5][tpk(V.myTeam, 'cavspd')] : 1);
   if (P.dashT > 0) { P.dashT -= dt; vx = cy; vz = cyz; speed = 27; }
-  const swim = inWater(P.x, P.z) ? 0.36 : 1, fz = frozen ? 0 : swim; let wvx = vx * speed * fz, wvz = vz * speed * fz; if (onIce(P.x, P.z) && !(P.dashT > 0)) { const k = Math.min(1, dt * 0.75); P.ivx = lerp(P.ivx ?? wvx, wvx * 1.3, k); P.ivz = lerp(P.ivz ?? wvz, wvz * 1.3, k); wvx = P.ivx; wvz = P.ivz; if (Math.hypot(wvx, wvz) > 3 && Math.random() < dt * 10) puff(P.x, unitY(P.x, P.z) + 0.1, P.z, 0xe8f6ff, 1, 0.4); } else { P.ivx = wvx; P.ivz = wvz; } const nx = P.x + wvx * dt, nz = P.z + wvz * dt;
-  if (P.pj) { /* flying over the moat */ } else if (P.falling) { P.x = clampX(P.x + (P.fvx || 0) * dt); P.z = clampZ(P.z + (P.fvz || 0) * dt); P.fvx = (P.fvx || 0) * 0.985; P.fvz = (P.fvz || 0) * 0.985; } else if (walkable(nx, nz) && !fallZone(nx, nz)) { P.x = nx; P.z = nz; } else if (fallZone(nx, nz) || edgeSlide(nx, nz) && (P.dashT > 0 || groundY(nx, nz) < (P.fy ?? groundY(P.x, P.z)) - 0.15)) { const vx = (nx - P.x) / Math.max(dt, 1e-3), vz = (nz - P.z) / Math.max(dt, 1e-3); P.x = nx; P.z = nz; if (fallZone(nx, nz)) { P.falling = true; P.fvx = vx * 0.85; P.fvz = vz * 0.85; P.dashT = 0; egoHint('AAAAH!', 1500); SFX.play('whoosh'); } } else if (walkable(nx, P.z) && Math.abs(nx - P.x) > 1e-4) P.x = nx; else if (walkable(P.x, nz) && Math.abs(nz - P.z) > 1e-4) P.z = nz;
+  const inW = inWater(P.x, P.z), wd = !inW && wadeAt(P.x, P.z); if (P.dashT > 0 && (inW || wd)) { P.dashT -= dt * 0.8; if (Math.random() < dt * 30) puff(P.x + (Math.random() - .5) * 1.4, WL + 0.2, P.z + (Math.random() - .5) * 1.4, 0xe8f8ff, 1, 0.6); } const swim = inW ? (P.dashT > 0 ? 0.5 : 0.36) : wd ? (P.dashT > 0 ? 0.6 : 0.65) : 1, fz = frozen ? 0 : swim; let wvx = vx * speed * fz, wvz = vz * speed * fz; if (onIce(P.x, P.z) && !(P.dashT > 0)) { const k = Math.min(1, dt * 0.75); P.ivx = lerp(P.ivx ?? wvx, wvx * 1.3, k); P.ivz = lerp(P.ivz ?? wvz, wvz * 1.3, k); wvx = P.ivx; wvz = P.ivz; if (Math.hypot(wvx, wvz) > 3 && Math.random() < dt * 10) puff(P.x, unitY(P.x, P.z) + 0.1, P.z, 0xe8f6ff, 1, 0.4); } else { P.ivx = wvx; P.ivz = wvz; } const nx = P.x + wvx * dt, nz = P.z + wvz * dt;
+  if (P.pj) { /* flying over the moat */ } else if (P.falling) { P.x = clampX(P.x + (P.fvx || 0) * dt); P.z = clampZ(P.z + (P.fvz || 0) * dt); P.fvx = (P.fvx || 0) * 0.985; P.fvz = (P.fvz || 0) * 0.985; } else if (walkable(nx, nz) && !fallZone(nx, nz)) { P.x = nx; P.z = nz; } else if (fallZone(nx, nz) || edgeSlide(nx, nz) && (P.dashT > 0 || groundY(nx, nz) <= groundY(P.x, P.z) + 0.03)) { const vx = (nx - P.x) / Math.max(dt, 1e-3), vz = (nz - P.z) / Math.max(dt, 1e-3); P.x = nx; P.z = nz; if (fallZone(nx, nz)) { P.falling = true; P.fvx = vx * 0.85; P.fvz = vz * 0.85; P.dashT = 0; egoHint('AAAAH!', 1500); SFX.play('whoosh'); } } else if (walkable(nx, P.z) && Math.abs(nx - P.x) > 1e-4) P.x = nx; else if (walkable(P.x, nz) && Math.abs(nz - P.z) > 1e-4) P.z = nz;
   else { const mx = nx - P.x, mz = nz - P.z; for (const ang of [0.5, -0.5, 1.0, -1.0, 1.45, -1.45]) { const c = Math.cos(ang), sn = Math.sin(ang), f = Math.cos(ang) * 0.9, tx = P.x + (mx * c - mz * sn) * f, tz = P.z + (mx * sn + mz * c) * f; if (walkable(tx, tz)) { P.x = tx; P.z = tz; break; } } }
   P.slope = !walkable(P.x, P.z) && edgeSlide(P.x, P.z);
   if (!walkable(P.x, P.z) && !P.pj && !P.falling && !P.slope) { const q = nearestWalkable(MAP, P.x, P.z); P.x = q.x; P.z = q.z; }
@@ -3781,7 +3779,7 @@ function egoUpdate(dt) {
   if (V.latest) { const gt = String(V.latest.g[V.myTeam]); if (gt !== EG.gtxt) { EG.gtxt = gt; $('#egoGold').textContent = gt; } }
   if (!P.confirmed && u && u.isPoss) P.confirmed = true;
   if (!P.confirmed && now() - P.t0 > (V.mode === 'guest' ? 12000 : 4000)) { exitEgo(false); toast('Übernehmen hat nicht geklappt.', 1800); return; }
-  const cav = KINDS[P.k].role === 'cav' || !!KINDS[P.k].bear, sg = KINDS[P.k].role === 'siege', back = sg ? 10.5 : cav ? 7.2 : 6.3, side = 0, gy = (P.fy ?? unitY(P.x, P.z)) + ((P.jumpT || 0) > 0 ? Math.sin(((P.jDur || 0.9) - P.jumpT) / (P.jDur || 0.9) * Math.PI) * (P.jDur > 1 ? 5 : 3) : 0);
+  const cav = KINDS[P.k].role === 'cav' || !!KINDS[P.k].bear, sg = KINDS[P.k].role === 'siege', back = sg ? 10.5 : cav ? 7.2 : 6.3, side = 0, gy = (P.fy ?? unitY(P.x, P.z)) + ((P.jumpT || 0) > 0 ? Math.sin(((P.jDur || 0.9) - P.jumpT) / (P.jDur || 0.9) * Math.PI) * (P.jDur > 1 ? PAD_H * 0.8 : 3) : 0);
   const rx = -cyz, rz = cy, cp = Math.cos(P.pitch), sp2 = Math.sin(P.pitch);
   const piv = new THREE.Vector3(P.x + rx * side, gy + (sg ? 5.2 : cav ? 4.3 : 3.7), P.z + rz * side);
   const dir = new THREE.Vector3(cy * cp, -sp2, cyz * cp);
@@ -4016,7 +4014,10 @@ function localRoom() {
 const ROOM_HELP = 'Keine Online-Verbindung. Das klappt nur, wenn ihr beide in Claude eingeloggt seid und das Spiel direkt mit dem Konto deines Mitspielers geteilt ist (im Teilen-Menü seine E-Mail eintragen). Über einen öffentlichen Link geht es nicht.';
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
 function peerTransport() {
-  const opts = Object.assign({ debug:0 }, window.WVR_PEER || {});
+  // STUN + public TURN relays: phones on mobile data sit behind carrier NAT and need a relay to reach a laptop
+  const ICE = [{ urls:['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
+    { urls:['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp', 'turns:openrelay.metered.ca:443'], username:'openrelayproject', credential:'openrelayproject' }];
+  const opts = Object.assign({ debug:0, config:{ iceServers:ICE, sdpSemantics:'unified-plan' } }, window.WVR_PEER || {});
   return { p2p:true, async join(name, role) {
     const hostId = name + '-wvr7';
     const peer = role === 'host' ? new Peer(hostId, opts) : new Peer(opts);
@@ -4030,7 +4031,7 @@ function peerTransport() {
       c.on('error', () => {});
     };
     await new Promise((res, rej) => {
-      const to = setTimeout(() => rej({ code:'timeout' }), 15000);
+      const to = setTimeout(() => rej({ code:'timeout' }), 25000);
       peer.on('open', pid => {
         myId = pid;
         if (role === 'host') { clearTimeout(to); res(); return; }
@@ -4054,20 +4055,20 @@ function peerTransport() {
     };
   } };
 }
+async function viewerRoom() {
+  if (!(window.claude && typeof window.claude.use === 'function')) return null;
+  try { return await window.claude.use('room'); } catch (_) { return null; }
+}
 async function getRoom() {
   if (NET.room) return NET.room;
-  let room = null; const inViewer = !!(window.claude && typeof window.claude.use === 'function');
-  if (inViewer) {
-    try { room = await window.claude.use('room'); } catch (_) { room = null; }
-    if (room) { NET.room = room; NET.local = false; NET.p2p = false; }
-    return NET.room;
-  }
-  try { if (!window.Peer) await loadScript('https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js'); } catch (_) {}
-  if (window.Peer) { NET.room = peerTransport(); NET.local = false; NET.p2p = true; }
-  else if ('BroadcastChannel' in window) { NET.room = localRoom(); NET.local = true; }
+  // same transport on every device: P2P (PeerJS) first, so phone and laptop always find each other
+  for (const src of ['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js', 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js']) { if (window.Peer) break; try { await loadScript(src); } catch (_) {} }
+  if (window.Peer) { NET.room = peerTransport(); NET.local = false; NET.p2p = true; return NET.room; }
+  const vr = await viewerRoom(); if (vr) { NET.room = vr; NET.local = false; NET.p2p = false; return NET.room; }
+  if ('BroadcastChannel' in window) { NET.room = localRoom(); NET.local = true; }
   return NET.room;
 }
-const P2P_MSG = { not_found:'Kein Spiel mit diesem Code gefunden. Stimmt der Code?', taken:'Dieser Code ist gerade vergeben. Bitte noch einmal versuchen.', network:'Keine Verbindung zum Vermittlungsdienst. Bist du online?', timeout:'Die Verbindung hat zu lange gedauert. Bitte noch einmal versuchen.' };
+const P2P_MSG = { not_found:'Kein Spiel mit diesem Code gefunden. Stimmt der Code?', taken:'Dieser Code ist gerade vergeben. Bitte noch einmal versuchen.', network:'Keine Verbindung zum Vermittlungsdienst. Bist du online?', timeout:'Die Verbindung hat zu lange gedauert. Tipp: Beide Geräte neu laden und es noch einmal versuchen. Falls es am Handy nicht klappt, kurz zwischen WLAN und mobilen Daten wechseln.' };
 const netErrMsg = e => NET.p2p ? (P2P_MSG[e && e.code] || P2P_MSG.network) : ROOM_HELP;
 function roomReady(r) {
   if (r.local || typeof r.onConnection !== 'function') return Promise.resolve(true);
@@ -4083,6 +4084,7 @@ async function openRoom(code, role) {
   let r;
   try { r = await room.join('wvr-' + code.toLowerCase(), role); }
   catch (e) {
+    if (room.p2p && e && e.code === 'network') { const vr = await viewerRoom(); if (vr) { NET.room = vr; NET.p2p = false; return openRoom(code, role); } }
     if (room.p2p || (e && (e.code === 'not_granted' || e.code === 'revoked'))) throw e;
     if (!(room.presence && room.peers)) throw e;
     r = { name:'lobby', presence:p => room.presence(p), peers:() => room.peers(), connected:() => room.connected(), onConnection:(h, er) => room.onConnection(h, er), leave:() => room.presence({ role:null, code:null, snap:null, cmds:null, in:null, fc:null, fgot:null }) };
@@ -4149,7 +4151,7 @@ function hostBroadcast() {
   const fp = faceChunkPatch(NET.guestPres); patch.fc = fp && fp.fc ? fp.fc : null;
   const got = faceChunkRecv(NET.guestPres); if (got) Object.assign(patch, got);
   if (patch.fc && JSON.stringify(patch).length > 3500) patch.fc = null;
-  if (JSON.stringify(patch).length > 3900) patch.snap.u = patch.snap.u.slice(0, 70);
+  if (!NET.p2p && JSON.stringify(patch).length > 3900) patch.snap.u = patch.snap.u.slice(0, 70);
   NET.r.presence(patch).catch(() => {});
 }
 async function joinOnline(code) {
@@ -4440,7 +4442,7 @@ function tutTick() {
 
 /* ---------- world: polar bears, pickups, cactus pricks ---------- */
 const PADV = [];
-const WV = { bears:[], items:new Map(), peSeen:undefined, prick:new Map(), holes:new Map(), ic:new Map(), fz:new Set() };
+const WV = { pj:new Map(), bears:[], items:new Map(), peSeen:undefined, prick:new Map(), holes:new Map(), ic:new Map(), fz:new Set() };
 let HOLE_TEX = null;
 function holeTex() {
   if (HOLE_TEX) return HOLE_TEX; const N = 256, c = cnv(N, N), x = c.getContext('2d'), g = x.createRadialGradient(128, 128, 10, 128, 128, 128);
@@ -4497,7 +4499,7 @@ function updateWorld(dt) {
   (s.pd || []).forEach((e, i) => { const v = PADV[i]; if (!v) return; if (v.n < 0) v.n = e[0]; else if (e[0] !== v.n) { v.n = e[0]; v.t = 0; const p = v.g.position; SFX.play('boing', { x:p.x, z:p.z, vol:1.1 }); SFX.play('creak', { x:p.x, z:p.z, vol:0.6 }); for (let k = 0; k < 8; k++) puff(p.x + (Math.random() - .5) * 3, p.y + 0.3, p.z + (Math.random() - .5) * 2.4, 0xd8c48f, 1, 0.6); word('BOING!', p.x, p.y + 2.2, p.z, { color:'#ffd34d', scale:1.1 });
       const P = V.poss, pd = MAP.pads[i]; if (P && pd && !P.pj && onPad(pd, P.x, P.z)) { const l = padLocal(pd, P.x, P.z), sp = l.ac * 1.1, tx = pd.tx + l.fz * sp, tz = pd.tz - l.fx * sp; P.pj = { sx:P.x, sz:P.z, tx, tz, t:0 }; P.jumpT = PAD_FLY; P.jDur = PAD_FLY; egoHint('Huiii!', 900); } }
     v.cd = e[1] / 10; v.armed = e[2]; });
-  WV.ic.clear(); for (const e of s.ic || []) WV.ic.set(e[0], e[1]); WV.fz.clear(); for (const id of s.fz || []) WV.fz.add(id);
+  WV.pj.clear(); for (const e of s.pj || []) WV.pj.set(e[0], e); WV.ic.clear(); for (const e of s.ic || []) WV.ic.set(e[0], e[1]); WV.fz.clear(); for (const id of s.fz || []) WV.fz.add(id);
   const br = s.br || [];
   while (WV.bears.length < br.length) WV.bears.push(bearMesh());
   while (WV.bears.length > br.length) { const v = WV.bears.pop(); scene.remove(v.g); hpGroup.remove(v.hp); }
@@ -4526,7 +4528,7 @@ function updateWorld(dt) {
     const own = u.team === V.myTeam; u.flash = 0.25; puff(u.g.position.x, u.g.position.y + 1, u.g.position.z, 0x4f8f3a, 3, 0.4);
     if (own || (V.poss && V.poss.id === id)) { word(pick(['AUA! Kaktus!', 'AUTSCH!', 'Stachelig!']), u.g.position.x, u.g.position.y + 3.2, u.g.position.z, { color:'#ff5a3c', scale:0.9 }); SFX.play('grunt', { x:u.g.position.x, z:u.g.position.z }); if (V.poss && V.poss.id === id) { EG.kick = Math.max(EG.kick, 0.2); egoHint('Aua! Weg vom Kaktus!', 1000); } } }
 }
-function padAnim(dt) { for (const v of PADV) { v.t += dt; let a; if (v.t < 0.1) a = -1.05 * (v.t / 0.1); else if (v.t < 0.45) a = -1.05; else { const r = clamp(v.cd / (PAD_CD - 0.45), 0, 1); a = -1.05 * r; } if (v.armed && v.cd <= 0) a = Math.sin(clock * 40) * 0.04; v.hinge.rotation.x = a; v.spring.scale.y = 1 + (-a) * 2.6; v.arr.material.emissive.setHex(v.cd > 0 ? 0x200804 : (Math.sin(clock * 5) > 0 ? 0x803018 : 0x401008)); } }
+function padAnim(dt) { for (const v of PADV) { v.t += dt; let a; if (v.t < 0.09) a = 0.95 * (v.t / 0.09); else if (v.t < 0.4) a = 0.95; else { const r = clamp(v.cd / (PAD_CD - 0.4), 0, 1); a = 0.95 * r; } if (v.armed && v.cd <= 0) a = Math.abs(Math.sin(clock * 40)) * 0.04; v.hinge.rotation.x = a; v.spring.scale.y = 1 + a * 3.4; v.arr.material.emissive.setHex(v.cd > 0 ? 0x200804 : (Math.sin(clock * 5) > 0 ? 0x803018 : 0x401008)); } }
 function clearWorldViews() { WV.bevSeen = undefined; WV.holes.forEach(v => scene.remove(v.g)); WV.holes.clear(); WV.holeInit = false; WV.ic.clear(); WV.bears.forEach(b => { scene.remove(b.g); hpGroup.remove(b.hp); }); WV.bears.length = 0; WV.items.forEach(v => scene.remove(v.g)); WV.items.clear(); WV.peSeen = undefined; WV.prick.clear(); }
 
 /* =====================================================================
@@ -4792,17 +4794,23 @@ function renderUnits(t, dt) {
     let x = eb ? lerp(ea[2], eb[2], k) / 10 : ea[2] / 10, z = eb ? lerp(ea[3], eb[3], k) / 10 : ea[3] / 10;
     const mine = V.poss && V.poss.id === u.id;
     if (mine) { x = V.poss.x; z = V.poss.z; }
+    u.padY = undefined;
+    if (!mine) { const pj = WV.pj.get(u.id);
+      if (pj && (!u.pjv || u.pjv.sx !== pj[1])) u.pjv = { sx:pj[1], sz:pj[2], tx:pj[3], tz:pj[4], t0:now() - pj[5] * 10 };
+      if (u.pjv) { const v = u.pjv, k = clamp((now() - v.t0) / 1000 / PAD_FLY, 0, 1), ax = v.sx / 10, az = v.sz / 10, bx = v.tx / 10, bz = v.tz / 10;
+        if (k >= 1 && !pj) u.pjv = null; else { x = lerp(ax, bx, k); z = lerp(az, bz, k); u.padY = lerp(groundY(ax, az), groundY(bx, bz), k) + Math.sin(k * Math.PI) * PAD_H; u.jumpT = 0; u.padK = k; } } }
     const px = u.g.position.x, pz = u.g.position.z, y = mine && V.poss.fy !== undefined ? Math.max(unitY(x, z), V.poss.fy) : unitY(x, z), wet = y > groundY(x, z) + 0.05 || holeAt(x, z);
     if (wet && !u.wet && u.dryT > 0.4 && !u.arm) { const sy = holeAt(x, z) ? Math.max(groundY(x, z), WL + 0.1) : WL; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU, r = 0.3 + Math.random() * 0.6; puff(x + Math.cos(a) * r, sy + 0.2 + Math.random() * 0.9, z + Math.sin(a) * r, i % 3 ? 0xe8f8ff : 0x7fc9ee, 1, 0.55 + Math.random() * 0.3); } if (u.team === V.myTeam || mine) SFX.play('splat', { x, z, vol:0.55 }); }
     u.dryT = wet ? 0 : (u.dryT || 0) + dt;
     u.wet = wet && !u.arm;
-    if (wet && Math.random() < dt * (u.speed > 0.6 ? 10 : 2)) puff(x + (Math.random() - .5) * 1.2, WL + 0.1, z + (Math.random() - .5) * 1.2, 0xe8f6ff, 1, 0.5);
+    if ((wet || (u.speed > 2 && wadeAt(x, z))) && Math.random() < dt * (u.speed > 0.6 ? 10 : 2)) puff(x + (Math.random() - .5) * 1.2, WL + 0.1, z + (Math.random() - .5) * 1.2, 0xe8f6ff, 1, 0.5);
     const jt = mine ? (V.poss.jumpT || 0) : (u.jumpT || 0), jd = mine ? (V.poss.jDur || 0.9) : (u.jDur || 0.9);
     if (!mine && u.jumpT > 0) u.jumpT = Math.max(0, u.jumpT - dt);
-    const jh = jt > 0 ? Math.sin((jd - jt) / jd * Math.PI) * (jd > 1 ? 6.5 : 4.8) : 0;
+    const jh = jt > 0 ? Math.sin((jd - jt) / jd * Math.PI) * (jd > 1 ? PAD_H : 4.8) : 0;
     if (u.wasJ && jt <= 0) { for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; puff(x + Math.cos(a) * 3.4, y + 0.2, z + Math.sin(a) * 3.4, 0xd8c48f, 1, 1.2); } SFX.play('stomp', { x, z }); }
     u.wasJ = jt > 0;
-    if (WV.fz.has(u.id) && !mine) { if (u.fallY === undefined) { u.fallY = u.g.position.y || y; u.fallV = 0; if (u.team === V.myTeam || Math.random() < 0.5) word(pick(['AAAAH!', 'NEEEIN!', 'HILFEEE!']), x, u.fallY + 2.5, z, { color:'#ffffff', scale:1 }); SFX.play('whoosh', { x, z }); }
+    if (u.padY !== undefined) u.g.position.set(x, u.padY, z);
+    else if (WV.fz.has(u.id) && !mine) { if (u.fallY === undefined) { u.fallY = u.g.position.y || y; u.fallV = 0; if (u.team === V.myTeam || Math.random() < 0.5) word(pick(['AAAAH!', 'NEEEIN!', 'HILFEEE!']), x, u.fallY + 2.5, z, { color:'#ffffff', scale:1 }); SFX.play('whoosh', { x, z }); }
       u.fallV += 30 * dt; u.fallY = Math.max(groundY(x, z), u.fallY - u.fallV * dt); u.g.position.set(x, u.fallY, z); u.rig.rotation.x -= dt * 6; u.rig.rotation.z += dt * 2.5; if (u.armL) { u.armL.rotation.x = -3 + Math.sin(clock * 30) * 0.5; u.armR.rotation.x = -2.8 + Math.cos(clock * 27) * 0.5; } }
     else if (!mine && !u.rag && Math.hypot(u.g.position.x - x, u.g.position.z - z) < 3) { const f = Math.min(1, dt * 15); u.g.position.set(lerp(u.g.position.x, x, f), y + jh, lerp(u.g.position.z, z, f)); } else u.g.position.set(x, y + jh, z);
     { const bm = u.isPoss && !mine && u.team !== V.myTeam ? FACE.badge[u.team] : null;
@@ -4862,6 +4870,6 @@ function renderUnits(t, dt) {
 document.fonts && document.fonts.load('40px "Lilita One"').then(() => { spriteCache.clear(); if (V.mode === 'menu') buildBases(V.facs); }).catch(() => {});
 menuScene(); applyCam();
 requestAnimationFrame(frame);
-window.__wvr = { clawLife:v=>{ CLAW_LIFE = v; }, clawStreak:(...a)=>clawStreak(...a), holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, breakIce:(G,u)=>breakIce(G,u), onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
+window.__wvr = { PADV:()=>PADV, clawLife:v=>{ CLAW_LIFE = v; }, clawStreak:(...a)=>clawStreak(...a), holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, breakIce:(G,u)=>breakIce(G,u), onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
 })();
 </script>
