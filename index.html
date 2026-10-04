@@ -1034,7 +1034,7 @@ function applyCmd(G, team, c) {
     const k = c.k | 0, K = KINDS[k];
     if (K && K.role === 'siege' && G.units.filter(u => u.team === team && KINDS[u.k].role === 'siege').length + T.q.filter(q => KINDS[q].role === 'siege').length >= 5) return;
     if (!K || K.fac !== T.fac || !FAC[T.fac].kinds.includes(k) || T.q.length >= CFG.queueMax || T.gold < K.cost || popOf(G, team) >= CFG.pop) return;
-    T.gold -= K.cost; T.q.push(k);
+    T.gold -= K.cost; if (c.auto) T.q.push(k); else { const qm = clamp(T.qm || 0, 0, T.q.length); T.q.splice(qm, 0, k); T.qm = qm + 1; }
   } else if (c.t === 'auto') {
     const K = KINDS[c.k | 0]; if (!K || K.fac !== T.fac) return; T.auto[c.k | 0] = !!c.on;
   } else if (c.t === 'order') {
@@ -1274,10 +1274,10 @@ function possStep(G, u, byId) {
   }
   u.ord = { x:u.x, z:u.z, mv:false }; u.tgt = -1;
 }
-function hitBear(G, b, dmg, team, attK, bp) {
-  if (!b || b.hp <= 0) return; let d = dmg; if (attK >= 0 && KINDS[attK].role === 'ranged') d *= 2.4; else if (attK >= 0 && KINDS[attK].role !== 'siege') d *= 0.7;
+function hitBear(G, b, dmg, team, attK, bp, head) {
+  if (!b || b.hp <= 0) return; let d = dmg; if (attK >= 0 && KINDS[attK].role === 'ranged') d *= 2.4; else if (attK >= 0 && KINDS[attK].role !== 'siege') d *= 0.7; if (head) d *= 3;
   b.hp -= d; b.aggro = team; b.at = 3;
-  if (bp) { const T = G.teams[team]; T.hqS = (T.hqS + 1) % 1000; T.hq.push([T.hqS, Math.round(b.x * 10), Math.round(b.z * 10), Math.round(d), 0, Math.round((groundY(b.x, b.z) + 1.4) * 10)]); if (T.hq.length > 4) T.hq.shift(); }
+  if (bp) { const T = G.teams[team]; T.hqS = (T.hqS + 1) % 1000; T.hq.push([T.hqS, Math.round(b.x * 10), Math.round(b.z * 10), Math.round(d), head ? 1 : 0, Math.round((groundY(b.x, b.z) + 1.4) * 10)]); if (T.hq.length > 4) T.hq.shift(); }
   if (b.hp <= 0) {
     const k = KINDS.findIndex(K => K.bear && K.fac === G.teams[team].fac), p = nearestWalkable(MAP, b.x, b.z);
     G.units.push({ id:G.nextId++, k, team, x:p.x, z:p.z, y:groundY(p.x, p.z), hp:KINDS[k].hp, cd:0.6, tgt:-1, at:0, atk:0, sp:0, run:0, re:0, ord:{ x:p.x, z:p.z, mv:false }, path:null, losT:0, los:true, repath:0, poss:false, rage:0, spcd:0, yaw:b.yaw });
@@ -1373,8 +1373,8 @@ function step(G) {
     const T = G.teams[i];
     T.gold += incomeOf(G, i) * DT;
     const en = FAC[T.fac].kinds.filter(k => T.auto[k]);
-    if (en.length && T.q.length < 3) { const k = en[T.autoI % en.length], n0 = T.q.length; applyCmd(G, i, { t:'spawn', k }); if (T.q.length > n0 || (KINDS[k].role === 'siege' && sigeOf(G, i) >= 5)) T.autoI = (T.autoI + 1) % 1000; }
-    if (T.q.length) { T.qt += DT; if (T.qt >= buildTime(G, i, T.q[0])) { const k = T.q.shift(); spawnUnit(G, i, k); if (pkL(G, i, 'twins') && KINDS[k].role !== 'siege') { T.twN = (T.twN || 0) + 1; if (T.twN % 3 === 0) spawnUnit(G, i, k); } T.qt = 0; } } else T.qt = 0;
+    if (en.length && T.q.length < 3) { const k = en[T.autoI % en.length], n0 = T.q.length; applyCmd(G, i, { t:'spawn', k, auto:true }); if (T.q.length > n0 || (KINDS[k].role === 'siege' && sigeOf(G, i) >= 5)) T.autoI = (T.autoI + 1) % 1000; }
+    if (T.q.length) { T.qt += DT; if (T.qt >= buildTime(G, i, T.q[0])) { const k = T.q.shift(); if (T.qm > 0) T.qm--; spawnUnit(G, i, k); if (pkL(G, i, 'twins') && KINDS[k].role !== 'siege') { T.twN = (T.twN || 0) + 1; if (T.twN % 3 === 0) spawnUnit(G, i, k); } T.qt = 0; } } else T.qt = 0;
   }
   for (const u of G.units) {
     if (u.fall > 0 || u.pj) continue;
@@ -1481,10 +1481,15 @@ function step(G) {
       p.x += p.dx * sd; p.y += p.dy * sd; p.z += p.dz * sd;
       if (p.y < Math.max(WL, groundY(p.x, p.z)) || Math.abs(p.x) > HALF_W + 4 || Math.abs(p.z) > HALF_H + 4) { p.t = 0; break; }
       if (baseGap(eb, p.x, p.z) < 0.3 && p.y < groundY(eb.x, eb.z) + 6 && !p.nb) { hit(G, -2, p.dmg, p.team, byId, p.k); p.t = 0; break; }
-      { let hb2 = null; for (const b of G.bears) { const by = groundY(b.x, b.z); if ((p.x - b.x) ** 2 + (p.z - b.z) ** 2 < 1.4 && p.y > by && p.y < by + 2.2) { hb2 = b; break; } } if (hb2) { hitBear(G, hb2, p.dmg, p.team, p.k, true); p.t = 0; break; } }
+      { let hb2 = null, hd = false; for (const b of G.bears) { const by = groundY(b.x, b.z), hx = b.x + Math.sin(b.yaw) * 1.4, hz = b.z + Math.cos(b.yaw) * 1.4; if ((p.x - hx) ** 2 + (p.z - hz) ** 2 + (p.y - by - 1.45) ** 2 < 0.36) { hb2 = b; hd = true; break; } if ((p.x - b.x) ** 2 + (p.z - b.z) ** 2 < 1.4 && p.y > by && p.y < by + 2.2) { hb2 = b; break; } } if (hb2) { hitBear(G, hb2, p.dmg, p.team, p.k, true, hd); p.t = 0; break; } }
       for (const e of us) {
         if (e.team === p.team || e.hp <= 0) continue;
         const dx = p.x - e.x, dz = p.z - e.z, h2 = dx * dx + dz * dz; if (h2 > 9) continue;
+        if (KINDS[e.k].bear) { const tg = e.tgt > 0 ? byId.get(e.tgt) : null, fy = e.poss ? e.yaw : tg ? Math.atan2(tg.x - e.x, tg.z - e.z) : Math.hypot(e.vx || 0, e.vz || 0) > 0.1 ? Math.atan2(e.vx, e.vz) : (e.fyaw ?? 0); e.fyaw = fy;
+          const hr = 0.36 * (e.poss ? 1.35 * (e.hs || 1) / 0.62 : 1), hx = e.x + Math.sin(fy) * 1.47, hz = e.z + Math.cos(fy) * 1.47, hy2 = e.y + 1.8;
+          if ((p.x - hx) ** 2 + (p.z - hz) ** 2 + (p.y - hy2) ** 2 < (hr + 0.12) ** 2 && !(e.down > 0)) { hit(G, e.id, p.dmg * CFG.headMul, p.team, byId, p.k, true, true); p.t = 0; break; }
+          if (h2 < 1.3 && p.y > e.y && p.y < e.y + 2.1) { hit(G, e.id, p.dmg, p.team, byId, p.k, true, false); p.t = 0; break; }
+          continue; }
         const hb = headBox(e), hy = e.y + hb.y, R = KINDS[e.k].r * 0.9;
         if (KINDS[e.k].role !== 'siege' && h2 + (p.y - hy) ** 2 < (hb.r * 1.12) ** 2 && !(e.down > 0)) { hit(G, e.id, p.dmg * CFG.headMul, p.team, byId, p.k, true, true); p.t = 0; break; }
         if (h2 < R * R && p.y > e.y - 0.2 && p.y < hy - hb.r * 0.5) { hit(G, e.id, p.dmg, p.team, byId, p.k, true, false); p.t = 0; break; }
@@ -1721,6 +1726,8 @@ function aiPossess(G, team, A, L, mine, foes) {
   if (!L.poss) return;
   const T = G.teams[team], PS = L.ps;
   A.posCd -= DT;
+  if (A.hadPos && !T.pos) { A.hadPos = false; if (!A.selfOut) A.posCd = Math.max(A.posCd, ({ easy:16, medium:12, hard:9, insane:6.5, extreme:4.5 }[A.lvl] || 10) * (0.8 + Math.random() * 0.4)); A.selfOut = false; }
+  if (T.pos) A.hadPos = true;
   if (!T.pos) {
     if (A.posCd > 0 || G.t < L.poss || mine.length < PS.min) return;
     const ok = mine.filter(u => KINDS[u.k].role !== 'siege' && !(u.down > 0) && u.hp >= KINDS[u.k].hp * 0.8), ep = foes.find(e => e.poss), vsR = ep && KINDS[ep.k].role === 'ranged' && L.micro >= 3;
@@ -1740,9 +1747,9 @@ function aiPossess(G, team, A, L, mine, foes) {
   A.crT = (A.crT || 0) - DT; if (A.crT <= 0) { A.crT = 3; A.cliffRoll = !L.cliff && Math.random() < ({ easy:0.12, medium:0.25, hard:0.4 }[A.lvl] || 0); }
   const K = KINDS[u.k];
   if (u.down > 0 || u.dance > 0) { A.rt = 0; return; }
-  if (PS.flee && u.hp < maxHp(u) * (A.fleeAt ?? PS.flee)) { applyCmd(G, team, { t:'unposs' }); A.posCd = 22; return; }
-  if (L.micro >= 3 && K.role === 'melee' && foes.some(e => e.poss && KINDS[e.k].role === 'ranged') && mine.some(m => KINDS[m.k].role === 'cav' || KINDS[m.k].role === 'ranged')) { applyCmd(G, team, { t:'unposs' }); A.posCd = 1.5; return; }
-  if (MAP.cliff && (L.cliff || A.cliffRoll) && K.role !== 'cav' && u.k !== 2 && Math.random() < DT * 0.08 && mine.some(m => (KINDS[m.k].role === 'cav' || m.k === 2) && !(m.down > 0) && foes.some(e => Math.hypot(e.x - m.x, e.z - m.z) < 18 && edgeNear(e.x, e.z, 4)))) { applyCmd(G, team, { t:'unposs' }); A.posCd = 1; return; }
+  if (PS.flee && u.hp < maxHp(u) * (A.fleeAt ?? PS.flee)) { A.selfOut = true; applyCmd(G, team, { t:'unposs' }); A.posCd = 22; return; }
+  if (L.micro >= 3 && K.role === 'melee' && foes.some(e => e.poss && KINDS[e.k].role === 'ranged') && mine.some(m => KINDS[m.k].role === 'cav' || KINDS[m.k].role === 'ranged')) { A.selfOut = true; applyCmd(G, team, { t:'unposs' }); A.posCd = 1.5; return; }
+  if (MAP.cliff && (L.cliff || A.cliffRoll) && K.role !== 'cav' && u.k !== 2 && Math.random() < DT * 0.08 && mine.some(m => (KINDS[m.k].role === 'cav' || m.k === 2) && !(m.down > 0) && foes.some(e => Math.hypot(e.x - m.x, e.z - m.z) < 18 && edgeNear(e.x, e.z, 4)))) { A.selfOut = true; applyCmd(G, team, { t:'unposs' }); A.posCd = 1; return; }
   const EB = BASES[1 - team], ebHp = G.teams[1 - team].hp, danger = ebHp > CFG.baseHp * 0.2, tr = CFG.towerRange + 2;
   if (danger && Math.hypot(u.x - EB.x, u.z - EB.z) < tr) { const dx = u.x - EB.x, dz = u.z - EB.z, d0 = Math.hypot(dx, dz) || 1, p = nearestWalkable(MAP, clampX(EB.x + dx / d0 * (tr + 6)), clampZ(EB.z + dz / d0 * (tr + 6))); u.vx = 0; u.vz = 0; steer(G, u, p.x, p.z, K.speed * 1.15); T.posIn = { id:u.id, x:u.x + u.vx * DT, z:u.z + u.vz * DT, y:Math.atan2(p.x - u.x, p.z - u.z), a:A.pa, s:A.ps }; return; }
   let best = null, bs = 1e9;
@@ -2308,18 +2315,35 @@ function buildBear(k) {
   scene.add(g);
   return Object.assign(U, { ring, hp, hpf, blob, baseHeadMat:head.material });
 }
+function clawRibbon(off, W = 0.075) { const pos = [], N = 14, P = (t, e, f) => { const w = W * (1 - Math.abs(t) * 0.7); return [t * 1.15, t * 0.55 + off + e * w * (1 - f), 1.15 - 0.42 * t * t + e * w * f]; };
+  for (let i = 0; i < N - 1; i++) { const t0 = -1 + 2 * i / (N - 1), t1 = -1 + 2 * (i + 1) / (N - 1); for (const f of [0, 1]) { const a = P(t0, 1, f), b = P(t0, -1, f), c = P(t1, 1, f), d = P(t1, -1, f); pos.push(...a, ...b, ...c, ...b, ...d, ...c); } }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); return g; }
+const clawGeo = [-0.22, 0, 0.22].map(o => clawRibbon(o)), clawGeoO = [-0.22, 0, 0.22].map(o => clawRibbon(o, 0.14));
+function clawStreak(x, y, z, yaw, side, sc = 1, col = 0xe6f7ff) {
+  const g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ color:lin(col), transparent:true, opacity:0.95, side:THREE.DoubleSide, depthWrite:false }), mo = new THREE.MeshBasicMaterial({ color:lin(0x0b4f8a), transparent:true, opacity:0.75, side:THREE.DoubleSide, depthWrite:false });
+  clawGeo.forEach((geo, i) => { const a = new THREE.Mesh(clawGeoO[i], mo); a.renderOrder = 11; g.add(a); const m2 = new THREE.Mesh(geo, mat); m2.renderOrder = 12; m2.position.y = 0.002; g.add(m2); });
+  g.position.set(x, y, z); g.rotation.set(0, yaw, 0); g.scale.set(sc * 0.25 * side, sc, sc);
+  scene.add(g); fx.claws.push({ g, mat, mo, t:0, side, sc });
+}
+let CLAW_LIFE = 0.32;
+function clawTick(dt) { for (let i = fx.claws.length - 1; i >= 0; i--) { const c = fx.claws[i]; c.t += Math.min(dt, 0.05); const p = c.t / CLAW_LIFE; c.g.scale.x = c.sc * c.side * Math.min(1, 0.25 + p * 3); c.mat.opacity = 0.95 * Math.max(0, 1 - p * p); c.mo.opacity = 0.75 * Math.max(0, 1 - p * p); if (p >= 1) { scene.remove(c.g); c.mat.dispose(); c.mo.dispose(); fx.claws.splice(i, 1); } } }
 function bearRig(u, dt, moving) {
-  if (u.ph === undefined) { u.ph = Math.random() * 10; }
-  u.ph += dt; u.walk += dt * (moving ? 10 : 0); u.atkT += dt;
-  const w = u.walk, sw = moving ? 1 : 0;
-  let fl = Math.sin(w) * 0.7 * sw, fr = Math.sin(w + Math.PI) * 0.7 * sw, hl = Math.sin(w + Math.PI + 0.6) * 0.7 * sw, hr = Math.sin(w + 0.6) * 0.7 * sw, lean = 0, rear = 0;
-  if (u.clawFx > 0) { u.clawFx -= dt; const c = Math.sin(u.ph * 34); rear = 0.35; fl = -1.6 + c * 1.1; fr = -1.6 - c * 1.1; if (Math.random() < dt * 14) { const p = u.g.position, a = u.g.rotation.y; puff(p.x + Math.sin(a) * 2, p.y + 1.4, p.z + Math.cos(a) * 2, 0xffffff, 1, 0.35); } }
-  else if (u.atkT < 0.5) { const p = u.atkT / 0.5; rear = Math.sin(p * Math.PI) * 0.4; fr = p < 0.4 ? -2.2 * (p / 0.4) : lerp(-2.2, 0.5, Math.min(1, (p - 0.4) / 0.25)); lean = p > 0.4 && p < 0.7 ? 0.15 : 0; }
+  if (u.ph === undefined) { u.ph = Math.random() * 10; u.lastAtk = 9; }
+  u.ph += dt; u.walk += dt * (moving ? 8.5 : 0); u.atkT += dt;
+  const w = u.walk, sw = moving ? 1 : 0, p0 = u.g.position, yaw = u.g.rotation.y, sc = u.g.scale.x || 1;
+  // heavy four-beat gait: diagonal pairs, rolling shoulders, bobbing head
+  let fl = Math.sin(w) * 0.75 * sw, fr = Math.sin(w + Math.PI) * 0.75 * sw, hl = Math.sin(w + Math.PI * 0.5) * 0.65 * sw, hr = Math.sin(w + Math.PI * 1.5) * 0.65 * sw, lean = 0, rear = 0, roll = Math.sin(w) * 0.07 * sw, frZ = 0, flZ = 0;
+  const breath = Math.sin(u.ph * 1.8) * 0.02 * (1 - sw);
+  if (u.atkT < u.lastAtk) { const side = (u.swSide = -(u.swSide || 1)); clawStreak(p0.x + Math.sin(yaw) * 0.7 * sc, p0.y + 1.3 * sc, p0.z + Math.cos(yaw) * 0.7 * sc, yaw, side, 1.05 * sc); } u.lastAtk = u.atkT;
+  if (u.clawFx > 0) { u.clawFx -= dt; const c = Math.sin(u.ph * 30); rear = 0.55; fl = -1.9 + c * 0.9; fr = -1.9 - c * 0.9; flZ = 0.35 * c; frZ = 0.35 * c; lean = 0.05;
+    u.clawP = (u.clawP || 0) - dt; if (u.clawP <= 0) { u.clawP = 0.16; const side = (u.swSide = -(u.swSide || 1)); clawStreak(p0.x + Math.sin(yaw) * 0.6 * sc, p0.y + 1.5 * sc, p0.z + Math.cos(yaw) * 0.6 * sc, yaw + side * 0.3, side, 1.6 * sc, 0xffffff); } }
+  else if (u.atkT < 0.55) { const p = u.atkT / 0.55, s2 = u.swSide || 1; rear = Math.sin(p * Math.PI) * 0.45; const arm = p < 0.35 ? -2.4 * (p / 0.35) : lerp(-2.4, 0.4, Math.min(1, (p - 0.35) / 0.25)), z = p < 0.35 ? -0.5 * s2 * (p / 0.35) : lerp(-0.5 * s2, 0.6 * s2, Math.min(1, (p - 0.35) / 0.25)); if (s2 > 0) { fr = arm; frZ = z; } else { fl = arm; flZ = z; } lean = p > 0.35 && p < 0.7 ? 0.22 : 0; roll = Math.sin(p * Math.PI) * 0.15 * s2; }
   if (u.flinch > 0) { u.flinch -= dt; lean -= u.flinch; }
-  u.armL.rotation.x = fl; u.armR.rotation.x = fr; u.legL.rotation.x = hl; u.legR.rotation.x = hr;
-  u.torso.rotation.x = -rear + lean; u.rig.position.y = (moving ? Math.abs(Math.sin(w)) * 0.1 : 0) + rear * 0.5; u.rig.position.z = 0;
+  u.armL.rotation.set(fl, 0, flZ); u.armR.rotation.set(fr, 0, frZ); u.legL.rotation.x = hl; u.legR.rotation.x = hr;
+  u.torso.rotation.set(-rear + lean, 0, roll); u.torso.scale.set(1 + breath, 1 - breath * 0.5, 1 + breath);
+  u.rig.position.y = (moving ? Math.abs(Math.sin(w * 2)) * 0.07 : 0) + rear * 0.55; u.rig.position.z = 0;
   if (u.spin > 0) { u.spin -= dt; u.rig.rotation.y = (0.6 - u.spin) / 0.6 * TAU * 2; } else u.rig.rotation.y = 0;
-  u.neck.rotation.set(rear * 0.6, Math.sin(u.ph * 0.6) * 0.25 * (moving ? 0.3 : 1), Math.sin(w * 0.5) * 0.08 * sw);
+  u.neck.rotation.set(rear * 0.7 + Math.sin(w * 2) * 0.08 * sw - lean * 0.5, Math.sin(u.ph * 0.6) * 0.3 * (moving ? 0.2 : 1), -roll * 0.6);
   if (u.headTarget !== undefined) u.neck.scale.setScalar(lerp(u.neck.scale.x, u.headTarget, Math.min(1, dt * 6)));
   if (u.pop !== undefined) { u.pop += dt; const s = Math.min(1, u.pop / 0.3); u.g.scale.setScalar(s < 1 ? s * (1 + 0.35 * Math.sin(s * Math.PI)) : 1); if (s >= 1) delete u.pop; }
 }
@@ -2463,7 +2487,7 @@ function unitIcon(k) {
 }
 
 /* ---------- effects ---------- */
-const fx = { puffs:[], projs:[], words:[], coins:[], shots:[], swings:[], debris:[] };
+const fx = { puffs:[], projs:[], words:[], coins:[], shots:[], swings:[], debris:[], claws:[] };
 const puffGeo = new THREE.IcosahedronGeometry(0.35, 1);
 function puff(x, y, z, col = 0xffffff, n = 5, size = 1) {
   for (let i = 0; i < n; i++) {
@@ -2614,6 +2638,7 @@ const SFX = (() => {
     stomp(b, t) { thump(b, 120, t, 0.8, 0.3); noise(b, 'lowpass', 1500, 200, t, 0.25, 0.4); },
     chicken(b, t) { const f = R(700, 900); for (let i = 0; i < 3; i++) tone(b, 'square', f * (i === 2 ? 1.4 : 1), f * 0.8, t + i * 0.09, 0.07, 0.08, { bp:1400, q:2 }); },
     chomp(b, t) { tone(b, 'square', 2400, 1600, t, 0.02, 0.06, { lp:5000 }); tone(b, 'square', 2200, 1500, t + 0.07, 0.02, 0.05, { lp:5000 }); },
+    omaThrow(b, t) { swell(b, 'bandpass', 380, 1700, t, 0.22, 0.32, 1.2); noise(b, 'highpass', 2600, 900, t + 0.02, 0.09, 0.18); tone(b, 'triangle', 520, 260, t + 0.01, 0.12, 0.07); },
     throw(b, t) { swell(b, 'bandpass', 500, 2000, t, 0.3, 0.25, 1.5); tone(b, 'sine', 900, 1400, t, 0.15, 0.08); },
     disco(b, t) { [0, 0.12, 0.24, 0.36, 0.48, 0.6].forEach((d, i) => { tone(b, 'sawtooth', [196, 196, 233, 262, 196, 294][i], 0, t + d, 0.1, 0.09, { lp:1600 }); thump(b, 90, t + d, 0.35, 0.1); }); [784, 988, 1175, 1568].forEach((f, i) => tone(b, 'square', f, f, t + 0.06 + i * 0.15, 0.08, 0.04, { lp:4000 })); noise(b, 'highpass', 6000, 0, t, 0.7, 0.05); },
     alarm(b, t) { for (let i = 0; i < 4; i++) { tone(b, 'square', i % 2 ? 660 : 880, i % 2 ? 660 : 880, t + i * 0.18, 0.15, 0.07, { lp:2600 }); } },
@@ -2630,9 +2655,10 @@ const SFX = (() => {
     lose(b, t) { [392, 370, 349].forEach((f, i) => tone(b, 'sawtooth', f, f, t + i * 0.32, 0.28, 0.12, { lp:1400 })); tone(b, 'sawtooth', 330, 315, t + 0.96, 0.8, 0.12, { lp:1400, vib:6, vibD:9 }); },
   };
   const GAP = { kill:120, creak:300, flop:800, dieV:90, dieR:90, drama:400, rocket:200, ghost:400, clatter:50, splinter:120, squish:80, crash:70, grunt:120, ready:500, pop:60, chicken:250, chomp:300, boing:80, stomp:80, disco:300, alarm:1500, splat:60, catapult:80, perk:300, pick:200, hitmark:40, whoosh:60, headshot:60, swing:30, axe:40, bonk:40, bow:45, teeth:60, impact:50, die:110, goat:900, horn:900, spawn:60, base:350, slipper:50, select:40, tick:25, click:30 };
-  const SOFT = new Set(['axe', 'bonk', 'swing', 'impact', 'grunt', 'die', 'dieV', 'dieR', 'drama', 'clatter', 'slipper', 'teeth', 'bow', 'chomp', 'squish']);
+  const SOFT = new Set(['axe', 'bonk', 'swing', 'impact', 'grunt', 'die', 'dieV', 'dieR', 'drama', 'clatter', 'slipper', 'teeth', 'omaThrow', 'bow', 'chomp', 'squish']);
   function play(name, o = {}) {
     if (muted || !ac || ac.state !== 'running') return;
+    if (name === 'teeth' && !o.noThrow) play('omaThrow', { ...o, vol:(o.vol || 1) * 1.1 });
     const f = LIB[name]; if (!f) return;
     const tn = now(); if (GAP[name] && last[name] && tn - last[name] < GAP[name]) return;
     if (tn - burstT > 100) { burstT = tn; burst = 0; } if (++burst > 10) return;
@@ -4478,7 +4504,7 @@ function updateWorld(dt) {
   br.forEach((b, i) => { const v = WV.bears[i], x = b[0] / 10, z = b[1] / 10, y = groundY(x, z);
     v.g.position.x = lerp(v.g.position.x || x, x, Math.min(1, dt * 8)); v.g.position.z = lerp(v.g.position.z || z, z, Math.min(1, dt * 8)); v.g.position.y = y; v.g.rotation.y += angDiff(b[2] / 100, v.g.rotation.y) * Math.min(1, dt * 8);
     v.walk += dt * (b[4] === 2 ? 11 : b[4] ? 5 : 0); v.legs.forEach((l, k) => l.rotation.x = b[4] ? Math.sin(v.walk + (k % 2 ? Math.PI : 0) + (k > 1 ? 1 : 0)) * 0.6 : 0);
-    if (b[3] !== v.atk) { v.atk = b[3]; v.swipe = 0.5; SFX.play('rage', { x, z, vol:0.8 }); if (Math.random() < 0.5) word('GRRR!', x, y + 3, z, { color:'#ffffff', scale:0.9 }); }
+    if (b[3] !== v.atk) { v.atk = b[3]; v.swipe = 0.5; v.side = -(v.side || 1); const yw = v.g.rotation.y; clawStreak(v.g.position.x + Math.sin(yw) * 0.9, y + 1.3, v.g.position.z + Math.cos(yw) * 0.9, yw, v.side, 1.1); SFX.play('rage', { x, z, vol:0.8 }); if (Math.random() < 0.5) word('GRRR!', x, y + 3, z, { color:'#ffffff', scale:0.9 }); }
     if (v.swipe > 0) { v.swipe -= dt; v.body.rotation.x = -Math.sin((0.5 - v.swipe) / 0.5 * Math.PI) * 0.45; v.legs[0].rotation.x = -1.6 * Math.sin((0.5 - v.swipe) / 0.5 * Math.PI); } else v.body.rotation.x = 0;
     v.head.rotation.y = Math.sin(clock * 0.7 + i) * 0.3;
     const hpP = b[5] ?? 100; v.hp.visible = hpP < 100; if (v.hp.visible) { v.hp.position.set(v.g.position.x, y + 3.4, v.g.position.z); v.hp.quaternion.copy(camera.quaternion); v.hpf.scale.x = Math.max(0.01, hpP / 100); } });
@@ -4703,7 +4729,7 @@ function frame() {
       if (TUT.on) tutCamTick(dt);
     }
     SFX.music(!!(V.playing && V.poss && (V.poss.dance || now() < (V.discoUntil || 0))));
-    renderUnits(t, dt); updateWorld(dt); padAnim(dt); updateFreeArrows(dt); updateFireballs(dt); updateGrenades(dt); debrisTick(dt);
+    renderUnits(t, dt); updateWorld(dt); padAnim(dt); clawTick(dt); updateFreeArrows(dt); updateFireballs(dt); updateGrenades(dt); debrisTick(dt);
   }
   flagViews.forEach((F, i) => { const pos = F.cloth.geometry.attributes.position, a = pos.array; for (let v = 0; v < a.length; v += 3) { const x = F.base[v]; a[v + 2] = Math.sin(clock * 5 + x * 2.2 + i) * 0.12 * x; } pos.needsUpdate = true; });
   water.position.y = (MAP && MAP.lift ? -9.7 : WL) + Math.sin(clock * 0.8) * 0.05;
@@ -4836,6 +4862,6 @@ function renderUnits(t, dt) {
 document.fonts && document.fonts.load('40px "Lilita One"').then(() => { spriteCache.clear(); if (V.mode === 'menu') buildBases(V.facs); }).catch(() => {});
 menuScene(); applyCam();
 requestAnimationFrame(frame);
-window.__wvr = { holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, breakIce:(G,u)=>breakIce(G,u), onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
+window.__wvr = { clawLife:v=>{ CLAW_LIFE = v; }, clawStreak:(...a)=>clawStreak(...a), holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, breakIce:(G,u)=>breakIce(G,u), onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
 })();
 </script>
