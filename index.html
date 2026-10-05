@@ -6,13 +6,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Wikinger">
+<meta name="apple-mobile-web-app-title" content="Rentner">
 <meta name="theme-color" content="#0d1526">
-<meta name="description" content="Wikinger gegen Rentner: 3D-Strategiespiel fürs Handy, online zu zweit.">
+<meta name="description" content="Rentner gegen Wikinger: 3D-Strategiespiel mit Physik-Chaos, fürs Handy und den PC, online zu zweit.">
 <style>*,*::before,*::after{box-sizing:border-box}html{color-scheme:dark}:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
-<title>Wikinger gegen Rentner</title>
+<title>Rentner gegen Wikinger</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Rubik:wght@400;500;600;700&display=swap">
@@ -112,6 +112,21 @@ details.help ul{margin:8px 0 2px;padding-left:1.1em;line-height:1.5;font-size:.8
 .endtitle{font-family:var(--display);font-weight:400;font-size:clamp(3rem,15vw,4.4rem);text-align:center;margin:0;line-height:1;text-shadow:0 4px 0 rgba(0,0,0,.35)}
 .endtitle.win{color:var(--gold)} .endtitle.lose{color:#c9d2e3}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.cmp{display:grid;grid-template-columns:1fr auto 1fr;gap:3px 12px;font-size:.82rem;margin:4px 2px 2px;font-variant-numeric:tabular-nums}
+.cmp:empty{display:none}
+.cmp .h{font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+.cmp .l{text-align:right}.cmp .m{text-align:center;color:var(--dim);font-size:.72rem;align-self:center;white-space:nowrap}.cmp .r{text-align:left}
+.cmp .win{color:var(--gold);font-weight:700}
+#phaseChip{position:absolute;left:10px;top:calc(env(safe-area-inset-top,0px) + 52px);border-radius:10px;padding:4px 10px;font-weight:700;font-size:.78rem;letter-spacing:.05em;font-variant-numeric:tabular-nums}
+#phaseChip.storm{background:rgba(150,40,18,.9);border-color:#ff8a5c;color:#fff}
+#phaseChip.final{background:rgba(120,8,8,.92);border-color:#ff5a3c;color:#fff;animation:phPulse 1s ease-in-out infinite}
+@keyframes phPulse{50%{transform:scale(1.07)}}
+#hlBan{position:absolute;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translate(-50%,0) scale(.6);opacity:0;pointer-events:none;text-align:center;transition:opacity .18s,transform .28s cubic-bezier(.2,1.6,.4,1);z-index:6;width:max-content;max-width:92vw}
+#hlBan.on{opacity:1;transform:translate(-50%,0) scale(1)}
+#hlBan b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(1.7rem,7.5vw,2.7rem);color:#ffd34d;text-shadow:0 3px 0 rgba(0,0,0,.5),0 0 20px rgba(0,0,0,.35);letter-spacing:.02em}
+#hlBan small{display:block;font-weight:600;font-size:.86rem;color:#fff;text-shadow:0 2px 5px rgba(0,0,0,.8)}
+#hlBan.foe b{color:#ff9a8a}
+.tutOn #hlBan{top:calc(env(safe-area-inset-top,0px) + 270px)}
 .stats div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 4px}
 .stats b{display:block;font-family:var(--display);font-size:1.45rem;font-weight:400;font-variant-numeric:tabular-nums}
 .stats span{font-size:.68rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
@@ -359,6 +374,7 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
   .hud-tl{display:grid;grid-template-columns:max-content max-content;gap:5px 6px}
   .hud-tl>.stat:first-child{grid-column:1/-1;justify-self:start}
   .hud-tl>.stat:nth-child(2),.hud-tl>.stat:nth-child(3){grid-row:2}
+  #phaseChip{top:calc(env(safe-area-inset-top,0px) + 92px)}
   #perkBar{top:calc(env(safe-area-inset-top,0px) + 88px)}
   #netBadge{left:auto;right:10px;top:calc(env(safe-area-inset-top,0px) + 53px);transform:none}
 }
@@ -377,12 +393,14 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
       <div class="stat panel flagdots" id="flagdots" title="Fahnen"></div>
       <div class="stat panel" title="Armee"><span id="armyIco"></span><b id="pop">0/30</b></div>
     </div>
+    <div id="phaseChip" class="panel" hidden></div>
     <div id="perkBar"></div>
     <div class="hud-tr">
       <div class="ibrow"><button class="ibtn panel fsBtn" aria-label="Vollbild"></button><button class="ibtn panel muteBtn" aria-label="Ton an oder aus"></button><button class="ibtn panel" id="menuBtn" aria-label="Pause"></button></div>
       <canvas id="mini" aria-label="Übersichtskarte"></canvas>
     </div>
     <div id="toast" class="panel"></div>
+    <div id="hlBan" aria-live="polite"><b></b><small></small></div>
     <div class="hud-orders">
       <button id="possBtn" hidden><span id="possIco"></span>Übernehmen</button>
       <div class="ctl">
@@ -450,12 +468,12 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
   <div id="menu" class="screen">
     <div id="menuTR"><button class="ibtn panel fsBtn" aria-label="Vollbild"></button><button class="ibtn panel muteBtn" id="menuMute" aria-label="Ton an oder aus"></button></div>
     <div class="card">
-      <h1 class="logo"><span class="a">Wikinger</span><span class="vs">GEGEN</span><span class="b">Rentner</span></h1>
+      <h1 class="logo"><span class="b">Rentner</span><span class="vs">GEGEN</span><span class="a">Wikinger</span></h1>
       <p class="sub">Erobere die Fahnen. Reiß die Basis ein.</p>
       <div class="label">Deine Seite</div>
       <div class="facs">
-        <button class="fac viking" data-fac="viking" aria-pressed="false"><span class="faces"><img data-face="0" alt=""><img data-face="1" alt=""><img data-face="4" alt=""></span><b>Wikinger</b><small>schnell und wild</small></button>
-        <button class="fac rentner" data-fac="rentner" aria-pressed="true"><span class="faces"><img data-face="2" alt=""><img data-face="3" alt=""><img data-face="5" alt=""></span><b>Rentner</b><small>zäh und nachtragend</small></button>
+        <button class="fac rentner" data-fac="rentner" aria-pressed="true"><span class="faces"><img data-face="2" alt=""><img data-face="3" alt=""><img data-face="5" alt=""></span><b>Rentner</b><small>clever und gemein</small></button>
+        <button class="fac viking" data-fac="viking" aria-pressed="false"><span class="faces"><img data-face="0" alt=""><img data-face="1" alt=""><img data-face="4" alt=""></span><b>Wikinger</b><small>wild und direkt</small></button>
       </div>
       <div class="me">
         <div class="ph" id="mePh">kein Foto</div>
@@ -557,6 +575,7 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
       <h2 class="endtitle" id="endTitle">Sieg!</h2>
       <p class="sub" id="endSub"></p>
       <div class="stats"><div><b id="stTime">0:00</b><span>Dauer</span></div><div><b id="stKills">0</b><span>Besiegt</span></div><div><b id="stFlags">0</b><span>Max. Fahnen</span></div></div>
+      <div class="cmp" id="endCmp"></div>
       <button class="btn gold" id="btnAgain">Revanche auf neuer Karte</button>
       <button class="btn" id="btnMenu">Zum Menü</button>
     </div>
@@ -661,12 +680,12 @@ const ICON = {
    GAME DATA
    ===================================================================== */
 const KINDS = [
-  { key:'berserker', fac:'viking',  role:'melee',  name:'Berserker',      hp:130, dmg:18, cd:1.0,  range:1.5, aggro:8,  speed:4.9, cost:55, build:1.3, r:0.5,  sp:'Raserei' },
-  { key:'bogen',     fac:'viking',  role:'ranged', name:'Bogenschützin',  hp:70,  dmg:13, cd:1.2,  range:13,  aggro:15, speed:4.0, cost:60, build:1.45, r:0.5,  sp:'Pfeilfächer', proj:'arrow', pspeed:26 },
-  { key:'opa',       fac:'rentner', role:'melee',  name:'Krückstock-Opa', hp:155, dmg:15, cd:1.0,  range:1.5, aggro:8,  speed:4.5, cost:55, build:1.3, r:0.5,  sp:'Stockwirbel' },
-  { key:'oma',       fac:'rentner', role:'ranged', name:'Gebiss-Oma',     hp:80,  dmg:14, cd:1.3,  range:12.5,aggro:14.5,speed:3.9,cost:60, build:1.45, r:0.5,  sp:'Gebiss-Salve', proj:'teeth', pspeed:17 },
-  { key:'ziege',     fac:'viking',  role:'cav',    name:'Ziegenreiter',   hp:125, dmg:16, cd:1.0,  range:1.8, aggro:10, speed:7.5, cost:75, build:1.8, r:0.75, sp:'Ramm-Anlauf' },
-  { key:'rollator',  fac:'rentner', role:'cav',    name:'Rollator-Raser', hp:140, dmg:15, cd:1.05, range:1.8, aggro:10, speed:6.9, cost:75, build:1.8, r:0.75, sp:'Turbo' },
+  { key:'berserker', fac:'viking',  role:'melee',  name:'Berserker',      hp:125, dmg:18, cd:0.95, range:1.5, aggro:8,  speed:5.0, cost:55, build:1.3, r:0.5,  sp:'Raserei', trait:'Blutrausch: nach jedem Sieg schlägt er kurz schneller' },
+  { key:'bogen',     fac:'viking',  role:'ranged', name:'Bogenschützin',  hp:76,  dmg:14, cd:1.2,  range:14,  aggro:16, speed:4.0, cost:60, build:1.45, r:0.5,  sp:'Pfeilfächer', proj:'arrow', pspeed:26, trait:'Weitschuss: größte Reichweite' },
+  { key:'opa',       fac:'rentner', role:'melee',  name:'Krückstock-Opa', hp:175, dmg:15, cd:1.0,  range:1.5, aggro:8,  speed:4.4, cost:55, build:1.3, r:0.5,  sp:'Stockwirbel', trait:'Standfest: lässt sich kaum wegstoßen' },
+  { key:'oma',       fac:'rentner', role:'ranged', name:'Gebiss-Oma',     hp:90,  dmg:12, cd:1.2,  range:12,  aggro:14, speed:3.9, cost:60, build:1.45, r:0.5,  sp:'Gebiss-Salve', proj:'teeth', pspeed:17, trait:'Klebegebiss: Treffer bremsen Gegner' },
+  { key:'ziege',     fac:'viking',  role:'cav',    name:'Ziegenreiter',   hp:135, dmg:16, cd:1.0,  range:1.8, aggro:10, speed:7.0, cost:75, build:1.8, r:0.75, sp:'Ramm-Anlauf', trait:'Hörnerstoß: Anlauf-Treffer schleudern Gegner weg' },
+  { key:'rollator',  fac:'rentner', role:'cav',    name:'Rollator-Raser', hp:134, dmg:16, cd:1.0,  range:1.8, aggro:10, speed:7.8, cost:75, build:1.8, r:0.75, sp:'Turbo', trait:'Vollgas: schnellste Einheit, Anlauf trifft besonders hart' },
   { key:'katapult',  fac:'viking',  role:'siege',  name:'Wikinger-Katapult', hp:700, dmg:70, cd:4.2, range:21, aggro:23, speed:1.8, cost:220, build:5, r:1.4, sp:'', proj:'boulder', pspeed:14, aoe:4.2 },
   { key:'torte',     fac:'rentner', role:'siege',  name:'Torten-Katapult',   hp:700, dmg:70, cd:4.2, range:21, aggro:23, speed:1.8, cost:220, build:5, r:1.4, sp:'', proj:'cake', pspeed:14, aoe:4.2 },
   { key:'baerv', fac:'viking', role:'melee', bear:true, name:'Eisbär', hp:460, dmg:26, cd:1.15, range:2.0, aggro:10, speed:4.8, cost:0, build:0, r:0.95, sp:'Bärenklauen' },
@@ -674,13 +693,14 @@ const KINDS = [
 ];
 const ROLE_NAME = { melee:'Nahkampf', ranged:'Fernkampf', cav:'Reiter', siege:'Katapult' };
 const BEATS = { melee:'cav', cav:'ranged', ranged:'melee' };
-const MULT = { melee:2.0, cav:2.0, ranged:2.1 };
+const MULT = { melee:1.5, cav:1.0, ranged:2.2 };
 const FAC = {
   viking:  { name:'Wikinger', res:'Gold',  base:'Langhaus',      css:'#4f86c4', col:0x3b6ea5, kinds:[0,1,4,6], other:'rentner', icon:'coin' },
   rentner: { name:'Rentner',  res:'Pfand', base:'Haus Abendrot', css:'#c07aa8', col:0xa0628f, kinds:[2,3,5,7], other:'viking', icon:'bottle' },
 };
-const CFG = { startGold:220, baseInc:5, flagInc:0.9, comebackInc:1.2, kill:4, pop:50, queueMax:10, baseHp:1800, baseR:5.5,
-  towerRange:15, towerPossRange:31, towerDmg:11, towerCd:1.0, towerPoss:5, towerSpeed:24, flagR:6, capTime:5, leash:11, hillBonus:3, spCd:8, possDmg:{ melee:3.2, cav:2.6, ranged:1.4 }, possArmor:0.6, possHp:2.0, headMul:4.2, downT:1.75, arrowSpeed:46, rush:150, healR:16, heal:6 };
+const CFG = { startGold:160, baseInc:4.5, flagInc:1.2, incGrow:0.12, incGrowMax:2, kill:4, underdogKill:3, siegeBounty:50, pop:50, queueMax:10, baseHp:1800, baseR:5.5,
+  homeR:24, homeArmor:0.75, homeDmg:1.2, phaseT:[540, 720], crumbleT:900, crumble:4, phaseBase:[1, 1.5, 2.2], phaseTower:[1, 1, 0.6],
+  towerRange:15, towerPossRange:31, towerDmg:18, towerCd:0.8, towerPoss:3.5, baseArmor:0.45, flagIncDeep:0.8, towerSpeed:24, flagR:6, capTime:5, leash:11, hillBonus:3, spCd:8, possDmg:{ melee:3.2, cav:2.6, ranged:1.4 }, possArmor:0.6, possHp:2.0, headMul:4.2, downT:1.75, arrowSpeed:46, rush:150, healR:16, heal:6 };
 const maxHp = u => u.mhp || KINDS[u.k].hp;
 const PERKS = {
   gold:    { t:0, ic:si('coins'), n:'Geldregen',       d:'+20 % Einkommen' },
@@ -777,8 +797,8 @@ function tryMap(seed, noForest, force, nf = 5, seed0 = seed) {
   m.bspec = m.rmode === 'island' ? [] : m.ring ? [{ x:0, zc:m.ringR }, { x:0, zc:-m.ringR }] : [{ x:m.bridgeX, zc:riverZ(m, m.bridgeX) }, { x:-m.bridgeX, zc:riverZ(m, -m.bridgeX) }];
   { const R0 = m.ringR, W0 = m.RW, P = [];
     if (m.rmode === 'island') [1, -1].forEach(sg => { P.push({ x:4 * sg, z:sg * (R0 + W0 + 3.9), tx:4 * sg, tz:sg * (R0 - W0 - 7) }, { x:-4 * sg, z:sg * (R0 - W0 - 3.9), tx:-4 * sg, tz:sg * (R0 + W0 + 7.5) }); });
-    else if (m.type === 'wiesen' && m.rmode === 'ring') [1, -1].forEach(sg => { P.push({ x:sg * (R0 + W0 + 3.9), z:4 * sg, tx:sg * (R0 - W0 - 6.5), tz:4 * sg }, { x:sg * (R0 - W0 - 3.9), z:-4 * sg, tx:sg * (R0 + W0 + 7.5), tz:-4 * sg }); });
-    else if (m.type === 'wiesen') { const n = 1 + (rs() < 0.6 ? 1 : 0), used = []; for (let k = 0, tr = 0; k < n && tr < 40; tr++) { const x = (0.15 + rs() * 0.8) * (HALF_W - 8) * (rs() < 0.5 ? -1 : 1); if (Math.abs(x) < m.ford + 2.5 || m.bspec.some(b => Math.abs(b.x - x) < 5.5) || used.some(u2 => Math.abs(u2 - x) < 7)) continue; used.push(x, -x);
+    else if ((m.type === 'wiesen' || m.type === 'klippen') && m.rmode === 'ring') [1, -1].forEach(sg => { P.push({ x:sg * (R0 + W0 + 3.9), z:4 * sg, tx:sg * (R0 - W0 - 6.5), tz:4 * sg }, { x:sg * (R0 - W0 - 3.9), z:-4 * sg, tx:sg * (R0 + W0 + 7.5), tz:-4 * sg }); });
+    else if (m.type === 'wiesen' || m.type === 'klippen') { const n = 1 + (rs() < 0.6 ? 1 : 0), used = []; for (let k = 0, tr = 0; k < n && tr < 40; tr++) { const x = (0.15 + rs() * 0.8) * (HALF_W - 8) * (rs() < 0.5 ? -1 : 1); if (Math.abs(x) < m.ford + 2.5 || m.bspec.some(b => Math.abs(b.x - x) < 5.5) || used.some(u2 => Math.abs(u2 - x) < 7)) continue; used.push(x, -x);
         const rz = riverZ(m, x); P.push({ x, z:rz + W0 + 3.9, tx:x, tz:rz - W0 - 6.5 }, { x:-x, z:-rz - W0 - 3.9, tx:-x, tz:-rz + W0 + 6.5 }); k++; } }
     m.pads = P; }
   m.crev = [];
@@ -994,26 +1014,28 @@ function startFall(u, vx, vz) { if (u.air) return; u.kb = null; u.down = 0; star
 function kbStep(u, kb) {
   const st = Math.min(kb.left, kb.sp * DT); kb.left -= st; const nx = u.x + kb.vx * st, nz = u.z + kb.vz * st;
   if (fallZone(nx, nz)) { u.x = nx; u.z = nz; kb.left = 0; startFall(u, kb.vx * Math.min(9, kb.sp * 0.6), kb.vz * Math.min(9, kb.sp * 0.6)); return; }
+  if (unitY(u.x, u.z) - unitY(nx, nz) > 1.1 && !u.air) { const v = Math.min(9, kb.sp * 0.6); kb.left = 0; startAir(u, kb.vx * v, kb.vz * v, 1.5, 'impact'); return; } // shoved over a ledge: real flight, no ground snapping
   if (walkable(nx, nz)) { u.x = nx; u.z = nz; }
   else if (edgeSlide(nx, nz)) { const down = sampleH(MAP, nx, nz) < sampleH(MAP, u.x, u.z) - 0.05; u.x = nx; u.z = nz; if (down) kb.left = Math.max(kb.left, 0.6); kb.slid = (kb.slid || 0) + st; if (kb.slid > 7) kb.left = 0; }
   else kb.left = 0;
-  if (kb.left <= 0 && kb.hard && MAP.ice && SIMG && onIce(u.x, u.z) && !holeAt(u.x, u.z)) breakIce(SIMG, u);
+  if (MAP.holes && MAP.holes.length && holeAt(u.x, u.z)) { kb.left = 0; u.down = Math.max(u.down || 0, 0.8); u.cold = 5; }
   if (kb.left <= 0 && !walkable(u.x, u.z)) { for (let s = 0.5; s <= 3; s += 0.5) if (fallZone(u.x + kb.vx * s, u.z + kb.vz * s)) { u.x += kb.vx * s; u.z += kb.vz * s; startFall(u, kb.vx * 5, kb.vz * 5); return; } const p = nearestWalkable(MAP, u.x, u.z); u.x = p.x; u.z = p.z; }
 }
 function cellOf(x, z) { const i = Math.floor((x + HALF_W) / CELL), j = Math.floor((z + HALF_H) / CELL); if (i < 0 || j < 0 || i >= GW || j >= GH) return -1; return j * GW + i; }
 function cellCenter(c) { return { x:-HALF_W + ((c % GW) + .5) * CELL, z:-HALF_H + (((c / GW) | 0) + .5) * CELL }; }
 function walkableIn(m, x, z) { const c = cellOf(x, z); return c >= 0 && (m.walk[c] === 1 || (m.wet && m.wet[c] === 1)); }
 function landIn(m, x, z) { const c = cellOf(x, z); return c >= 0 && m.walk[c] === 1; }
-function holeAt(x, z) {
+const HOLE_B = 3; // hole index bucket size (holes are at most 3 m in radius)
+function holeAt(x, z, pad = 0) {
   const H = MAP.holes; if (!H || !H.length) return false;
   if (MAP.holeList !== H || MAP.holeCount !== H.length) {
-    const index = new Map(); for (const h of H) { const key = Math.floor(h.x / CELL) + 64 + (Math.floor(h.z / CELL) + 128) * 128; let list = index.get(key); if (!list) index.set(key, list = []); list.push(h); }
+    const index = new Map(); for (const h of H) { const key = Math.floor(h.x / HOLE_B) + 64 + (Math.floor(h.z / HOLE_B) + 128) * 128; let list = index.get(key); if (!list) index.set(key, list = []); list.push(h); }
     MAP.holeList = H; MAP.holeCount = H.length; MAP.holeIndex = index;
   }
-  const ix = Math.floor(x / CELL), iz = Math.floor(z / CELL);
+  const ix = Math.floor(x / HOLE_B), iz = Math.floor(z / HOLE_B);
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
     const list = MAP.holeIndex.get(ix + dx + 64 + (iz + dz + 128) * 128); if (!list) continue;
-    for (const h of list) if ((x - h.x) ** 2 + (z - h.z) ** 2 < 1.3) return true;
+    for (const h of list) { const r = (h.r || 1.14) + pad; if ((x - h.x) ** 2 + (z - h.z) ** 2 < r * r) return true; }
   }
   return false;
 }
@@ -1036,7 +1058,15 @@ function nearestWalkable(m, x, z) {
   }
   return { x, z };
 }
-function losIn(m, ax, az, bx, bz) { const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / (CELL * 0.45)); for (let i = 1; i <= n; i++) { const t = i / n; if (!landIn(m, ax + (bx - ax) * t, az + (bz - az) * t)) return false; } return true; }
+// Nearest walkable spot that is not above the current ground: knocked units slide down, they never pop up a cliff.
+function nearestWalkableBelow(x, z) {
+  const h0 = sampleH(MAP, x, z) + 0.6, c0i = Math.floor((x + HALF_W) / CELL), c0j = Math.floor((z + HALF_H) / CELL);
+  for (let rad = 1; rad < 12; rad++) { let best = null, bd = 1e9;
+    for (let dj = -rad; dj <= rad; dj++) for (let di = -rad; di <= rad; di++) { if (Math.max(Math.abs(di), Math.abs(dj)) !== rad) continue; const i = c0i + di, j = c0j + dj; if (i < 0 || j < 0 || i >= GW || j >= GH) continue; const c = j * GW + i; if (!MAP.walk[c]) continue; const p = cellCenter(c); if (sampleH(MAP, p.x, p.z) > h0) continue; const d = (p.x - x) ** 2 + (p.z - z) ** 2; if (d < bd) { bd = d; best = p; } }
+    if (best) return best; }
+  return nearestWalkable(MAP, x, z);
+}
+function losIn(m, ax, az, bx, bz) { const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / (CELL * 0.45)), hg = m.holeGrid && m.holes && m.holes.length ? m.holeGrid : null; for (let i = 1; i <= n; i++) { const t = i / n, x = ax + (bx - ax) * t, z = az + (bz - az) * t; if (!landIn(m, x, z)) return false; if (hg && hg[cellOf(x, z)]) return false; } return true; }
 const los = (ax, az, bx, bz) => losIn(MAP, ax, az, bx, bz);
 function losFat(ax, az, bx, bz) { if (!los(ax, az, bx, bz)) return false; const dx = bx - ax, dz = bz - az, d = Math.hypot(dx, dz) || 1, ox = -dz / d * 0.45, oz = dx / d * 0.45; return los(ax + ox, az + oz, bx + ox, bz + oz) && los(ax - ox, az - oz, bx - ox, bz - oz); }
 const AS = { g:new Float32Array(GW * GH), f:new Float32Array(GW * GH), from:new Int32Array(GW * GH), stamp:new Uint32Array(GW * GH), closed:new Uint32Array(GW * GH), gen:1 };
@@ -1052,7 +1082,7 @@ function buildPadLinks(m) {
 function astarCells(m, sx, sz, tx, tz, allowPads = true) {
   const s0 = nearestWalkable(m, sx, sz), t0 = nearestWalkable(m, tx, tz);
   const s = cellOf(s0.x, s0.z), t = cellOf(t0.x, t0.z); if (s < 0 || t < 0) return null;
-  const gen = ++AS.gen, { g, f, from, stamp, closed } = AS, ti = t % GW, tj = (t / GW) | 0;
+  const gen = ++AS.gen, { g, f, from, stamp, closed } = AS, ti = t % GW, tj = (t / GW) | 0, hg = m.holeGrid && m.holes && m.holes.length ? m.holeGrid : null;
   const hfn = c => { if (allowPads && m.padLinks && m.padLinks.size) return Math.hypot(c % GW - ti, ((c / GW) | 0) - tj); const dx = Math.abs(c % GW - ti), dz = Math.abs(((c / GW) | 0) - tj); return (dx + dz) + (1.414 - 2) * Math.min(dx, dz); };
   const heap = [];
   const push = c => { heap.push(c); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (f[heap[p]] <= f[heap[i]]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
@@ -1070,7 +1100,7 @@ function astarCells(m, sx, sz, tx, tz, allowPads = true) {
     for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
       if (!di && !dj) continue;
       const ni = ci + di, nj = cj + dj; if (ni < 0 || nj < 0 || ni >= GW || nj >= GH) continue;
-      const n = nj * GW + ni; if (!m.walk[n] || closed[n] === gen) continue;
+      const n = nj * GW + ni; if (!m.walk[n] || closed[n] === gen || (hg && hg[n] && !hg[c] && n !== t)) continue;
       if (di && dj && (!m.walk[cj * GW + ni] || !m.walk[nj * GW + ci])) continue;
       const ng = g[c] + (di && dj ? 1.414 : 1);
       if (stamp[n] !== gen || ng < g[n]) { stamp[n] = gen; g[n] = ng; f[n] = ng + hfn(n); from[n] = c; push(n); }
@@ -1099,12 +1129,19 @@ function setMap(m) { MAP = m; BASES = m.bases; FLAGS = m.flags; }
 /* =====================================================================
    SIMULATION (host / single player)
    ===================================================================== */
-function newGame(facs, seed, chaos) {
-  setMap(genMap(seed));
-  return { t:0, cd:3, seed, nextId:1, over:-1, ai:aiNew('medium'), astarBudget:0, towerOff:[false, false], towerMul:[1, 1],
+function newGame(facs, seed, chaos, opts = {}) {
+  setMap(genMap(seed)); MAP.holeGrid = new Uint8Array(GW * GH); MAP.holes = [];
+  const G = { t:0, cd:3, seed, nextId:1, over:-1, ai:aiNew('medium'), astarBudget:0, towerOff:[false, false], towerMul:[1, 1],
     chaos:!!chaos, offerN:0, nextOffer:0.3, pz:0, fb:[], fbId:0, fp:[], fpId:0, teams:[0,1].map(i => ({ pk:{}, offer:null, offerDl:0, pkN:0, lastPk:null, fireT:0, hq:[], hqS:0, autoI:0, fac:facs[i], gold:CFG.startGold, q:[], qt:0, rally:rallyDefault(i), hp:CFG.baseHp, tcd:1, tatk:0, ttgt:-1, kills:0, maxFlags:0, auto:{}, pos:null, posIn:null, rush:0, rushAt:[0, 0], incMul:1 })),
     units:[], flags:FLAGS.map(() => ({ owner:-1, p:0 })), proj:[], items:[], itemT:22, itemId:0, pe:[], peS:0, bears:(MAP.bears || []).map((b, i) => ({ id:i, x:b.x, z:b.z, hx:b.x, hz:b.z, yaw:0, cd:0, atk:0, mv:0, wt:Math.random() * 3, hp:520, mhp:520 })) };
+  G.st = [0, 1].map(() => ({ made:0, lost:0, baseDmg:0, flagT:0, leadT:0, rams:0, cliff:0, bears:0, cats:0, holes:0, egoKills:0 }));
+  G.hl = []; G.hlS = 0; G.phase = 0;
+  if (opts.squad !== false) for (let i = 0; i < 2; i++) { const ks = FAC[facs[i]].kinds; [ks[0], ks[0], ks[1]].forEach(k => spawnUnit(G, i, k)); }
+  return G;
 }
+// Escalation: after 9 minutes the "storm" begins (bases take more damage, no home advantage), after 12 the final battle.
+const phaseOf = G => G.tut ? 0 : G.t >= CFG.phaseT[1] ? 2 : G.t >= CFG.phaseT[0] ? 1 : 0;
+function highlight(G, ty, team, n, x, z) { G.hlS = (G.hlS + 1) % 10000; G.hl.push([G.hlS, ty, team, n, Math.round(x * 10), Math.round(z * 10)]); if (G.hl.length > 8) G.hl.shift(); }
 function rallyDefault(team) {
   const B = BASES[team]; if (!FLAGS || !FLAGS.length) return frontOf(team, 12);
   const f = FLAGS.slice().sort((a, b) => Math.hypot(a.x - B.x, a.z - B.z) - Math.hypot(b.x - B.x, b.z - B.z))[0], dx = B.x - f.x, dz = B.z - f.z, d = Math.hypot(dx, dz) || 1;
@@ -1136,7 +1173,11 @@ function applyCmd(G, team, c) {
     if (!K || K.fac !== T.fac || !FAC[T.fac].kinds.includes(k) || T.q.length >= CFG.queueMax || T.gold < K.cost || popOf(G, team) >= CFG.pop) return;
     T.gold -= K.cost; if (c.auto) T.q.push(k); else { const qm = clamp(T.qm || 0, 0, T.q.length); T.q.splice(qm, 0, k); T.qm = qm + 1; }
   } else if (c.t === 'auto') {
-    const K = KINDS[c.k | 0]; if (!K || K.fac !== T.fac) return; T.auto[c.k | 0] = !!c.on;
+    const k = c.k | 0, K = KINDS[k]; if (!K || K.fac !== T.fac) return; T.auto[k] = !!c.on;
+    if (!c.on) { // switching AUTO off returns the money of auto units that have not started yet
+      const qm = clamp(T.qm || 0, 0, T.q.length);
+      for (let j = T.q.length - 1; j >= qm; j--) if (T.q[j] === k && !(j === 0 && T.qt > 0)) { T.q.splice(j, 1); T.gold += K.cost; }
+    }
   } else if (c.t === 'order') {
     if (!Number.isFinite(c.x) || !Number.isFinite(c.z) || !Array.isArray(c.ids)) return;
     const ids = new Set(c.ids.slice(0, 80));
@@ -1160,6 +1201,18 @@ function applyCmd(G, team, c) {
     { const o = T.pos && G.units.find(v => v.id === T.pos); if (o && o.dance > 0) return; }
     if (T.pos) { const o = G.units.find(v => v.id === T.pos); if (o) { setPoss(o, false); o.ord = { x:o.x, z:o.z, mv:false }; o.path = null; } }
     T.pos = null; T.posIn = null;
+  }
+}
+// AUTO keeps exactly one waiting unit per enabled type behind the manual orders.
+// Several AUTO types take turns; an unaffordable type is waited for, so cheap units never starve an expensive one.
+function autoQueue(G, team, T, en) {
+  const qm = clamp(T.qm || 0, 0, T.q.length), tail = T.q.slice(qm);
+  for (let n = 0; n < en.length; n++) {
+    const k = en[(T.autoI + n) % en.length], K = KINDS[k];
+    if (tail.includes(k)) continue;
+    if (K.role === 'siege' && sigeOf(G, team) >= 5) continue;
+    if (T.q.length >= CFG.queueMax || popOf(G, team) >= CFG.pop || T.gold < K.cost) return;
+    applyCmd(G, team, { t:'spawn', k, auto:true }); T.autoI = (T.autoI + n + 1) % 1000; return;
   }
 }
 function pickPerk(G, T, id) {
@@ -1193,24 +1246,35 @@ function perkStep(G) {
   for (const b of G.fb) { b.t -= DT; if (b.t <= 0) { for (const e of G.units) if (e.team !== b.team && (e.x - b.x) ** 2 + (e.z - b.z) ** 2 < b.r * b.r) hit(G, e.id, b.dm, b.team, byId, -1); const f = b.fi >= 0 && G.flags[b.fi]; if (f) { const k = 0.6; f.p = f.p > 0 ? Math.max(0, f.p - k) : Math.min(0, f.p + k); if (f.owner === 0 && f.p <= 0) f.owner = -1; if (f.owner === 1 && f.p >= 0) f.owner = -1; } } }
   G.fb = G.fb.filter(b => b.t > 0);
 }
-function buildTime(G, team, k) { const diff = flagsOf(G, 1 - team) - flagsOf(G, team); return KINDS[k].build * (diff > 0 ? Math.max(0.6, 1 - 0.13 * diff) : 1) * pk(G, team, 'fast', [1, 0.5]); }
-function incomeOf(G, team) { const mine = flagsOf(G, team), diff = flagsOf(G, 1 - team) - mine; return (CFG.baseInc + CFG.flagInc * mine + (diff > 0 ? CFG.comebackInc * diff : 0)) * G.teams[team].incMul * pk(G, team, 'gold', [1, 1.2]); }
+function buildTime(G, team, k) { return KINDS[k].build * pk(G, team, 'fast', [1, 0.5]); }
+// Flags pay. No hidden gifts for the trailing side: comebacks come from home advantage, flag decay and bounties.
+function incomeOf(G, team) {
+  const grow = G.tut ? 0 : Math.min(CFG.incGrowMax, CFG.incGrow * G.t / 60); let fl = 0;
+  G.flags.forEach((f, i) => { if (f.owner === team) fl += flagSide(i) === 1 - team && !G.tut ? CFG.flagIncDeep : CFG.flagInc; }); // flags deep in enemy land pay less
+  return (CFG.baseInc + grow + fl) * G.teams[team].incMul * pk(G, team, 'gold', [1, 1.2]);
+}
+function flagSide(i) { const F = FLAGS[i], d0 = Math.hypot(F.x - BASES[0].x, F.z - BASES[0].z), d1 = Math.hypot(F.x - BASES[1].x, F.z - BASES[1].z); return Math.abs(d0 - d1) < 6 ? -1 : d0 < d1 ? 0 : 1; }
 function spawnUnit(G, team, k) {
   const T = G.teams[team], f = frontOf(team, 8), a = Math.random() * TAU, rr = Math.random() * 2.5;
   const o = nearestWalkable(MAP, clampX(T.rally.x + Math.cos(a) * rr), clampZ(T.rally.z + Math.sin(a) * rr));
   let sp = null; const B = BASES[team], near = G.units.filter(e => e.team !== team && (e.x - B.x) ** 2 + (e.z - B.z) ** 2 < 26 * 26);
   if (near.length) { let best = -1; for (let a2 = 0; a2 < 16; a2++) { const ang = a2 / 16 * TAU, c = nearestWalkable(MAP, clampX(B.x + Math.sin(ang) * 8), clampZ(B.z + Math.cos(ang) * 8)); if (Math.hypot(c.x - B.x, c.z - B.z) > 11) continue; let md = 1e9; for (const e of near) md = Math.min(md, Math.hypot(e.x - c.x, e.z - c.z)); if (md > best) { best = md; sp = c; } } }
   if (!sp) sp = nearestWalkable(MAP, f.x + (Math.random() - .5) * 3, f.z + (Math.random() - .5) * 2);
+  if (G.st) G.st[team].made++;
   G.units.push({ id:G.nextId++, k, team, x:sp.x, z:sp.z, y:unitY(sp.x, sp.z), hp:KINDS[k].hp, cd:0.4, tgt:-1, at:0, atk:0, sp:0, run:0,
-    re:Math.random() * 0.3, ord:{ x:o.x, z:o.z, mv:false }, path:null, losT:0, los:true, repath:0, poss:false, rage:0, spcd:0, yaw:0 });
+    re:Math.random() * 0.3, ord:near.length >= 3 && !G.tut ? { x:sp.x, z:sp.z, mv:false } : { x:o.x, z:o.z, mv:false }, path:null, losT:0, los:true, repath:0, poss:false, rage:0, spcd:0, yaw:0 });
   if (pkL(G, team, 'giant')) makeGiant(G.units[G.units.length - 1]);
 }
+// Desert: open sight lines, ranged units and catapults shoot farther.
+const desertRange = K => MAP && MAP.type === 'wueste' ? (K.role === 'ranged' ? 1.5 : K.role === 'siege' ? 3 : 0) : 0;
+const isCounter = (attK, defK) => BEATS[KINDS[attK].role] === KINDS[defK].role || dmgMult(attK, defK) > 1;
 function dmgMult(attK, defK) { if (KINDS[attK].bear) return KINDS[defK].role === 'ranged' ? 0.6 : 1.7; if (KINDS[defK].bear && KINDS[attK].role === 'ranged') return 2.4; if (KINDS[attK].role === 'cav' && KINDS[defK].role === 'siege') return 6; return BEATS[KINDS[attK].role] === KINDS[defK].role ? MULT[KINDS[attK].role] : 1; }
 function hit(G, tgt, dmg, team, byId, attK, bp, head) {
-  if (tgt === -2) { G.teams[1 - team].hp -= dmg; return; }
+  if (tgt === -2) { const bd = dmg * CFG.phaseBase[G.phase || 0] * (attK >= 0 && KINDS[attK].role === 'siege' || G.tut || (G.phase || 0) >= 2 ? 1 : CFG.baseArmor); /* walls: only catapults hit bases at full force (until the final battle) */ G.teams[1 - team].hp -= bd; if (G.st) G.st[team].baseDmg += bd; return; }
   const e = byId.get(tgt); if (!e || e.hp <= 0 || (e.tutDummy && !bp)) return;
   let d = attK >= 0 ? dmg * dmgMult(attK, e.k) : dmg;
   if (e.poss) d *= CFG.possArmor;
+  if (inHome(G, e)) d *= CFG.homeArmor; // home advantage
   if (bp && attK >= 0 && !e.poss) { // possessed attacker: hard counters
     const ar = KINDS[attK].role, dr = KINDS[e.k].role, mh = maxHp(e);
     if (BEATS[ar] === dr && (ar !== 'ranged' || head)) d = Math.max(d, e.hp + 1);
@@ -1229,20 +1293,34 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   if (attK >= 0 && KINDS[attK].role === 'siege') { if (e.poss) d *= 2.2; if (KINDS[e.k].role === 'ranged') d *= 1.6; }
   if (attK >= 0 && KINDS[attK].role === 'ranged' && KINDS[e.k].role === 'siege') d *= 1.25;
   e.hp -= d; e.hurt = 2.5;
+  if (attK === 3 && e.hp > 0 && !KINDS[e.k].bear) e.slowT = 1.5;
   if (attK === 3 && G.chaos && pkL(G, team, 'bite')) { e.bite = 6; e.biteT = team; }
   if (bp && e.poss) e.egoHit = { team, t:G.t, pid:G.teams[team].pos };
   if (bp) { const T = G.teams[team]; T.hqS = (T.hqS + 1) % 1000; T.hq.push([T.hqS, Math.round(e.x * 10), Math.round(e.z * 10), Math.round(d), head ? 1 : 0, Math.round((e.y + (head ? headBox(e).y : 1.2)) * 10)]); if (T.hq.length > 4) T.hq.shift(); }
   if (e.hp <= 0) {
-    const T = G.teams[team]; T.gold += CFG.kill; T.kills++;
+    const T = G.teams[team]; T.gold += CFG.kill + (flagsOf(G, team) < flagsOf(G, e.team) ? CFG.underdogKill : 0); T.kills++;
+    if (KINDS[e.k].role === 'siege' && !e.bounty) { e.bounty = 1; T.gold += CFG.siegeBounty; if (G.st) G.st[team].cats++; highlight(G, 'cat', team, 1, e.x, e.z); }
     if (e.poss && bp) giveRush(G, team, e);
   }
 }
-function giveRush(G, team, e) { if (e.rushed) return; e.rushed = 1; const T = G.teams[team]; T.gold += CFG.rush * pk(G, team, 'bounty', [1, 2]); T.rush = (T.rush + 1) % 100; T.rushAt = [Math.round(e.x * 10), Math.round(e.z * 10)]; }
+function giveRush(G, team, e) { if (e.rushed) return; e.rushed = 1; if (G.st) G.st[team].egoKills++; const T = G.teams[team]; T.gold += CFG.rush * pk(G, team, 'bounty', [1, 2]); T.rush = (T.rush + 1) % 100; T.rushAt = [Math.round(e.x * 10), Math.round(e.z * 10)]; }
 let SIMG = null;
+// Unit traits that make each role feel different (applied to AI-led and player-led units alike).
+function traitHit(G, u, tgt, charged) {
+  if (!tgt || tgt.id === undefined) return;
+  if (tgt.hp <= 0) { if (u.k === 0) u.frenzy = 4; return; }
+  if (u.k === 4 && charged && !KINDS[tgt.k].bear && KINDS[tgt.k].role !== 'siege') knockFly(tgt, u.x, u.z, u.poss ? 3 : 2.2);
+}
+const KNOCK_RES = k => k === 2 ? 0.55 : 1;
+const inHome = (G, u) => !G.phase && !G.tut && (u.x - BASES[u.team].x) ** 2 + (u.z - BASES[u.team].z) ** 2 < CFG.homeR * CFG.homeR;
+const homeMul = (G, u) => inHome(G, u) ? CFG.homeDmg : 1;
 function knockFly(e, fx, fz, dist, impulseX, impulseZ, lift = 0) {
   if (e.hp <= 0 || (e.tutDummy && !e.poss && !e.tutPush)) return;
+  dist *= KNOCK_RES(e.k); if (KNOCK_RES(e.k) < 1) lift *= 0.6;
+  if (MAP.ice && onIce(e.x, e.z)) { dist *= 1.5; e.slipT = 1.3; } // ice: knocked bodies slide much farther, on their bellies
   const moon = pkL(SIMG, 1 - e.team, 'moon'); if (moon) dist *= 1.5;
   const dx = impulseX ?? (e.x - fx), dz = impulseZ ?? (e.z - fz), d = Math.hypot(dx, dz) || 1;
+  e.kbT = SIMG ? SIMG.t : 0; e.kbTeam = 1 - e.team;
   e.kb = { vx:dx / d, vz:dz / d, left:dist, sp:dist / (moon ? 1.1 : 0.38), hard:1 }; e.down = CFG.downT + (moon ? 1.1 : 0); e.dance = 0; e.tgt = -1; e.path = null; e.kbN = ((e.kbN || 0) + 1) % 100;
   if (lift > 0) startAir(e, e.kb.vx * e.kb.sp, e.kb.vz * e.kb.sp, lift, 'impact');
 }
@@ -1255,6 +1333,7 @@ function knock(e, fx, fz, dist) {
   for (let s = dist; s > 0.2; s -= 0.5) { const nx = e.x + dx / d * s, nz = e.z + dz / d * s; if (walkable(nx, nz)) { e.x = nx; e.z = nz; return; } }
 }
 function steer(G, u, gx, gz, speed) {
+  if (u.slowT > 0) speed *= 0.7;
   if (u.navPad !== undefined) {
     const pd = MAP.pads[u.navPad];
     if (pd) { const dx = pd.x - u.x, dz = pd.z - u.z, d = Math.hypot(dx, dz);
@@ -1275,7 +1354,7 @@ function steer(G, u, gx, gz, speed) {
 function enemiesInCone(G, u, maxD, maxAng) {
   const out = [];
   for (const e of G.units) {
-    if (e.team === u.team || e.hp <= 0) continue;
+    if (e.team === u.team || e.hp <= 0 || e.pj || (e.air && Math.abs((e.y || 0) - (u.y || 0)) > 2)) continue; // airborne units are out of reach
     const dx = e.x - u.x, dz = e.z - u.z, d = Math.hypot(dx, dz);
     if (d > maxD) continue;
     const a = d < 0.6 ? 0 : Math.abs(angDiff(Math.atan2(dx, dz), u.yaw));
@@ -1313,8 +1392,8 @@ function baseApproach(u, used = []) {
 function baseInReach(u, reach) { const eb = BASES[1 - u.team]; const dx = eb.x - u.x, dz = eb.z - u.z, d = baseGap(eb, u.x, u.z); return d < reach && Math.abs(angDiff(Math.atan2(dx, dz), u.yaw)) < 1.2; }
 function possAttack(G, u, byId) {
   const K = KINDS[u.k];
-  u.cd = K.cd * 0.65 * (u.rage > 0 ? (pkL(G, u.team, 'walhalla') ? 0.4 : 0.6) : 1); u.atk = (u.atk + 1) % 100; u.at = 0;
-  const dmg = K.dmg * CFG.possDmg[K.role] * (u.rage > 0 ? 1.5 : 1);
+  u.cd = K.cd * 0.65 * (u.rage > 0 ? (pkL(G, u.team, 'walhalla') ? 0.4 : 0.6) : 1) * (u.frenzy > 0 ? 0.85 : 1); u.atk = (u.atk + 1) % 100; u.at = 0;
+  const dmg = K.dmg * CFG.possDmg[K.role] * (u.rage > 0 ? 1.5 : 1) * homeMul(G, u);
   if (K.role === 'siege') {
     const In = G.teams[u.team].posIn; let tx = u.x + Math.sin(u.yaw) * 12, tz = u.z + Math.cos(u.yaw) * 12;
     if (In && Array.isArray(In.gp) && In.gp.every(Number.isFinite)) { tx = In.gp[0]; tz = In.gp[1]; }
@@ -1332,9 +1411,9 @@ function possAttack(G, u, byId) {
     else if (baseInReach(u, K.range)) { u.at = -2; G.proj.push({ t:0.5, dmg, tgt:-2, team:u.team, k:u.k }); }
   } else {
     let hits = enemiesInCone(G, u, K.range + K.r + 1.0, 1.15).sort((a, b) => a.d - b.d).slice(0, 2);
-    const charge = K.role === 'cav' && u.run > 1.2 ? 1.9 : 1;
+    const charge = K.role === 'cav' && u.run > 1.2 ? (u.k === 5 ? 2.3 : 1.9) : 1;
     for (const b of G.bears.slice()) { const dx = b.x - u.x, dz = b.z - u.z, d = Math.hypot(dx, dz); if (d < K.range + K.r + 1.6 && Math.abs(angDiff(Math.atan2(dx, dz), u.yaw)) < 1.2) { hitBear(G, b, dmg * charge, u.team, u.k, true); u.at = -3; } }
-    hits.forEach(h => { hit(G, h.e.id, dmg * charge, u.team, byId, u.k, true); if (u.k === 0 && u.rage > 0 && pkL(G, u.team, 'walhalla')) knockFly(h.e, u.x, u.z, 3.5); });
+    hits.forEach(h => { hit(G, h.e.id, dmg * charge, u.team, byId, u.k, true); traitHit(G, u, h.e, charge > 1); if (u.k === 0 && u.rage > 0 && pkL(G, u.team, 'walhalla')) knockFly(h.e, u.x, u.z, 3.5); });
     if (hits.length) u.at = hits[0].e.id;
     else if (baseInReach(u, K.range + 1)) { u.at = -2; hit(G, -2, dmg, u.team, byId, u.k); }
   }
@@ -1361,17 +1440,34 @@ function possSpecial(G, u, byId) {
   else if (u.k === 3) { enemiesInCone(G, u, K.range + 1, Math.PI).sort((a, b) => a.d - b.d).slice(0, 3).forEach(c => G.proj.push({ t:c.d / K.pspeed, dmg:30, tgt:c.e.id, team:u.team, k:u.k, bp:true })); if (!pkL(G, u.team, 'volley') && baseGap(BASES[1 - u.team], u.x, u.z) < K.range + 1) G.proj.push({ t:0.6, dmg:70, tgt:-2, team:u.team, k:u.k }); }
   else {
     const In = G.teams[u.team].posIn, U0 = u; U0.dashUntil = G.t + 0.5; if (!(In && Array.isArray(In.dp))) { U0.dashS = 0.42; U0.dfx = Math.sin(U0.yaw); U0.dfz = Math.cos(U0.yaw); } u = { x:u.x, z:u.z, yaw:u.yaw, k:u.k, team:u.team }; if (In && Array.isArray(In.dp) && In.dp.length === 2 && In.dp.every(Number.isFinite) && Math.hypot(In.dp[0] - u.x, In.dp[1] - u.z) < 14) { u.x = In.dp[0]; u.z = In.dp[1]; }
-    const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), ebs = BASES[1 - u.team], stp0 = u.k === 4 && pkL(G, u.team, 'stampede');
-    for (let a2 = 0; a2 <= (stp0 ? 16 : 10.5); a2 += 1) if (baseGap(ebs, u.x + fx * a2, u.z + fz * a2) < (stp0 ? 4 : 2.2)) { hit(G, -2, 110 * pk(G, u.team, 'ram', [1, 2]), u.team, byId, -1); break; }
-    for (const b of G.bears.slice()) { const dx = b.x - u.x, dz = b.z - u.z, al = dx * fx + dz * fz; if (al > -0.5 && al < (stp0 ? 16 : 10.5) && Math.abs(dx * fz - dz * fx) < 2.6) hitBear(G, b, 110, u.team, -1, true); }
+    // The ram connects when the rider actually reaches each target (dash speed ~26 m/s), not all at once at the start.
+    const fx = Math.sin(u.yaw), fz = Math.cos(u.yaw), ebs = BASES[1 - u.team], stp0 = u.k === 4 && pkL(G, u.team, 'stampede'), len = stp0 ? 16 : 10.5, wid = stp0 ? 6 : 2.5;
+    const Q = U0.ramQ = []; U0.ramN = 0; U0.ramL = { x:u.x, z:u.z, fx, fz, wid };
+    const due = along => G.t + Math.max(0, along) / 26;
+    for (let a2 = 0; a2 <= len; a2 += 1) if (baseGap(ebs, u.x + fx * a2, u.z + fz * a2) < (stp0 ? 4 : 2.2)) { Q.push({ base:true, t:due(a2) }); break; }
+    for (const b of G.bears) { const dx = b.x - u.x, dz = b.z - u.z, al = dx * fx + dz * fz; if (al > -0.5 && al < len && Math.abs(dx * fz - dz * fx) < 2.6) Q.push({ bear:b.id, t:due(al) }); }
     for (const e of G.units) {
       if (e.team === u.team || e.hp <= 0) continue;
       const dx = e.x - u.x, dz = e.z - u.z, along = dx * fx + dz * fz;
-      const stp = u.k === 4 && pkL(G, u.team, 'stampede');
-      if (along < -0.5 || along > (stp ? 16 : 10.5)) continue;
-      if (Math.abs(dx * fz - dz * fx) < (stp ? 6 : 2.5)) { if (KINDS[e.k].role === 'siege') { e.smash = 1; hit(G, e.id, e.hp + 9999, u.team, byId, -1, true); continue; } hit(G, e.id, (KINDS[e.k].role === 'ranged' ? KINDS[e.k].hp * 0.8 : 52) * pk(G, u.team, 'ram', [1, 2]), u.team, byId, -1, true); ramImpulse(e, fx, fz, dx * fz - dz * fx, 9.5 * pk(G, u.team, 'ram', [1, 4])); }
+      if (along < -0.5 || along > len || Math.abs(dx * fz - dz * fx) >= wid) continue;
+      Q.push({ id:e.id, t:due(along) });
     }
+    Q.sort((a, b) => a.t - b.t); ramTick(G, U0, byId);
   }
+}
+function ramTick(G, u, byId) {
+  const Q = u.ramQ; if (!Q) return; const L = u.ramL;
+  while (Q.length && Q[0].t <= G.t + 1e-6) {
+    const h = Q.shift();
+    if (h.base) { hit(G, -2, 110 * pk(G, u.team, 'ram', [1, 2]), u.team, byId, -1); continue; }
+    if (h.bear !== undefined) { const b = G.bears.find(o => o.id === h.bear); if (b) hitBear(G, b, 110, u.team, -1, true); continue; }
+    const e = byId.get(h.id); if (!e || e.hp <= 0 || e.pj) continue;
+    const dx = e.x - L.x, dz = e.z - L.z, lat = dx * L.fz - dz * L.fx; if (Math.abs(lat) > L.wid + 1.5) continue; // dodged
+    u.ramN++;
+    if (KINDS[e.k].role === 'siege') { e.smash = 1; hit(G, e.id, e.hp + 9999, u.team, byId, -1, true); continue; }
+    hit(G, e.id, (KINDS[e.k].role === 'ranged' ? KINDS[e.k].hp * 0.8 : 52) * pk(G, u.team, 'ram', [1, 2]), u.team, byId, -1, true); ramImpulse(e, L.fx, L.fz, lat, 9.5 * pk(G, u.team, 'ram', [1, 4]));
+  }
+  if (!Q.length) { if (G.st) G.st[u.team].rams += u.ramN; if (u.ramN >= 3) highlight(G, 'ram', u.team, u.ramN, u.x, u.z); u.ramQ = null; }
 }
 function possStep(G, u, byId) {
   const T = G.teams[u.team], In = T.posIn, K = KINDS[u.k];
@@ -1440,12 +1536,12 @@ function tameBearStep(G, b) {
   const team = b.tameTeam, k = KINDS.findIndex(K => K.bear && K.fac === G.teams[team].fac);
   const p = walkable(b.x, b.z) ? b : nearestWalkable(MAP, b.x, b.z);
   G.units.push({ id:G.nextId++, k, team, x:p.x, z:p.z, y:unitY(p.x, p.z), hp:KINDS[k].hp, cd:0.6, tgt:-1, at:0, atk:0, sp:0, run:0, re:0, ord:{ x:p.x, z:p.z, mv:false }, path:null, losT:0, los:true, repath:0, poss:false, rage:0, spcd:0, yaw:b.yaw });
-  b.tameDone = true; G.bevS = ((G.bevS || 0) + 1) % 10000;
+  b.tameDone = true; G.bevS = ((G.bevS || 0) + 1) % 10000; if (G.st) G.st[team].bears++;
   (G.bev || (G.bev = [])).push([G.bevS, team, Math.round(p.x * 10), Math.round(p.z * 10)]); if (G.bev.length > 6) G.bev.shift();
   if (MAP.type === 'arktis') (G.bearQ || (G.bearQ = [])).push(85 + Math.random() * 35);
 }
 function bearKillAt(G, x, z, r, team) { for (const b of G.bears.slice()) if (Math.hypot(b.x - x, b.z - z) < r) hitBear(G, b, 99999, team, -1); }
-const PAD_FLY = 1.75, PAD_CD = 1.4, PAD_W = 3.15, PAD_D = 2.4, PAD_H = 10;
+const PAD_FLY = 1.75, PAD_CD = 1.4, PAD_W = 3.15, PAD_D = 2.4, PAD_H = 10, PAD_ARM = 0.35, SIEGE_WIND = 0.6;
 function padLocal(pd, x, z) { const dx = pd.tx - pd.x, dz = pd.tz - pd.z, d = Math.hypot(dx, dz) || 1, fx = dx / d, fz = dz / d, rx = x - pd.x, rz = z - pd.z; return { al:rx * fx + rz * fz, ac:rx * fz - rz * fx, fx, fz }; }
 const onPad = (pd, x, z) => { const l = padLocal(pd, x, z); return Math.abs(l.al) < PAD_D && Math.abs(l.ac) < PAD_W; };
 function padHeight(j, k) { return lerp(unitY(j.sx, j.sz), unitY(j.tx, j.tz), k) + 4 * PAD_H * k * (1 - k); }
@@ -1475,7 +1571,7 @@ function padStep(G) {
     const st = PS[i]; st.cd = Math.max(0, st.cd - DT); if (st.cd > 0) return;
     const on = G.units.filter(u => !u.pj && !(u.fall > 0) && u.hp > 0 && !(u.padCd > 0) && KINDS[u.k].role !== 'siege' && onPad(pd, u.x, u.z));
     if (!on.length) { st.arm = 0; return; }
-    st.arm += DT; if (st.arm < 0.15) return; st.arm = 0; st.cd = PAD_CD; st.n = (st.n + 1) % 100;
+    st.arm += DT; if (st.arm < PAD_ARM) return; st.arm = 0; st.cd = PAD_CD; st.n = (st.n + 1) % 100;
     for (const u of on) {
       u.pj = padFlight(pd, u); u.padAck = u.pj.ack = Math.round(G.t * 100); u.jumpT = PAD_FLY; u.kb = null; u.down = 0; u.dance = 0; u.path = null; u.vx = 0; u.vz = 0;
       // Only a command aimed at this pad is consumed. Farther orders survive.
@@ -1483,27 +1579,30 @@ function padStep(G) {
     }
   });
 }
-function breakIce(G, u) {
-  if (!G.holes) G.holes = [];
-  MAP.holes = G.holes;
-  const cell = cellOf(u.x, u.z);
-  if (cell < 0 || !MAP.ice || !MAP.ice[cell]) return;
-  // Each ice cell can break once. The finite map bounds storage naturally;
-  // old holes are never removed to make room for new ones or healed by a timer.
-  if (!G.holeCells) G.holeCells = new Set(G.holes.map(h => h.cell ?? cellOf(h.x, h.z)));
-  if (!G.holeCells.has(cell) && !holeAt(u.x, u.z)) {
-    G.holeS = (G.holeS || 0) + 1;
-    G.holes.push({ id:G.holeS, x:u.x, z:u.z, cell }); G.holeCells.add(cell);
+// Catapult shells smash ice: a permanent hole sized to the shot. Whoever stands on it breaks through.
+function iceImpact(G, x, z, r, team) {
+  const cell = cellOf(x, z); if (cell < 0 || !MAP.ice || !MAP.ice[cell] || G.tut) return 0;
+  if (!G.holes) G.holes = []; MAP.holes = G.holes;
+  const dup = G.holes.some(h => (h.x - x) ** 2 + (h.z - z) ** 2 < (h.r * 0.55) ** 2 && h.r >= r * 0.8);
+  if (!dup) {
+    G.holeS = (G.holeS || 0) + 1; G.holes.push({ id:G.holeS, x, z, r, cell, team });
+    const hg = MAP.holeGrid || (MAP.holeGrid = new Uint8Array(GW * GH)), rr = r + 0.35, i0 = Math.floor((x - rr + HALF_W) / CELL), i1 = Math.floor((x + rr + HALF_W) / CELL), j0 = Math.floor((z - rr + HALF_H) / CELL), j1 = Math.floor((z + rr + HALF_H) / CELL);
+    for (let j = Math.max(0, j0); j <= Math.min(GH - 1, j1); j++) for (let i = Math.max(0, i0); i <= Math.min(GW - 1, i1); i++) { const c = j * GW + i, p = cellCenter(c); if ((p.x - x) ** 2 + (p.z - z) ** 2 < rr * rr) hg[c] = 1; }
+    if (G.st && team >= 0) G.st[team].holes++;
   }
-  MAP.holes = G.holes;
-  u.cold = 5; u.down = Math.max(u.down || 0, 0.7); u.kb = null; u.dance = 0;
+  let n = 0;
+  for (const u of G.units) { if (u.hp <= 0 || u.pj || u.air || (u.x - x) ** 2 + (u.z - z) ** 2 > r * r) continue;
+    if (KINDS[u.k].role === 'siege') { u.hp -= maxHp(u) * 0.35; u.hurt = 2.5; continue; }
+    u.down = Math.max(u.down || 0, 1.1); u.kb = null; u.dance = 0; u.cold = 5; u.inHole = 1; u.hp -= maxHp(u) * (u.poss ? 0.1 : 0.2); u.hurt = 2.5; u.path = null; if (team >= 0 && u.team !== team) n++; }
+  if (n >= 3) highlight(G, 'ice', team, n, x, z);
+  return n;
 }
 function iceVelocity(u, vx, vz, dt) {
   if (!onIce(u.x, u.z) || holeAt(u.x, u.z)) { u.ivx = vx; u.ivz = vz; return; }
   let ix = u.ivx ?? vx, iz = u.ivz ?? vz;
   const wanted = Math.hypot(vx, vz), current = Math.hypot(ix, iz);
   if (wanted > 0.001) {
-    const speed = lerp(current, wanted * 1.42, 1 - Math.exp(-dt * 9));
+    const speed = lerp(current, wanted * 1.5, 1 - Math.exp(-dt * 9));
     const angle = current > 0.001 ? Math.atan2(ix, iz) : Math.atan2(vx, vz);
     const turn = clamp(angDiff(Math.atan2(vx, vz), angle), -dt * 3.2, dt * 3.2);
     ix = Math.sin(angle + turn) * speed; iz = Math.cos(angle + turn) * speed;
@@ -1521,9 +1620,6 @@ function iceStep(G) {
     if (hole) { u.cold = 5; u.inHole = 1; u.hp -= 11 * DT * arm; u.hurt = 2.5; continue; }
     u.inHole = 0;
     if (u.cold > 0) { u.cold -= DT; u.hp -= 6 * DT * arm; u.hurt = Math.max(u.hurt || 0, 0.5); }
-    if (!MAP.ice || !onIce(u.x, u.z) || u.down > 0 || u.dance > 0 || sp < 1.5) continue;
-    if (Math.random() < DT * (K.bear ? 0.004 : K.role === 'cav' ? 0.02 : 0.03)) { const d = Math.hypot(mx, mz) || 1; u.slipT = 1.4; u.down = 1.4; u.kb = { vx:mx / d, vz:mz / d, left:Math.min(4, sp * 0.7), sp:Math.max(3, sp) }; u.tgt = -1; u.path = null; continue; }
-    if (Math.random() < DT * 0.004) breakIce(G, u);
   }
 }
 function worldStep(G, byId) {
@@ -1541,7 +1637,11 @@ function worldStep(G, byId) {
     b.cd -= DT; b.mv = 0; b.at = (b.at || 0) - DT; let tg = null, bd = 64;
     for (const u of G.units) { if (u.hp <= 0 || u.fall > 0 || u.pj) continue; const d2 = (u.x - b.x) ** 2 + (u.z - b.z) ** 2; if (d2 < bd) { bd = d2; tg = u; } }
     let tx = b.x, tz = b.z, sp = 2.2;
-    if (tg) { tx = tg.x; tz = tg.z; sp = 4.7; const d = Math.sqrt(bd); if (d < 2.0) { tx = b.x; tz = b.z; if (b.cd <= 0) { b.cd = 1.25; b.atk = (b.atk + 1) % 100; tg.hp -= 34 * (b.dm ?? 1) * (tg.poss ? CFG.possArmor : 1); tg.hurt = 2.5; if (!KINDS[tg.k].bear && KINDS[tg.k].role !== 'siege' && Math.random() < (tg.poss ? 0.2 : 0.4)) knockFly(tg, b.x, b.z, 3); } } }
+    if (b.wind > 0) { // paw raised: the swipe lands after a visible wind-up, so you can step back
+      b.wind -= DT; tx = b.x; tz = b.z;
+      if (b.wind <= 0) { b.wind = 0; const v = G.units.find(o => o.id === b.windT && o.hp > 0 && !o.pj && !o.air); b.atk = (b.atk + 1) % 100; b.cd = 1.05;
+        if (v && (v.x - b.x) ** 2 + (v.z - b.z) ** 2 < 2.8 * 2.8) { v.hp -= 34 * (b.dm ?? 1) * (v.poss ? CFG.possArmor : 1); v.hurt = 2.5; if (!KINDS[v.k].bear && KINDS[v.k].role !== 'siege') knockFly(v, b.x, b.z, v.poss ? 2 : 3); } } }
+    else if (tg) { tx = tg.x; tz = tg.z; sp = 4.7; const d = Math.sqrt(bd); if (d < 2.0) { tx = b.x; tz = b.z; if (b.cd <= 0) { b.wind = 0.4; b.windT = tg.id; b.raise = ((b.raise || 0) + 1) % 100; b.yaw = Math.atan2(tg.x - b.x, tg.z - b.z); } } }
     else { b.wt -= DT; if (b.wt <= 0 || b.wx === undefined || Math.hypot(b.wx - b.x, b.wz - b.z) < 1) { b.wt = 6 + Math.random() * 8; for (let k = 0; k < 8; k++) { const q = nearestWalkable(MAP, (Math.random() - .5) * 2 * (HALF_W - 3), clamp(b.z + (Math.random() - .5) * 50, -HALF_H + 22, HALF_H - 22)); if (BASES.every(B => Math.hypot(B.x - q.x, B.z - q.z) > 24)) { b.wx = q.x; b.wz = q.z; break; } } } tx = b.wx; tz = b.wz; }
     const dx = tx - b.x, dz = tz - b.z, d = Math.hypot(dx, dz);
     if (d > 0.3) { if (!b.path || b.repath <= 0 || Math.hypot((b.pgx || 0) - tx, (b.pgz || 0) - tz) > 3) { b.repath = 1.5; b.pgx = tx; b.pgz = tz; b.path = los(b.x, b.z, tx, tz) ? null : (G.astarBudget-- > 0 ? findPath(b.x, b.z, tx, tz, false) : b.path); } b.repath -= DT;
@@ -1568,17 +1668,22 @@ function step(G) {
   if (G.cd > 0) { G.cd = Math.max(0, G.cd - DT); return; }
   if (G.pz > 0) { perkPause(G); return; }
   G.t += DT; G.astarBudget = 8; SIMG = G; perkStep(G);
+  { const ph = phaseOf(G); if (ph !== G.phase) { G.phase = ph; highlight(G, 'phase', -1, ph, 0, 0); } }
+  if (!G.tut && G.t >= CFG.crumbleT) { if (!G.crumble) { G.crumble = 1; highlight(G, 'phase', -1, 3, 0, 0); } for (const T of G.teams) T.hp -= CFG.crumble * DT; } // safety net: no endless stalemates
   const byId = G.unitIndex || (G.unitIndex = new Map()); byId.clear(); for (const u of G.units) byId.set(u.id, u);
   worldStep(G, byId);
   for (let i = 0; i < 2; i++) {
     const T = G.teams[i];
     T.gold += incomeOf(G, i) * DT;
     const en = FAC[T.fac].kinds.filter(k => T.auto[k]);
-    if (en.length && T.q.length < 3) { const k = en[T.autoI % en.length], n0 = T.q.length; applyCmd(G, i, { t:'spawn', k, auto:true }); if (T.q.length > n0 || (KINDS[k].role === 'siege' && sigeOf(G, i) >= 5)) T.autoI = (T.autoI + 1) % 1000; }
+    if (en.length) autoQueue(G, i, T, en);
     if (T.q.length) { T.qt += DT; if (T.qt >= buildTime(G, i, T.q[0])) { const k = T.q.shift(); if (T.qm > 0) T.qm--; spawnUnit(G, i, k); if (pkL(G, i, 'twins') && KINDS[k].role !== 'siege') { T.twN = (T.twN || 0) + 1; if (T.twN % 3 === 0) spawnUnit(G, i, k); } T.qt = 0; } } else T.qt = 0;
   }
+  // Simultaneous resolution: everyone alive at the start of the tick acts this tick, so list order never decides a duel.
+  for (const u of G.units) { u.a0 = u.hp > 0; if (u.frenzy > 0) u.frenzy -= DT; if (u.slowT > 0) u.slowT -= DT; }
   for (const u of G.units) {
-    if (u.hp <= 0 || u.air || u.fall > 0 || u.pj) continue;
+    if (u.ramQ && u.a0) ramTick(G, u, byId);
+    if (!u.a0 || u.air || u.fall > 0 || u.pj) continue;
     if (u.poss) { possStep(G, u, byId); continue; }
     const K = KINDS[u.k], o = u.ord;
     u.cd -= DT; u.re -= DT; u.vx = 0; u.vz = 0; u.hurt = (u.hurt || 0) - DT;
@@ -1590,9 +1695,10 @@ function step(G) {
       if (u.down <= 0) { u.kb = null; u.re = 0; u.path = null; }
       continue;
     }
+    if (u.wind) { u.wind.t -= DT; if (u.wind.t <= 0) { const w = u.wind, dd = Math.hypot(w.tx - u.x, w.tz - u.z); G.proj.push({ t:Math.max(0.6, dd / K.pspeed), dmg:K.dmg * (u.chick > 0 ? 0.6 : 1), tgt:w.tgt, team:u.team, k:u.k, aoe:K.aoe, tx:w.tx, tz:w.tz }); u.wind = null; } continue; }
     if (u.hp < maxHp(u) && (u.x - BASES[u.team].x) ** 2 + (u.z - BASES[u.team].z) ** 2 < CFG.healR * CFG.healR) u.hp = Math.min(maxHp(u), u.hp + CFG.heal * DT);
     if (G.chaos && pkL(G, u.team, 'heal')) u.hp = Math.min(maxHp(u), u.hp + 5 * DT);
-    const hurt = u.hurt > 0, leash = hurt ? CFG.leash + 12 : CFG.leash, scan = hurt ? Math.max(K.aggro, 13.5) : K.aggro;
+    const hurt = u.hurt > 0, leash = hurt ? CFG.leash + 12 : CFG.leash, scan = (hurt ? Math.max(K.aggro, 13.5) : K.aggro) + desertRange(K);
     if (o.mv && Math.hypot(o.x - u.x, o.z - u.z) < 1.2) o.mv = false;
     let tgt = u.tgt > 0 ? byId.get(u.tgt) : null;
     if (o.target > 0) { const explicit = byId.get(o.target); if (explicit && explicit.hp > 0 && explicit.team !== u.team) { u.tgt = explicit.id; tgt = explicit; } else { delete o.target; u.tgt = -1; tgt = null; u.re = 0; } }
@@ -1603,7 +1709,7 @@ function step(G) {
     else if (u.re <= 0) {
       u.re = 0.3;
       let best = null, bd = scan * scan;
-      let bs = 1e9; for (const e of G.units) { if (e.team === u.team || e.hp <= 0 || e.tutDummy) continue; const d = (e.x - u.x) ** 2 + (e.z - u.z) ** 2; if (d < bd && Math.hypot(e.x - o.x, e.z - o.z) < leash) { const sc = d * (dmgMult(u.k, e.k) > 1 ? 0.45 : 1) * (tgt && e === tgt ? 0.55 : 1); if (sc < bs) { bs = sc; best = e; } } }
+      let bs = 1e9; for (const e of G.units) { if (e.team === u.team || e.hp <= 0 || e.tutDummy || e.pj || e.air) continue; const d = (e.x - u.x) ** 2 + (e.z - u.z) ** 2; if (d < bd && Math.hypot(e.x - o.x, e.z - o.z) < leash) { const sc = d * (isCounter(u.k, e.k) ? 0.45 : 1) * (tgt && e === tgt ? 0.55 : 1) * (K.role === 'siege' && MAP.ice && onIce(e.x, e.z) ? 0.7 : 1); if (sc < bs) { bs = sc; best = e; } } }
       if (!best && G.bears.length) { let bb = null, bbd = (Math.min(scan, 9)) ** 2; for (const b of G.bears) { if (b.hp <= 0 || b.tameTeam !== undefined) continue; const d2 = (b.x - u.x) ** 2 + (b.z - u.z) ** 2; if (d2 < bbd && (b.at > 0 || d2 < 36)) { bbd = d2; bb = b; } } if (bb) { u.tgt = -3; u.btg = bb.id; } }
       if (best) { u.tgt = best.id; tgt = best; }
       else if (u.tgt === -3) {}
@@ -1615,15 +1721,17 @@ function step(G) {
     else if (u.tgt === -2) { const eb = BASES[1 - u.team]; tx = clamp(u.x, eb.x - 6.6, eb.x + 6.6); tz = clamp(u.z, eb.z - 3.6, eb.z + 3.6); tr = 0; ty = groundY(eb.x, eb.z); }
     if (tx !== undefined) {
       const dist = Math.hypot(tx - u.x, tz - u.z), d = dist - tr;
-      const range = K.range + (K.role === 'ranged' && u.y - ty > 1.2 ? CFG.hillBonus : 0) + (u.eng > 0 ? 0.45 : 0);
+      const range = K.range + desertRange(K) + (K.role === 'ranged' && u.y - ty > 1.2 ? CFG.hillBonus : 0) + (u.eng > 0 ? 0.45 : 0);
       u.eng = (u.eng || 0) - DT;
       if (d <= range) { u.eng = 0.5;
         if (u.cd <= 0) {
-          u.cd = K.cd; u.atk = (u.atk + 1) % 100; u.at = tgt ? tgt.id : -2;
-          const charge = K.role === 'cav' && u.run > 1.2 ? 1.6 : 1;
+          u.cd = K.cd * (u.frenzy > 0 ? 0.85 : 1); u.atk = (u.atk + 1) % 100; u.at = tgt ? tgt.id : -2;
+          const charge = K.role === 'cav' && u.run > 1.2 ? (u.k === 5 ? 1.55 : 1.4) : 1;
+          const hm = homeMul(G, u);
           if (u.tgt === -3) { const b = G.bears.find(o => o.id === u.btg); u.at = -3; if (K.proj) G.proj.push({ t:dist / K.pspeed, dmg:K.dmg, tgt:-3, bear:u.btg, team:u.team, k:u.k, aoe:K.aoe, tx, tz }); else hitBear(G, b, K.dmg * charge, u.team, u.k); }
-          else if (K.proj) G.proj.push({ t:dist / K.pspeed, dmg:K.dmg * (u.chick > 0 ? 0.6 : 1), tgt:u.at, team:u.team, k:u.k, aoe:K.aoe, tx, tz });
-          else hit(G, u.at, K.dmg * charge * (u.chick > 0 ? 0.6 : 1), u.team, byId, u.k);
+          else if (K.proj && K.role === 'siege') u.wind = { t:SIEGE_WIND, tx, tz, tgt:u.at }; // the arm winds up first: everyone can see it coming
+          else if (K.proj) G.proj.push({ t:dist / K.pspeed, dmg:K.dmg * hm * (u.chick > 0 ? 0.6 : 1), tgt:u.at, team:u.team, k:u.k, aoe:K.aoe, tx, tz });
+          else { hit(G, u.at, K.dmg * hm * charge * (u.chick > 0 ? 0.6 : 1), u.team, byId, u.k); traitHit(G, u, tgt, charge > 1); }
           u.run = 0;
         }
       } else { const approach = u.tgt === -2 ? (u.baseSlot || (u.baseSlot = baseApproach(u))) : null;
@@ -1666,7 +1774,7 @@ function step(G) {
       }
     }
     a.x = clampX(a.x); a.z = clampZ(a.z);
-    if (!walkable(a.x, a.z) && !a.pj && !a.fall && !a.poss && !(a.kb && a.kb.left > 0 && a.down > 0)) { const p = nearestWalkable(MAP, a.x, a.z); a.x = p.x; a.z = p.z; }
+    if (!walkable(a.x, a.z) && !a.pj && !a.fall && !a.air && !a.poss && !(a.kb && a.kb.left > 0 && a.down > 0)) { const p = nearestWalkableBelow(a.x, a.z), dx = p.x - a.x, dz = p.z - a.z, d = Math.hypot(dx, dz); if (d < 0.6) { a.x = p.x; a.z = p.z; } else { a.x += dx / d * 0.6; a.z += dz / d * 0.6; } } // slide off, never pop back up a cliff
     a.y = a.fy = unitY(a.x, a.z);
   }
   for (const p of G.proj) { p.t -= DT; if (p.t > 0) continue;
@@ -1678,7 +1786,8 @@ function step(G) {
         if (KINDS[e.k].bear) { e.squash = 1; hit(G, e.id, e.hp * 10 + 9999, p.team, byId, -1, p.bp); continue; }
         const core = 0.6 + KINDS[e.k].r; if (dd < core && KINDS[e.k].role === 'siege') { e.squash = 0; hit(G, e.id, maxHp(e) * 0.5 / (e.poss ? CFG.possArmor : 1), p.team, byId, -1, p.bp); continue; }
         if (dd < core) { e.squash = 1; hit(G, e.id, e.hp * 10 + 9999, p.team, byId, -1, p.bp); continue; }
-        const f = 1 - (dd - core) / Math.max(0.5, p.aoe - core); hit(G, e.id, p.dmg * (0.2 + 1.3 * f * f), p.team, byId, p.k, p.bp); } const eb = BASES[1 - p.team]; if (baseGap(eb, p.tx, p.tz) < p.aoe) hit(G, -2, p.dmg, p.team, byId, p.k); }
+        const f = 1 - (dd - core) / Math.max(0.5, p.aoe - core); hit(G, e.id, p.dmg * (0.2 + 1.3 * f * f), p.team, byId, p.k, p.bp); } const eb = BASES[1 - p.team]; if (baseGap(eb, p.tx, p.tz) < p.aoe) hit(G, -2, p.dmg, p.team, byId, p.k);
+      if (sg && MAP.ice) iceImpact(G, p.tx, p.tz, clamp(p.aoe * 0.48, 1.4, 2.4), p.team); }
     else hit(G, p.tgt, p.dmg, p.team, byId, p.k, p.bp); }
   for (const p of G.fp) {
     const n = 8, sd = CFG.arrowSpeed * DT / n, eb = BASES[1 - p.team];
@@ -1710,25 +1819,33 @@ function step(G) {
     if (T.tcd <= 0 && !G.towerOff[i]) {
       let best = null, bd = CFG.towerRange * CFG.towerRange;
       let bs = 1e9; for (const e of us) { if (e.team === i || e.hp <= 0) continue; const d = (e.x - b.x) ** 2 + (e.z - b.z) ** 2; if (d < (e.poss ? CFG.towerPossRange : CFG.towerRange) ** 2 && d * (e.poss ? 0.25 : 1) < bs) { bs = d * (e.poss ? 0.25 : 1); bd = d; best = e; } }
-      if (best) { T.tcd = CFG.towerCd * pk(G, i, 'tower', [1, 0.67]); T.tatk = (T.tatk + 1) % 100; T.ttgt = best.id; G.proj.push({ t:Math.sqrt(bd) / CFG.towerSpeed, dmg:CFG.towerDmg * G.towerMul[i] * pk(G, i, 'tower', [1, 2]) * (best.poss ? CFG.towerPoss : 1), tgt:best.id, team:i, k:-1 }); }
+      if (best) { T.tcd = CFG.towerCd * pk(G, i, 'tower', [1, 0.67]); T.tatk = (T.tatk + 1) % 100; T.ttgt = best.id; G.proj.push({ t:Math.sqrt(bd) / CFG.towerSpeed, dmg:CFG.towerDmg * G.towerMul[i] * CFG.phaseTower[G.phase || 0] * pk(G, i, 'tower', [1, 2]) * (best.poss ? CFG.towerPoss : 1), tgt:best.id, team:i, k:-1 }); }
     }
   }
   for (const u of us) if (u.hp <= 0 && u.poss && !u.rushed && u.egoHit && u.egoHit.team !== u.team) { const h = u.egoHit, alive = G.units.some(v => v.id === h.pid && v.hp > 0); if (G.t - h.t <= (alive ? 2 : 1)) giveRush(G, h.team, u); }
   for (const u of us) if (u.hp <= 0 && (u.squash || u.smash || u.fallen || u.air)) { G.dzS = ((G.dzS || 0) + 1) % 10000; (G.dz || (G.dz = [])).push([G.dzS, u.id, u.fallen || u.air ? 3 : u.squash ? 1 : 2, Math.round(u.x * 10), Math.round(u.y * 10), Math.round(u.z * 10), Math.round((u.air ? u.air.vx : 0) * 100), Math.round((u.air ? u.air.vy : 0) * 100), Math.round((u.air ? u.air.vz : 0) * 100)]); if (G.dz.length > 64) G.dz.shift(); }
+  if (G.st) for (const u of us) if (u.hp <= 0 && !u.counted) { u.counted = 1; G.st[u.team].lost++;
+    if ((u.fallen || u.air) && u.kbTeam !== undefined && G.t - (u.kbT || -9) < 6) { const tm = u.kbTeam; G.st[tm].cliff++; const cr = G.cliffRun; if (cr && cr.team === tm && G.t - cr.t < 2.5) { cr.n++; cr.t = G.t; } else G.cliffRun = { team:tm, n:1, t:G.t }; if (G.cliffRun.n === 2 || G.cliffRun.n === 4) highlight(G, 'cliff', tm, G.cliffRun.n, u.x, u.z); } }
   G.units = us.filter(u => u.hp > 0);
   for (let i = 0; i < 2; i++) { const T = G.teams[i]; if (T.pos && !G.units.some(u => u.id === T.pos)) { T.pos = null; T.posIn = null; } }
   G.flags.forEach((f, fi) => {
     const F = FLAGS[fi]; let c0 = 0, c1 = 0;
     for (const u of G.units) if ((u.x - F.x) ** 2 + (u.z - F.z) ** 2 < CFG.flagR * CFG.flagR) u.team ? c1++ : c0++;
-    const rate = n => DT / (CFG.capTime * 1.8 / Math.pow(Math.min(n, 12), 0.75));
-    if (c0 && !c1) f.p = Math.min(1, f.p + rate(c0) * pk(G, 0, 'flagger', [1, 2.5]));
-    else if (c1 && !c0) f.p = Math.max(-1, f.p - rate(c1) * pk(G, 1, 'flagger', [1, 2.5]));
-    else if (!c0 && !c1) { const home = f.owner === 0 ? 1 : f.owner === 1 ? -1 : 0; f.p += clamp(home - f.p, -DT / 10, DT / 10); }
+    // Which side's half is this flag on? The home side retakes it 1.5x faster; a flag held deep in enemy land fades without guards.
+    const side = flagSide(fi);
+    const rate = (n, team) => DT / (CFG.capTime * 1.8 / Math.pow(Math.min(n, 12), 0.75)) * (side === team && !G.tut ? 1.5 : 1);
+    if (c0 && !c1) f.p = Math.min(1, f.p + rate(c0, 0) * pk(G, 0, 'flagger', [1, 2.5]));
+    else if (c1 && !c0) f.p = Math.max(-1, f.p - rate(c1, 1) * pk(G, 1, 'flagger', [1, 2.5]));
+    else if (!c0 && !c1) { const deep = !G.tut && f.owner >= 0 && side === 1 - f.owner, home = deep ? 0 : f.owner === 0 ? 1 : f.owner === 1 ? -1 : 0; f.p += clamp(home - f.p, -DT / (deep ? 16 : 10), DT / (deep ? 16 : 10)); if (deep && Math.abs(f.p) < 0.004) { f.p = 0; f.owner = -1; } }
+    if (f.owner >= 0 && Math.abs(f.p) < 0.14) f.danger = f.owner;
+    if (f.danger !== undefined && (f.owner !== f.danger)) f.danger = undefined;
+    else if (f.danger !== undefined && Math.abs(f.p) > 0.985) { highlight(G, 'save', f.danger, fi, F.x, F.z); f.danger = undefined; }
     if (f.p >= 1) f.owner = 0; else if (f.p <= -1) f.owner = 1;
     if (f.owner === 0 && f.p <= 0) f.owner = -1;
     if (f.owner === 1 && f.p >= 0) f.owner = -1;
   });
   for (let i = 0; i < 2; i++) G.teams[i].maxFlags = Math.max(G.teams[i].maxFlags, flagsOf(G, i));
+  if (G.st) { const f0 = flagsOf(G, 0), f1 = flagsOf(G, 1); G.st[0].flagT += f0 * DT; G.st[1].flagT += f1 * DT; if (f0 > f1) G.st[0].leadT += DT; else if (f1 > f0) G.st[1].leadT += DT; }
   for (let i = 0; i < 2; i++) if (G.teams[i].hp <= 0) { G.teams[i].hp = 0; G.over = 1 - i; }
 }
 function snapOf(G) {
@@ -1742,10 +1859,13 @@ function snapOf(G) {
     b:[Math.ceil(T0.hp), Math.ceil(T1.hp)], f:G.flags.map(f => [f.owner, Math.round(f.p * 100)]),
     r:[Math.round(T0.rally.x), Math.round(T0.rally.z), Math.round(T1.rally.x), Math.round(T1.rally.z)],
     tw:[T0.tatk, T0.ttgt, T1.tatk, T1.ttgt], k:[T0.kills, T1.kills], mf:[T0.maxFlags, T1.maxFlags], ru:[T0.rush, T1.rush], rp:[T0.rushAt, T1.rushAt],
+    ph:[G.phase || 0, G.tut || (G.phase || 0) >= 2 ? -1 : Math.ceil(CFG.phaseT[G.phase || 0] - G.t)], hl:G.hl ? G.hl.slice() : [],
+    st:G.st ? G.st.map(x => [x.made, x.lost, Math.round(x.baseDmg), Math.round(x.flagT), Math.round(x.leadT), x.rams, x.cliff, x.bears, x.cats, x.holes, x.egoKills]) : null,
+    sp:G.proj.filter(p => p.aoe && KINDS[p.k] && KINDS[p.k].role === 'siege').map(p => [Math.round(p.tx * 10), Math.round(p.tz * 10), Math.round(p.t * 10), p.team, Math.round(p.aoe * 10)]),
     ...(G.chaos ? { ch:1, pk:[Object.assign({}, T0.pk), Object.assign({}, T1.pk)], of:[T0.offer, T1.offer], pn:[T0.pkN, T1.pkN], lp:[T0.lastPk, T1.lastPk], no:Math.max(0, Math.ceil(G.nextOffer - G.t)), on:G.offerN, pz:Math.ceil(G.pz), fb:G.fb.map(b => [b.id, Math.round(b.x * 10), Math.round(b.z * 10), Math.round(b.t * 10), b.team, b.lvl]) } : {}),
     gr:(G.gr || []).map(g => [g.id, Math.round(g.x * 10), Math.round(g.z * 10), Math.round(g.sx * 10), Math.round(g.sz * 10), Math.round(g.t * 10), g.team, Math.round((g.t0 || 1) * 10)]),
-    hq:[T0.hq.slice(), T1.hq.slice()], dz:G.dz ? G.dz.slice() : [], ge:G.ge ? G.ge.slice() : [], it:(G.items || []).map(i => [i.id, i.ty, Math.round(i.x * 10), Math.round(i.z * 10)]), nd:[T0.nades || 0, T1.nades || 0], pe:G.pe ? G.pe.slice() : [], ct:G.ct ? G.ct.slice() : [], br:(G.bears || []).map(b => [Math.round(b.x * 10), Math.round(b.z * 10), Math.round(b.yaw * 100), b.atk, b.mv, Math.round(b.hp / b.mhp * 100), b.id, b.tameTeam === undefined ? 0 : Math.round(b.tameT * 100) + 1, b.tameTeam === undefined ? 0 : b.tameTeam + 1]), bev:G.bev ? G.bev.slice() : [], pj:G.units.filter(u => u.pj).map(u => [u.id, Math.round(u.pj.sx * 10), Math.round(u.pj.sz * 10), Math.round(u.pj.tx * 10), Math.round(u.pj.tz * 10), Math.round(u.pj.t * 100), u.pj.ack]), pd:(G.padSt || []).map(st => [st.n, Math.ceil(st.cd * 10), st.arm > 0 ? 1 : 0]), fz:G.units.filter(u => u.fall > 0).map(u => u.id), af:G.units.filter(u => u.air).map(u => [u.id, Math.round(u.x * 10), Math.round(u.y * 10), Math.round(u.z * 10), Math.round(u.air.vx * 100), Math.round(u.air.vy * 100), Math.round(u.air.vz * 100), u.air.kind === 'dash' ? 1 : u.air.kind === 'impact' ? 2 : 0, u.airAck]), ih:(G.holes || []).map(h => [h.id, Math.round(h.x * 10), Math.round(h.z * 10)]), ic:G.units.filter(u => u.slipT > 0 || u.inHole || u.cold > 0).map(u => [u.id, (u.slipT > 0 ? 1 : 0) | (u.inHole ? 2 : 0) | (u.cold > 0 ? 4 : 0)]), fp:G.fp.map(p => [p.id, Math.round(p.x * 10), Math.round(p.y * 10), Math.round(p.z * 10), Math.round(p.dx * 100), Math.round(p.dy * 100), Math.round(p.dz * 100), p.team, p.k]),
-    u:G.units.map(u => { const e = [u.id, u.k, Math.round(u.x * 10), Math.round(u.z * 10), Math.max(1, Math.round(u.hp / maxHp(u) * 100)), u.at, u.atk, (u.poss ? 1 : 0) | (u.down > 0 ? 2 : 0) | (u.bite > 0 ? 4 : 0) | (u.dance > 0 ? 8 : 0) | (u.chick > 0 ? 16 : 0) | (u.jumpT > 0 ? 32 : 0) | ((u.kbN || 0) << 6)];
+    hq:[T0.hq.slice(), T1.hq.slice()], dz:G.dz ? G.dz.slice() : [], ge:G.ge ? G.ge.slice() : [], it:(G.items || []).map(i => [i.id, i.ty, Math.round(i.x * 10), Math.round(i.z * 10)]), nd:[T0.nades || 0, T1.nades || 0], pe:G.pe ? G.pe.slice() : [], ct:G.ct ? G.ct.slice() : [], br:(G.bears || []).map(b => [Math.round(b.x * 10), Math.round(b.z * 10), Math.round(b.yaw * 100), b.atk, b.mv, Math.round(b.hp / b.mhp * 100), b.id, b.tameTeam === undefined ? 0 : Math.round(b.tameT * 100) + 1, b.tameTeam === undefined ? 0 : b.tameTeam + 1, b.raise || 0]), bev:G.bev ? G.bev.slice() : [], pj:G.units.filter(u => u.pj).map(u => [u.id, Math.round(u.pj.sx * 10), Math.round(u.pj.sz * 10), Math.round(u.pj.tx * 10), Math.round(u.pj.tz * 10), Math.round(u.pj.t * 100), u.pj.ack]), pd:(G.padSt || []).map(st => [st.n, Math.ceil(st.cd * 10), st.arm > 0 ? 1 : 0]), fz:G.units.filter(u => u.fall > 0).map(u => u.id), af:G.units.filter(u => u.air).map(u => [u.id, Math.round(u.x * 10), Math.round(u.y * 10), Math.round(u.z * 10), Math.round(u.air.vx * 100), Math.round(u.air.vy * 100), Math.round(u.air.vz * 100), u.air.kind === 'dash' ? 1 : u.air.kind === 'impact' ? 2 : 0, u.airAck]), ih:(G.holes || []).map(h => [h.id, Math.round(h.x * 10), Math.round(h.z * 10), Math.round((h.r || 1.14) * 10)]), ic:G.units.filter(u => u.slipT > 0 || u.inHole || u.cold > 0).map(u => [u.id, (u.slipT > 0 ? 1 : 0) | (u.inHole ? 2 : 0) | (u.cold > 0 ? 4 : 0)]), fp:G.fp.map(p => [p.id, Math.round(p.x * 10), Math.round(p.y * 10), Math.round(p.z * 10), Math.round(p.dx * 100), Math.round(p.dy * 100), Math.round(p.dz * 100), p.team, p.k]),
+    u:G.units.map(u => { const e = [u.id, u.k, Math.round(u.x * 10), Math.round(u.z * 10), Math.max(1, Math.round(u.hp / maxHp(u) * 100)), u.at, u.atk, (u.poss ? 1 : 0) | (u.down > 0 ? 2 : 0) | (u.bite > 0 ? 4 : 0) | (u.dance > 0 ? 8 : 0) | (u.chick > 0 ? 16 : 0) | (u.jumpT > 0 ? 32 : 0) | (u.frenzy > 0 ? 64 : 0) | (u.slowT > 0 ? 128 : 0) | ((u.kbN || 0) << 8)];
       if (u.poss) e.push(u.sp, Math.round(u.yaw * 100), u.rage > 0 ? 1 : 0, Math.max(0, Math.ceil(u.spcd * 10)), u.spm ? 1 : 0, u.shot ? u.shot[0] : 0, u.shot ? u.shot[1] : 0, u.padAck || 0, u.airAck || 0); return e; }),
   };
 }
@@ -1794,7 +1914,7 @@ function aiRecruit(G, team, A, L, mine, foes) {
     }
     A.plan = ks.find(k => KINDS[k].role === role);
     const nSiege = mine.filter(u => KINDS[u.k].role === 'siege').length + T.q.filter(k => KINDS[k].role === 'siege').length;
-    if (G.t > (L.micro >= 2 ? 70 : 100) && total >= 5 && nSiege < (L.counter > 0.8 ? 2 : 1) && Math.random() < (L.micro >= 2 ? 0.2 : 0.12)) A.plan = ks.find(k => KINDS[k].role === 'siege');
+    if (G.t > (L.micro >= 2 ? 70 : 100) && total >= 5 && nSiege < (L.counter > 0.8 ? 2 : 1) + ((G.phase || 0) >= 1 ? 1 : 0) && Math.random() < (L.micro >= 2 ? 0.2 : 0.12)) A.plan = ks.find(k => KINDS[k].role === 'siege');
   }
   const before = T.q.length; applyCmd(G, team, { t:'spawn', k:A.plan }); if (T.q.length > before) A.plan = null;
 }
@@ -1821,7 +1941,7 @@ function aiBlob(G, team, A, L, mine, foes) {
   let p, m = 0;
   if (threat.length) p = cen(threat);
   else if (mine.length < (L.micro ? 5 : 7)) p = frontOf(team, 14);
-  else if (mine.length >= L.wave + 4 && mine.length > foes.length * 1.5) p = frontOf(1 - team, 8);
+  else if ((mine.length >= L.wave + 4 && mine.length > foes.length * 1.5) || ((G.phase || 0) >= 1 && mine.length >= L.wave && mine.length > foes.length * 1.1)) p = frontOf(1 - team, 8);
   else p = aiBestFlag(G, team, foes, L.micro === 0);
   if (L.retreat && !threat.length) { const c = cen(mine), near = within(foes, c, 16); if (near.length && strength(mine, near) < 0.55 * strength(near, mine)) { p = aiSafe(G, team, c); m = 1; } }
   aiOrder(G, team, A, 'all', mine, p, m);
@@ -1831,14 +1951,20 @@ function aiSmart(G, team, A, L, free, allFoes) {
   if (!free.length) return;
   const home = BASES[team], eb = BASES[1 - team];
   const ratio = strength(free, allFoes) / Math.max(1, strength(allFoes, free));
-  if (!A.push && free.length >= L.wave && ratio > 1.7) { const def = within(allFoes, eb, 24); if (strength(def, free) < 0.45 * strength(free, def)) A.push = true; }
-  if (A.push && (ratio < 1.0 || free.length < L.wave * 0.65)) A.push = false;
+  const storm = (G.phase || 0) >= 1; // storm phase: bases are fragile, the AI goes for the kill
+  if (!A.push && free.length >= (storm ? L.wave * 0.7 : L.wave) && ratio > (storm ? 1.15 : 1.7)) { const def = within(allFoes, eb, 24); if (strength(def, free) < 0.45 * strength(free, def)) A.push = true; }
+  if (A.push && (ratio < (storm ? 0.8 : 1.0) || free.length < L.wave * (storm ? 0.45 : 0.65))) A.push = false;
+  if ((G.phase || 0) >= 2 && !A.push && free.length >= 6 && ratio > 0.85) A.push = true; // final battle: no more waiting
   const foes = A.push ? allFoes : allFoes.filter(e => Math.hypot(e.x - eb.x, e.z - eb.z) > CFG.towerRange + 4);
   const R = r => free.filter(u => KINDS[u.k].role === r), E = r => foes.filter(u => KINDS[u.k].role === r);
   const cav = R('cav'), mel = R('melee'), rng = R('ranged'), eCav = E('cav'), eMel = E('melee'), eRng = E('ranged');
   const threat = within(allFoes, home, 26), army = mel.concat(rng);
+  // clearly outnumbered: fall back into the home zone and rebuild instead of feeding units one by one
+  if (A.turtle ? (ratio > 0.8 || free.length >= L.wave || A.push || (G.phase || 0) >= 2) : (!A.push && ratio < 0.55 && free.length < L.wave && (G.phase || 0) < 2)) A.turtle = !A.turtle; // hysteresis: no back-and-forth
+  const turtle = A.turtle && !threat.length;
   let obj;
   if (threat.length) obj = cen(threat);
+  else if (turtle) obj = frontOf(team, 9);
   else if (A.push) obj = { x:eb.x, z:eb.z + (team ? -3 : 3) };
   else obj = aiBestFlag(G, team, allFoes, false, cen(army) || null);
   const ac = cen(army.length ? army : free);
@@ -1877,6 +2003,7 @@ function aiSmart(G, team, A, L, free, allFoes) {
     if (egoArch && ok.length >= 2) target = { x:egoArch.x, z:egoArch.z };
     else if (exposed.length) { const t = nearestOf(exposed, cc.x, cc.z); target = { x:t.x, z:t.z }; }
     if (!target && threat.length) target = cen(threat);
+    if (turtle && (!target || Math.hypot(target.x - home.x, target.z - home.z) > 40)) target = obj;
     if (!target && A.push) target = obj;
     if (!target) {
       let bs = 1e9;
@@ -1960,7 +2087,7 @@ function aiPossess(G, team, A, L, mine, foes) {
   if (danger && Math.hypot(u.x - EB.x, u.z - EB.z) < tr) { const dx = u.x - EB.x, dz = u.z - EB.z, d0 = Math.hypot(dx, dz) || 1, p = nearestWalkable(MAP, clampX(EB.x + dx / d0 * (tr + 6)), clampZ(EB.z + dz / d0 * (tr + 6))); u.vx = 0; u.vz = 0; steer(G, u, p.x, p.z, K.speed * 1.15); T.posIn = { id:u.id, x:u.x + u.vx * DT, z:u.z + u.vz * DT, y:Math.atan2(p.x - u.x, p.z - u.z), a:A.pa, s:A.ps, pad:u.padAck || 0, air:u.airAck || 0 }; return; }
   let best = null, bs = 1e9;
   if (L.micro >= 3) { const ep2 = foes.find(e => e.poss && KINDS[e.k].role === 'ranged'); if (ep2 && Math.hypot(ep2.x - u.x, ep2.z - u.z) < 40 && !(danger && Math.hypot(ep2.x - EB.x, ep2.z - EB.z) < tr)) { best = ep2; bs = 0; } }
-  if (!best) for (const e of foes) { const d = Math.hypot(e.x - u.x, e.z - u.z); if (d > 30 || (danger && Math.hypot(e.x - EB.x, e.z - EB.z) < tr)) continue; const sc = d * (dmgMult(u.k, e.k) > 1 ? 1 - 0.45 * L.counter : 1) * (e.poss ? 1 - 0.6 * PS.hunt : 1) * (e.down > 0 ? 0.8 : 1) * (MAP.cliff && (L.cliff || A.cliffRoll) && (K.role === 'cav' || u.k === 2) && edgeNear(e.x, e.z, 4) ? 0.45 : 1); if (sc < bs) { bs = sc; best = e; } }
+  if (!best) for (const e of foes) { const d = Math.hypot(e.x - u.x, e.z - u.z); if (d > 30 || (danger && Math.hypot(e.x - EB.x, e.z - EB.z) < tr)) continue; const sc = d * (isCounter(u.k, e.k) ? 1 - 0.45 * L.counter : 1) * (e.poss ? 1 - 0.6 * PS.hunt : 1) * (e.down > 0 ? 0.8 : 1) * (MAP.cliff && (L.cliff || A.cliffRoll) && (K.role === 'cav' || u.k === 2) && edgeNear(e.x, e.z, 4) ? 0.45 : 1); if (sc < bs) { bs = sc; best = e; } }
   const calm = !foes.some(e => Math.hypot(e.x - u.x, e.z - u.z) < 14), itm = L.micro >= 2 ? (G.items || []).find(i => Math.hypot(i.x - u.x, i.z - u.z) < (L.items && calm ? 70 : 22) && (!L.items || (i.z - BASES[1 - team].z) ** 2 > (i.z - BASES[team].z) ** 2 || Math.hypot(i.x - u.x, i.z - u.z) < 22)) : null;
   const tg = best && (!itm || Math.hypot(best.x - u.x, best.z - u.z) < 7) ? best : itm ? itm : best ? best : aiBestFlag(G, team, foes, false, u);
   const d = Math.hypot(tg.x - u.x, tg.z - u.z), reach = K.role === 'ranged' ? K.range - 1 : K.range + K.r + 0.5;
@@ -3263,7 +3390,8 @@ function processSnap(s) {
     u.dancing = (e[7] & 8) === 8; const ch = (e[7] & 16) === 16; if (ch !== !!u.chick) setChicken(u, ch); u.bitten = (e[7] & 4) === 4; if ((e[7] & 32) && !(pe && (pe[7] & 32))) { const nearPad = (MAP.pads || []).some(pd => Math.hypot(pd.x - e[2] / 10, pd.z - e[3] / 10) < 3.5); u.jDur = nearPad ? PAD_FLY : 0.9; u.jumpT = u.jDur; if (!nearPad) SFX.play('boing', { x:u.g.position.x, z:u.g.position.z }); }
     if (V.poss && V.poss.id === id) { const dz2 = (e[7] & 8) === 8; if (dz2 && !V.poss.dance) egoHint(matchMedia('(pointer:fine)').matches ? 'Kein Entkommen! Leertaste oder Klick für Tanzmoves!' : 'Kein Entkommen! Tippe den Tanz-Knopf für Tanzmoves!', 2600); V.poss.dance = dz2;  $('#egoExit').classList.toggle('locked', dz2); }
     if (V.poss && V.poss.id === id) { const dn = (e[7] & 2) === 2; if (dn && !V.poss.down) { egoHint('Umgehauen! Gleich stehst du wieder auf …', 1600); V.poss.dashT = 0; } V.poss.down = dn; V.poss.srv = { x:e[2] / 10, z:e[3] / 10 }; }
-    if (pe && (e[7] >> 6) !== (pe[7] >> 6) && (e[7] & 2)) startRagdoll(u, pe[2] / 10, pe[3] / 10);
+    if (pe && (e[7] >> 8) !== (pe[7] >> 8) && (e[7] & 2)) startRagdoll(u, pe[2] / 10, pe[3] / 10);
+    u.frenzy = (e[7] & 64) === 64; u.slowed = (e[7] & 128) === 128;
     if (pe) {
       if (e[6] !== pe[6]) onAttack(u, e[5], cur, poss);
       if (e[4] < pe[4]) { u.wobV += (Math.random() < .5 ? -1 : 1) * (5 + (pe[4] - e[4]) * 0.3); u.flash = 0.15; u.flinch = 0.2; emitFX('hit', u.g.position.x, u.g.position.y + 1, u.g.position.z, { dx:-Math.sin(u.g.rotation.y), dz:-Math.cos(u.g.rotation.y), n:3, size:0.4 }); if (!u.arm && Math.random() < 0.14) SFX.play('grunt', { x:u.g.position.x, z:u.g.position.z, vol:0.7 }); }
@@ -3301,6 +3429,9 @@ function processSnap(s) {
     if (s.hq) for (let i = 0; i < 2; i++) for (const h of s.hq[i]) { const last = V.hqLast[i], dd = (h[0] - last + 1000) % 1000; if (dd > 0 && dd < 500) { hitFx(i, h); V.hqLast[i] = h[0]; } }
   }
   s.f.forEach((f, i) => updateFlag(i, f[0], f[1] / 100, ps && ps.f[i][0] !== f[0]));
+  hlProcess(s);
+  if (ps && V.playing && s.b[V.myTeam] < ps.b[V.myTeam] - 35) shake(0.22);
+  if (ps && V.playing && !V.tut && !V.siegeTip && s.b[1 - V.myTeam] < ps.b[1 - V.myTeam]) { V.siegeTip = true; if (!s.u.some(e => teamOfKind(e[1], s.fa) === V.myTeam && KINDS[e[1]].role === 'siege')) setTimeout(() => toast('Tipp: Basen halten viel aus. Nur Katapulte treffen sie mit voller Wucht.', 4200), 600); }
   V.prevMap = cur; V.prevSnap = s;
 }
 function onAttack(u, at, cur, poss) {
@@ -3311,11 +3442,14 @@ function onAttack(u, at, cur, poss) {
   if (at === -2) { const B = BASES[1 - u.team]; to = new THREE.Vector3(B.x, groundY(B.x, B.z) + 2, B.z); }
   else if (at > 0) { follow = V.units.get(at); const te = cur.get(at); if (follow) { to = follow.g.position.clone(); to.y += 1.2; } else if (te) to = new THREE.Vector3(te[2] / 10, groundY(te[2] / 10, te[3] / 10) + 1.2, te[3] / 10); }
   else if (poss && K.proj) { const y = u.g.rotation.y; to = u.g.position.clone().add(new THREE.Vector3(Math.sin(y) * K.range, 1.2, Math.cos(y) * K.range)); }
+  if (K.proj && to && K.role === 'siege' && !poss) { // anticipation: the arm winds back before the shot
+    const tgt = to.clone(); tgt.y -= 1.0; u.atkT = -SIEGE_WIND; SFX.play('creak', { x:u.g.position.x, z:u.g.position.z, vol:0.9 });
+    setTimeout(() => { if (!u.g.parent) return; const from = u.g.position.clone(); from.y += 3; shoot(K.proj, from, tgt, Math.max(0.6, from.distanceTo(tgt) / K.pspeed), null); SFX.play('catapult', { x:from.x, z:from.z }); }, SIEGE_WIND * 1000); return; }
   if (K.proj && to) { const from = u.g.position.clone(); from.y += K.role === 'siege' ? 3 : 1.6; if (K.role === 'siege') { to = to.clone(); to.y -= 1.0; } shoot(K.proj, from, to, from.distanceTo(to) / K.pspeed, K.role === 'siege' ? null : follow); SFX.play(K.role === 'siege' ? 'catapult' : u.k === 1 ? 'bow' : 'teeth', { x:from.x, z:from.z }); return; }
   if (!K.proj) SFX.play('swing', { x:u.g.position.x, z:u.g.position.z, vol:0.7 });
   if (!K.proj) setTimeout(() => {
     const p = follow ? follow.g.position : to; if (!p) return;
-    const strong = follow && dmgMult(u.k, follow.k) > 1;
+    const strong = follow && isCounter(u.k, follow.k);
     emitFX('hit', p.x, p.y + 1.2, p.z, { dx:p.x - u.g.position.x, dz:p.z - u.g.position.z, n:strong ? 7 : 4, size:strong ? 0.7 : 0.5 });
     SFX.play(u.k === 2 || u.k === 5 ? 'bonk' : 'axe', { x:p.x, z:p.z }); if ((u.k === 4 || u.k === 5) && Math.random() < 0.12) SFX.play(u.k === 4 ? 'goat' : 'horn', { x:p.x, z:p.z });
     if ((poss || strong ? Math.random() < 0.35 : Math.random() < 0.12) && QUOTES[u.k].hit.length) word(pick(QUOTES[u.k].hit), p.x, p.y + 3, p.z, { color:strong ? '#ff8a5c' : undefined });
@@ -3326,13 +3460,66 @@ function onSpecial(u, cur) {
   if (K.role === 'siege') { const e = cur.get(u.id); if (e && e.length > 14) { const tx = e[13] / 10, tz = e[14] / 10; for (let i = 0; i < 3; i++) setTimeout(() => { const a = i / 3 * TAU, ox = tx + Math.cos(a) * 3, oz = tz + Math.sin(a) * 3, from = u.g.position.clone(); from.y += 3; shoot(K.proj, from, new THREE.Vector3(ox, unitY(ox, oz), oz), 0.9, null); SFX.play('catapult', { x:from.x, z:from.z }); }, i * 250); } word('SALVE!', p.x, p.y + 5, p.z, { color:'#ff9b54', scale:1.3 }); return; }
   if (K.bear) { word(SP_WORD[u.k], p.x, p.y + 4.8, p.z, { color:'#ffffff', scale:1.3 }); u.clawFx = 1.25; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; puff(p.x + Math.cos(a) * 3.6, p.y + 0.6, p.z + Math.sin(a) * 3.6, 0xffffff, 1, 0.5); } SFX.play('rage', { x:p.x, z:p.z, vol:1.2 }); for (let i = 0; i < 5; i++) setTimeout(() => { SFX.play('impact', { x:u.g.position.x, z:u.g.position.z, vol:0.7 }); }, i * 180); return; }
   word(SP_WORD[u.k], p.x, p.y + 4.6, p.z, { color:'#ff9b54', scale:1.2 });
-  SFX.play(u.k === 0 ? 'rage' : 'special', { x:p.x, z:p.z, vol:1.1 }); if (u.k === 4) SFX.play('goat', { x:p.x, z:p.z }); if (u.k === 5) SFX.play('horn', { x:p.x, z:p.z });
+  SFX.play(u.k === 0 ? 'rage' : 'special', { x:p.x, z:p.z, vol:1.1 }); if (u.k === 4) SFX.play('goat', { x:p.x, z:p.z }); if (u.k === 5) SFX.play('horn', { x:p.x, z:p.z }); if (u.k === 4 || u.k === 5) SFX.play('whoosh', { x:p.x, z:p.z, vol:1 });
   if (u.k === 2) { u.spin = 0.6 + [0, 5][tpk(u.team, 'spin')]; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; puff(p.x + Math.cos(a) * 2.5, p.y + 0.6, p.z + Math.sin(a) * 2.5, 0xf6f1e7, 1, 0.8); } }
   else if (u.k === 0) puff(p.x, p.y + 1.5, p.z, 0xff5a3c, 8, 0.9);
   else if (u.k === 4 || u.k === 5) { u.dashFx = 0.5; }
   else if ((u.k === 1 || u.k === 3) && (u.spm || (V.poss && V.poss.id === u.id))) { /* manual fan: arrows come from free projectiles */ }
   else if (u.k === 1) { const y = u.g.rotation.y; for (let i = -2; i <= 2; i++) { const a = y + i * 0.16; const from = p.clone(); from.y += 1.6; shoot('arrow', from, p.clone().add(new THREE.Vector3(Math.sin(a) * K.range, 1, Math.cos(a) * K.range)), K.range / K.pspeed, null); } }
   else if (u.k === 3) { [...cur.values()].map(e => ({ e, d:Math.hypot(e[2] / 10 - p.x, e[3] / 10 - p.z) })).filter(o => teamOfKind(o.e[1], V.latest.fa) !== u.team && o.d < K.range + 1).sort((a, b) => a.d - b.d).slice(0, 3).forEach((o, i) => setTimeout(() => { const t = V.units.get(o.e[0]); if (!t) return; const from = u.g.position.clone(); from.y += 1.6; const to = t.g.position.clone(); to.y += 1.2; shoot('teeth', from, to, from.distanceTo(to) / K.pspeed, t); }, i * 120)); }
+}
+/* ---------- big moments, phases, siege warnings, camera shake ---------- */
+const SHAKE = { a:0 };
+function shake(a) { SHAKE.a = Math.max(SHAKE.a, a); }
+const HL = { q:[], busy:0, seen:undefined, last:{} };
+function hlText(ty, team, n) {
+  const mine = team === V.myTeam;
+  if (ty === 'ram') return mine ? [n >= 5 ? 'RAMMBOCK-FESTIVAL!' : n === 4 ? 'VIERFACH-RAMME!' : 'DREIFACH-RAMME!', n + ' Gegner mit einem Anlauf umgenietet'] : [n + ' auf einmal umgerammt!', 'Achte auf seinen Reiter'];
+  if (ty === 'cliff') return mine ? [n >= 4 ? 'MASSENSTURZ!' : 'AB IN DIE TIEFE!', n + ' Gegner über die Kante geschubst'] : ['KLIPPENSTURZ!', n + ' deiner Krieger sind abgestürzt'];
+  if (ty === 'ice') return mine ? ['EINGEBROCHEN!', n + ' Gegner sind ins Eis gekracht'] : ['DAS EIS BRICHT!', n + ' deiner Krieger sind eingebrochen'];
+  if (ty === 'cat') return mine ? ['KATAPULT ZERLEGT!', '+' + CFG.siegeBounty + ' ' + FAC[V.facs[V.myTeam]].res + ' Beute'] : ['KATAPULT VERLOREN!', 'Der Gegner kassiert Beute'];
+  if (ty === 'save') return mine ? ['IN LETZTER SEKUNDE!', 'Fahne gerade noch gehalten'] : null;
+  if (ty === 'phase') return n === 1 ? ['STURM!', 'Basen nehmen 50 % mehr Schaden, kein Heimvorteil mehr'] : n === 2 ? ['ENDKAMPF!', 'Die Mauern brechen: Basen nehmen vollen, doppelten Schaden'] : ['DIE BASEN BRÖCKELN!', 'Beide Basen verlieren jetzt ständig Leben'];
+  return null;
+}
+function hlPush(ty, team, n, x, z) {
+  const t = hlText(ty, team, n); if (!t) return;
+  if (ty !== 'phase' && now() - (HL.last[ty + team] || -1e9) < 12000) return; HL.last[ty + team] = now(); // only truly special moments, no spam
+  if (HL.q.length > 2) HL.q.shift(); HL.q.push({ t, foe:team >= 0 && team !== V.myTeam, ty });
+  if (team === V.myTeam && (ty === 'ram' || ty === 'cliff' || ty === 'ice')) shake(0.3);
+  if (ty === 'phase') shake(0.35);
+}
+function hlTick(dt) {
+  HL.busy -= dt; if (HL.busy > 0 || !HL.q.length) return;
+  const h = HL.q.shift(), el = $('#hlBan'); el.querySelector('b').textContent = h.t[0]; el.querySelector('small').textContent = h.t[1] || '';
+  el.classList.toggle('foe', h.foe); el.classList.remove('on'); void el.offsetWidth; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2200);
+  HL.busy = 2.6; SFX.play(h.ty === 'phase' ? 'alarm' : h.foe ? 'lost' : 'rush', { vol:0.9 }); if (h.ty === 'phase') SFX.play('horn', { vol:1 });
+}
+function hlProcess(s) {
+  if (!s.hl) return; if (!s.hl.length) { if (HL.seen === undefined) HL.seen = 0; return; }
+  if (HL.seen === undefined) { HL.seen = s.hl[s.hl.length - 1][0]; return; }
+  for (const e of s.hl) { const d = (e[0] - HL.seen + 10000) % 10000; if (d === 0 || d > 5000) continue; HL.seen = e[0]; hlPush(e[1], e[2], e[3], e[4] / 10, e[5] / 10); }
+}
+const SW = { pool:[] };
+function siegeWarnTick() {
+  const list = (V.latest && V.latest.sp) || []; let i = 0;
+  for (const e of list) {
+    let m = SW.pool[i];
+    if (!m) { m = new THREE.Group(); m.r1 = new THREE.Mesh(SW.ring || (SW.ring = new THREE.RingGeometry(0.8, 1, 48).rotateX(-Math.PI / 2)), new THREE.MeshBasicMaterial({ color:0xff3b2f, transparent:true, opacity:0.85, depthWrite:false })); m.d1 = new THREE.Mesh(discGeo, new THREE.MeshBasicMaterial({ color:0xff3b2f, transparent:true, opacity:0.24, depthWrite:false })); m.r1.renderOrder = m.d1.renderOrder = 7; m.add(m.r1, m.d1); scene.add(m); SW.pool.push(m); }
+    const x = e[0] / 10, z = e[1] / 10, tl = e[2] / 10, R = e[4] / 10, mine = e[3] === V.myTeam, ice = MAP && MAP.ice && onIce(x, z);
+    m.visible = true; m.position.set(x, Math.max(groundY(x, z), WL + 0.1) + 0.2, z); m.r1.scale.setScalar(R); m.d1.scale.setScalar(Math.max(0.08, R * clamp(1 - tl / 1.8, 0, 1)));
+    m.r1.material.color.setHex(mine ? 0xffa040 : 0xff3b2f); m.d1.material.color.setHex(ice ? 0x1f6f9a : mine ? 0xffa040 : 0xff3b2f); m.d1.material.opacity = ice ? 0.4 : 0.24; m.r1.material.opacity = 0.5 + 0.45 * Math.abs(Math.sin(clock * 9)); i++;
+  }
+  for (; i < SW.pool.length; i++) SW.pool[i].visible = false;
+}
+function homeRings(facs) {
+  if (V.homeRings) V.homeRings.forEach(m => { scene.remove(m); m.geometry.dispose(); m.material.dispose(); }); V.homeRings = null;
+  if (V.tut) return;
+  V.homeRings = BASES.map((B, i) => { const N = 120, W = 0.5, pos = [], idx = [];
+    for (let k = 0; k <= N; k++) { const a = k / N * TAU, ca = Math.cos(a), sa = Math.sin(a); for (const rr of [CFG.homeR - W, CFG.homeR]) { const x = B.x + ca * rr, z = B.z + sa * rr; pos.push(x, Math.max(groundY(x, z), WL) + 0.14, z); } }
+    for (let k = 0; k < N; k++) if ((k >> 1) % 2 === 0) { const a = k * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color:lin(FAC[facs[i]].col), transparent:true, opacity:0.55, depthWrite:false, side:THREE.DoubleSide })); m.renderOrder = 2; scene.add(m); return m; });
 }
 /* ---------- hit feedback, ragdoll, free arrows ---------- */
 function hitFx(team, h) {
@@ -3687,7 +3874,7 @@ function updateFlag(i, owner, p, changed) {
     if (F.cloth.material.map) F.cloth.material.map.dispose();
     F.cloth.material.map = ctex(flagCanvas(owner, V.facs)); F.cloth.material.needsUpdate = true;
     F.ring.material.color.copy(lin(owner < 0 ? 0xffffff : FAC[V.facs[owner]].col));
-    if (changed && V.playing) { if (owner >= 0) SFX.play(owner === V.myTeam ? 'capture' : 'lost'); if (owner >= 0) toast(owner === V.myTeam ? 'Fahne erobert! Mehr Einkommen.' : 'Der Gegner hat eine Fahne erobert.', 2200); puff(FLAGS[i].x, F.g.position.y + 4, FLAGS[i].z, owner < 0 ? 0xffffff : FAC[V.facs[owner]].col, 8); }
+    if (changed && V.playing) { if (owner >= 0) SFX.play(owner === V.myTeam ? 'capture' : 'lost'); if (owner >= 0) toast(owner === V.myTeam ? (!V.tut && flagSide(i) === 1 - V.myTeam ? 'Fahne in Feindesland erobert! Bringt etwas weniger und verblasst ohne Wache.' : 'Fahne erobert! Mehr Einkommen.') : 'Der Gegner hat eine Fahne erobert.', 2400); puff(FLAGS[i].x, F.g.position.y + 4, FLAGS[i].z, owner < 0 ? 0xffffff : FAC[V.facs[owner]].col, 8); }
   }
   if (Math.abs(p - F.p) > 0.015) {
     F.p = p; F.prog.geometry.dispose(); const a = Math.abs(p);
@@ -4170,7 +4357,7 @@ function egoUpdate(dt) {
   if (P.down && P.srv && !P.air) { P.x = lerp(P.x, P.srv.x, Math.min(1, dt * 12)); P.z = lerp(P.z, P.srv.z, Math.min(1, dt * 12)); }
   const fwd = -jy, str = jx, cy = Math.sin(P.camYaw), cyz = Math.cos(P.camYaw);
   let vx = (cy * fwd - cyz * str), vz = (cyz * fwd + cy * str);
-  let speed = K.speed * 1.15 * (P.rageT > 0 ? 1.4 : 1) * [1, 2][tpk(V.myTeam, 'turbo')] * (K.role === 'cav' ? [1, 1.5][tpk(V.myTeam, 'cavspd')] : 1);
+  const slowMu = V.units.get(P.id); let speed = K.speed * 1.15 * (slowMu && slowMu.slowed ? 0.7 : 1) * (P.rageT > 0 ? 1.4 : 1) * [1, 2][tpk(V.myTeam, 'turbo')] * (K.role === 'cav' ? [1, 1.5][tpk(V.myTeam, 'cavspd')] : 1);
   const dashing = P.dashT > 0; if (dashing) { P.dashT -= dt; vx = cy; vz = cyz; speed = 27; }
   const inW = inWater(P.x, P.z), wd = !inW && wadeAt(P.x, P.z); if (P.dashT > 0 && (inW || wd)) { P.dashT -= dt * 0.8; if (Math.random() < dt * 30) puff(P.x + (Math.random() - .5) * 1.4, WL + 0.2, P.z + (Math.random() - .5) * 1.4, 0xe8f8ff, 1, 0.6); } const swim = inW ? (P.dashT > 0 ? 0.5 : 0.36) : wd ? (P.dashT > 0 ? 0.6 : 0.65) : 1, fz = frozen || P.pj || P.air ? 0 : (P.waterDrag = lerp(P.waterDrag ?? swim, swim, 1 - Math.exp(-dt * 9))); let wvx = vx * speed * fz, wvz = vz * speed * fz; if (!P.pj && !P.air && !frozen) { iceVelocity(P, wvx, wvz, dt); wvx = P.ivx; wvz = P.ivz; if (onIce(P.x, P.z) && Math.hypot(wvx, wvz) > 3 && Math.random() < dt * 8) emitFX('ice', P.x, unitY(P.x, P.z) + 0.1, P.z, { n:1, size:.4, dx:-cy, dz:-cyz }); } else if (!P.air) { P.ivx = wvx; P.ivz = wvz; } const nx = P.x + wvx * dt, nz = P.z + wvz * dt;
   if (P.pj) { /* Pad flight owns the trajectory. */ } else if (P.air) { const landed = airStep(P, dt); if (landed && !(P.hp <= 0) && P.landV > 5) emitFX('land', P.x, P.fy + .1, P.z, { size:.7 }); } else if (walkable(nx, nz) && !fallZone(nx, nz)) { advanceGround(P, nx, nz, wvx, wvz, dt, dashing); } else if (fallZone(nx, nz) || edgeSlide(nx, nz) && (dashing || groundY(nx, nz) <= groundY(P.x, P.z) + 0.03)) { advanceGround(P, nx, nz, wvx, wvz, dt, dashing); } else if (walkable(nx, P.z) && Math.abs(nx - P.x) > 1e-4) P.x = nx; else if (walkable(P.x, nz) && Math.abs(nz - P.z) > 1e-4) P.z = nz;
@@ -4217,7 +4404,9 @@ function egoUpdate(dt) {
     if (EG.intro <= 0) EG.intro = 0;
   }
   if (!EG.camInit) { EG.cam.copy(want); EG.lk.copy(look); EG.camInit = true; } else { const f = EG.intro > 0 ? 1 : Math.min(1, dt * 14); EG.cam.lerp(want, f); EG.lk.lerp(look, f); }
-  camera.position.copy(EG.cam); camera.lookAt(EG.lk); camera.updateMatrixWorld();
+  camera.position.copy(EG.cam); camera.lookAt(EG.lk);
+  { const f0 = camera.aspect < 1 ? 78 : 62, want = f0 + (P.dashT > 0 ? 9 : 0); if (Math.abs(camera.fov - want) > 0.05) { camera.fov = lerp(camera.fov, want, Math.min(1, dt * (P.dashT > 0 ? 14 : 5))); camera.updateProjectionMatrix(); } } // dash: speed kick
+  camera.updateMatrixWorld();
   for (let i = fx.swings.length - 1; i >= 0; i--) { const w = fx.swings[i]; w.t += dt; const p = w.t / 0.24; w.m.position.set(w.follow.x, w.m.position.y, w.follow.z); w.m.rotation.y = w.yaw - Math.PI / 2 + lerp(0.9, -0.9, Math.min(1, p)); w.mat.opacity = 0.8 * (1 - p); if (p >= 1) { scene.remove(w.m); w.mat.dispose(); fx.swings.splice(i, 1); } }
   sun.target.position.set(P.x, 0, P.z); sun.position.copy(sun.target.position).add(SUN_OFF);
 }
@@ -4234,6 +4423,7 @@ const HINTS = [
   { id:'poss', text:'Wähle genau einen Krieger und tippe „Übernehmen“, um selbst zu kämpfen.' },
   { id:'mode', text:'„Laufen“ ignoriert Gegner, praktisch für einen Rückzug. „Angreifen“ kämpft unterwegs.' },
   { id:'lasso', text:'Profi-Trick: Finger lange halten und eine Schlinge um Krieger ziehen.' },
+  { id:'home', text:'Heimvorteil: Im gestrichelten Kreis um deine Basis nehmen deine Krieger 25 % weniger Schaden.' },
 ];
 const hintState = { done:new Set(), shownAt:0, cur:null };
 function hintDone(id) { hintState.done.add(id); if (hintState.cur === id) { hintState.cur = null; $('#toast').classList.remove('show'); } }
@@ -4242,10 +4432,10 @@ function hintTick() {
   const h = HINTS.find(h2 => !hintState.done.has(h2.id)); if (!h) return;
   if (h.id === 'select' && !ownUnits().length) return;
   if (h.id === 'order' && !V.selected.size) return;
-  if (['lasso', 'mode', 'poss'].includes(h.id) && ownUnits().length < 3) return;
+  if (['lasso', 'mode', 'poss', 'home'].includes(h.id) && ownUnits().length < 3) return;
   if (now() - hintState.shownAt < 6000 && hintState.cur === h.id) return;
   hintState.cur = h.id; hintState.shownAt = now(); toast(h.text, 5000);
-  if (['lasso', 'mode', 'poss'].includes(h.id)) hintState.done.add(h.id);
+  if (['lasso', 'mode', 'poss', 'home'].includes(h.id)) hintState.done.add(h.id);
 }
 function setupHud() {
   const fac = V.facs[V.myTeam], F = FAC[fac], E = FAC[V.facs[1 - V.myTeam]];
@@ -4255,7 +4445,8 @@ function setupHud() {
     const k = F.kinds[i], K = KINDS[k];
     b.dataset.k = k; b.querySelector('img').src = unitIcon(k); b.querySelector('.nm').textContent = K.name.replace('schützin', '­schützin');
     b.querySelector('.cost').innerHTML = ICON[F.icon] + K.cost;
-    b.querySelector('.beats').textContent = K.role === 'siege' ? 'Flächenschaden' : 'stark gg. ' + ROLE_NAME[BEATS[K.role]];
+    b.querySelector('.beats').textContent = K.role === 'siege' ? 'Fläche · bricht Eis' : 'stark gg. ' + ROLE_NAME[BEATS[K.role]];
+    b.title = K.name + ': ' + (K.trait || (K.role === 'siege' ? 'langsam, mächtiger Flächenschaden, zerstört Basen und Eis' : ''));
     b.querySelector('.main').setAttribute('aria-label', K.name + ' ausbilden, ' + K.cost + ' ' + F.res);
     b.querySelector('.auto').setAttribute('aria-label', K.name + ' automatisch ausbilden');
   });
@@ -4271,7 +4462,10 @@ function updateHud() {
   const me = V.myTeam, en = 1 - me;
   $('#gold').textContent = s.g[me];
   const mine = s.f.filter(f => f[0] === me).length, theirs = s.f.filter(f => f[0] === en).length;
-  const inc = $('#inc'); inc.textContent = '+' + String(s.in ? s.in[me] : CFG.baseInc).replace('.', ',') + '/s'; inc.classList.toggle('bonus', theirs > mine);
+  const inc = $('#inc'); inc.textContent = '+' + String(s.in ? s.in[me] : CFG.baseInc).replace('.', ',') + '/s'; inc.classList.toggle('bonus', mine > theirs);
+  { const chip = $('#phaseChip'), ph = s.ph, fm = v => Math.floor(v / 60) + ':' + String(v % 60).padStart(2, '0'); let txt = '', cls = '';
+    if (ph && !V.tut) { if (ph[0] === 0 && ph[1] >= 0 && ph[1] <= 60) txt = 'Sturm in ' + fm(ph[1]); else if (ph[0] === 1) { cls = 'storm'; txt = ph[1] >= 0 && ph[1] <= 60 ? 'Endkampf in ' + fm(ph[1]) : 'STURM · Basen ×1,5'; } else if (ph[0] === 2) { cls = 'final'; txt = s.t >= CFG.crumbleT ? 'ENDKAMPF · Basen bröckeln' : 'ENDKAMPF · Basen ×2,2'; } }
+    if (chip.textContent !== txt) chip.textContent = txt; chip.hidden = !txt; chip.className = 'panel ' + cls; }
   const pop = s.u.filter(e => teamOfKind(e[1], s.fa) === me).length + s.q[me].length;
   $('#pop').textContent = pop + '/' + CFG.pop;
   $$('#flagdots i').forEach((d, i) => { const o = s.f[i] ? s.f[i][0] : -1; d.style.background = o < 0 ? '#d6d9df' : FAC[V.facs[o]].css; });
@@ -4366,10 +4560,10 @@ function beginMatch(mode, facs, myTeam, seed) {
   resetView(); loadMap(seed);
   V.mode = mode; V.facs = facs; V.myTeam = myTeam; V.playing = true; V.delay = mode === 'guest' ? 0.2 : 0.06;
   setFaceMat(myTeam, FACE.mine ? FACE.mine.crop : null); setFaceMat(1 - myTeam, FACE.other ? FACE.other.crop : null);
-  if (!V.tut && MAP && MAP.type) setTimeout(() => { if (!V.playing || V.tut) return; const old = $('#mapCard'); if (old) old.remove(); const T = MAPTYPES[MAP.type], d = document.createElement('div'); d.id = 'mapCard'; d.innerHTML = `<div class="mi">${T.ic}</div><div class="mn">${T.n}</div><div class="ms">${FLAGS.length} Fahnen${MAP.type === 'wueste' ? ' · Vorsicht, Kakteen!' : MAP.type === 'arktis' ? ' · Eisbären & Glatteis' : MAP.type === 'klippen' ? ' · Nicht runterfallen!' : ''}</div>`; $('#game').appendChild(d); setTimeout(() => d.remove(), 2700); }, 300);
-  buildBases(facs); setupHud(); homeCam(); applyCam();
+  if (!V.tut && MAP && MAP.type) setTimeout(() => { if (!V.playing || V.tut) return; const old = $('#mapCard'); if (old) old.remove(); const T = MAPTYPES[MAP.type], d = document.createElement('div'); d.id = 'mapCard'; d.innerHTML = `<div class="mi">${T.ic}</div><div class="mn">${T.n}</div><div class="ms">${FLAGS.length} Fahnen · ${{ wiesen:'übersichtlich, Sprungpads über den Fluss', wueste:'offen und weit: Fernkampf und Katapulte schießen weiter, Kakteen stechen', arktis:'Eis ist schnell und rutschig, Katapulte brechen Eis, Eisbären zähmen', klippen:'Abgründe und Sprungpads: stoß Gegner in die Tiefe' }[MAP.type] || ''}</div>`; $('#game').appendChild(d); setTimeout(() => d.remove(), 2700); }, 300);
+  buildBases(facs); homeRings(facs); setupHud(); homeCam(); applyCam(); HL.q.length = 0; HL.seen = undefined; HL.busy = 0; HL.last = {}; SHAKE.a = 0;
   showScreen(null); $('#hud').hidden = false; $('#ego').hidden = true; $('#netwarn').hidden = true;
-  hintState.done = new Set(); hintState.cur = null; V.warnedPoss = false; V.cdLast = null;
+  hintState.done = new Set(); hintState.cur = null; V.warnedPoss = false; V.cdLast = null; V.siegeTip = false;
   if (!V.tut) setTimeout(() => toast(HINTS[0].text, 4500), 1200);
 }
 function robotFace(lvl = aiLvl) {
@@ -4415,6 +4609,13 @@ function endGame(s) {
   $('#endSub').textContent = { viking:['Walhalla jubelt. Das Altersheim ist geplündert!', 'Die Rentner haben euch mit Pantoffeln heimgeschickt.'], rentner:['Ruhe im Haus! Die Wikinger rudern zurück nach Hause.', 'Die Wikinger haben das Haus Abendrot geplündert.'] }[myF][won ? 0 : 1];
   $('#stTime').textContent = Math.floor(s.t / 60) + ':' + String(Math.floor(s.t % 60)).padStart(2, '0');
   $('#stKills').textContent = s.k[me]; $('#stFlags').textContent = s.mf[me];
+  { // honest numbers instead of guesses about "your biggest mistake"
+    const box = $('#endCmp'), st = s.st; box.innerHTML = '';
+    if (st && !V.tut) { const op = 1 - me, T = Math.max(1, s.t), fmt = v => Math.floor(v / 60) + ':' + String(Math.round(v % 60)).padStart(2, '0');
+      const rows = [['Ausgebildet', 0, 1, null, true], ['Verloren', 1, -1, null, true], ['Basis-Schaden', 2, 1, null, true], ['Ø Fahnen', 3, 1, v => (v / T).toFixed(1).replace('.', ','), true], ['Fahnen-Führung', 4, 1, fmt, true], ['Helden besiegt', 10, 1], ['Rammstöße', 5, 1], ['Klippenstürze', 6, 1], ['Katapulte zerstört', 8, 1], ['Eisbären gezähmt', 7, 1], ['Eislöcher', 9, 1]];
+      let h = '<div class="l h">Du</div><div class="m h"></div><div class="r h">Gegner</div>';
+      for (const [nm, i, dir, f, always] of rows) { const a = st[me][i], b = st[op][i]; if (!always && !a && !b) continue; const w = a === b ? 0 : (a > b ? 1 : -1) * dir; h += `<div class="l${w > 0 ? ' win' : ''}">${f ? f(a) : a}</div><div class="m">${nm}</div><div class="r${w < 0 ? ' win' : ''}">${f ? f(b) : b}</div>`; }
+      box.innerHTML = h; } }
   if (V.mode === 'ai' && !V.tut) $('#endSub').textContent += ' (Computer: ' + AI_LVL[aiLvl].name + ')';
   $('#btnAgain').hidden = V.mode !== 'ai';
   if (V.tut) { $('#endTitle').textContent = won ? 'Geschafft!' : 'Fast!'; $('#endSub').textContent = TUT.adv ? 'Profi-Prüfung bestanden! Jetzt zeig es dem Computer auf „Schwer“.' : 'Du kennst jetzt das Wichtigste. Ab gegen den Computer – oder ins Profi-Tutorial!'; $('#btnAgain').hidden = true; store.set('wvr-tut', '1'); $('#tutBadge').hidden = true; endTutorial(); }
@@ -4518,7 +4719,7 @@ async function openRoom(code, role) {
   return r;
 }
 /* open every available transport at once (direct P2P + Claude room), so devices that ended up on different ones still meet */
-const NET_VER = 33;
+const NET_VER = 34;
 async function openClaude(code, role) {
   const vr = await viewerRoom(); if (!vr) return null;
   let r; try { r = await vr.join('wvr-' + code.toLowerCase(), role); }
@@ -4867,7 +5068,7 @@ function tutSteps(nar, adv) {
       const cav = { x:x - ed.x * 7.5, z:z - ed.z * 7.5 }; if (!walkable(cav.x, cav.z) || !walkable(x - ed.x * 3.5, z - ed.z * 3.5)) continue;
       const ds = [-1.6, 0, 1.6].map(o => ({ x:x + tx * o, z:z + tz * o })); if (!ds.every(d => walkable(d.x, d.z) && edgeDir(d.x, d.z, 2.8))) continue;
       const fx = ed.x, fz = ed.z; if (!ds.every(d => knockFalls(d, d.x - fx, d.z - fz, 6))) continue;
-      if (!ds.every(d => { for (let k = 0.5; k <= 3; k += 0.5) if (fallZone(d.x + fx * k, d.z + fz * k)) return true; return false; })) continue;
+      if (!ds.every(d => { for (let k = 0.5; k <= 3; k += 0.5) if (fallZone(d.x + fx * k, d.z + fz * k) && fallZone(d.x + fx * (k + 2.5), d.z + fz * (k + 2.5)) && fallZone(d.x + fx * (k + 5), d.z + fz * (k + 5))) return true; return false; })) continue; // a wide chasm, not a narrow crevasse
       const sc = Math.hypot(x - B.x, z - B.z) + Math.abs(x) * 0.3; if (sc < bs) { bs = sc; best = { x, z, ed, tx:fx, tz:fz, cav, ds }; } }
     return best;
   };
@@ -4915,6 +5116,8 @@ function tutSteps(nar, adv) {
       start:() => { const P = G.units.find(u => u.id === TUT.egoId) || { x:arena().x, z:arena().z }; TUT.dIds = [-1.5, 0, 1.5].map(o => { const d = tutUnit(1, E.kinds[0], P.x + o, P.z + 11 * dir); d.tutStill = true; d.tutDummy = true; return d.id; }); TUT.ge0 = G.geS || 0; TUT.enterAt = now() + 400; },
       after:() => { egoKeep(); if (!(T().nades > 0) && !(G.gr && G.gr.length) && !((G.geS || 0) !== TUT.ge0 && G.ge && G.ge[G.ge.length - 1][2] > 0)) { T().nades = 1; if ((G.geS || 0) !== TUT.ge0) $('#tutText').textContent = 'Daneben! Hier ist noch eine. Schau etwas höher, um weiter zu werfen, tiefer für kürzer.'; } }, world:() => { const d = G.units.find(u => u.id === TUT.dIds[0]); return d ? { x:d.x, z:d.z } : null; }, done:() => (G.geS || 0) !== TUT.ge0 && G.ge && G.ge[G.ge.length - 1][2] > 0 },
     { t:pc ? `Merke: Die Basis schießt auf gesteuerte Krieger doppelt so weit. Allein stürmen ist Selbstmord – geh mit Armee! Zurück mit ${kl('exit')}.` : 'Merke: Die Basis schießt auf gesteuerte Krieger doppelt so weit. Allein stürmen ist Selbstmord – geh mit Armee! Tippe „Verlassen“.', hl:'#egoExit', start:() => { TUT.egoId = null; }, done:() => !V.poss },
+    { t:'Heimvorteil und Sturm: Im gestrichelten Kreis um deine Basis nehmen deine Krieger weniger Schaden. Ab Minute 9 kommt der Sturm, dann nehmen Basen mehr Schaden, ab Minute 12 der Endkampf. Spätestens dann wird entschieden!', next:true },
+    { t:'Karten-Wissen: Auf Arktis brechen Katapult-Treffer das Eis auf, wer dort steht, kracht ein. In der Wüste schießen Fernkämpfer weiter. Auf Klippen stößt dein Reiter Gegner in die Tiefe.', next:true },
     { t:'Im Chaos-Modus wählst du alle paar Minuten einen Perk. Der Gegner sieht, was du nimmst – und du siehst seinen. Plane deine Konter danach!', next:true },
     { t:`Abschlussprüfung! ${E.base} wird von Kriegern und einem Katapult verteidigt und bildet nach. Kleine Truppe, wenig ${F.res}: Konter, Reiter gegen das Katapult, Sammelfahne, AUTO und Ego-Krieger – du brauchst alles!`, free:true, world:() => BASES[1],
       start:() => { clearTut(); G.towerOff = [false, false]; G.towerMul[1] = 0.5; const T1 = G.teams[1]; T1.hp = 800; T1.incMul = 0.35; T1.gold = 0; T1.auto = {}; T1.auto[E.kinds[0]] = true; T1.auto[E.kinds[1]] = true; T1.rally = frontOf(1, 13);
@@ -4928,7 +5131,7 @@ function tutSteps(nar, adv) {
     { id:'firstFlag', t:pc ? `Wähle „Alle“ (${kl('selAll')}), dann ${kl('order')} auf die Fahne mit dem Pfeil. Deine beiden Krieger müssen erst dorthin laufen.` : `Tippe „Alle“ und dann auf die Fahne mit dem Pfeil. Deine beiden Krieger müssen erst dorthin laufen.`, allow:['order'], hlFn:() => V.selected.size ? null : '[data-sel="all"]', world:() => FLAGS[nf], start:() => { TUT.moveProof = null; G.flags[nf] = { owner:-1, p:0 }; flagZoom(FLAGS[nf]); }, command:c => { if (tutMovementOrder(c, FLAGS[nf], 2)) return true; toast('Wähle beide Krieger und schick sie zur Fahne mit dem Pfeil.', 1800); return false; }, done:() => tutMovementDone(FLAGS[nf]) && G.flags[nf].owner === me },
     { t:`Jede Fahne bringt mehr ${F.res} pro Sekunde. Je mehr Fahnen du hast, desto mehr Einkommen – schau oben links!`, hl:'#inc', next:true },
     { id:'enemySelect', t:pc ? 'Wähle den Gegner beim Pfeil mit Linksklick aus. So siehst du, wen du angreifen möchtest.' : 'Halte den Gegner beim Pfeil länger gedrückt, ohne den Finger zu bewegen. Erst dann ist er ausgewählt.', allow:['enemy'], start:() => { tutEnemies(mid); for (const id of TUT.enemyIds) { const u = G.units.find(u => u.id === id); u.tutStill = true; u.tutDummy = true; } V.selected.clear(); focus(FLAGS[mid]); }, world:() => { const u = G.units.find(u => u.id === TUT.enemyIds[0]); return u ? { x:u.x, z:u.z } : FLAGS[mid]; }, done:() => TUT.flags.enemySelected === TUT.enemyIds[0] },
-    { t:`Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Schick 2 „${nm('cav')}“ zu den Fernkämpfern in der Mitte!`, allow:['spawn2', 'order'], hl:'.spawn[data-slot="2"] .main', world:() => FLAGS[mid], start:() => { gold(190); for (const id of TUT.enemyIds) { const u = G.units.find(u => u.id === id); if (u) { delete u.tutStill; delete u.tutDummy; u.cd = 0.4; } } focus(FLAGS[mid]); }, done:() => TUT.enemyIds.length && TUT.enemyIds.every(id => !G.units.some(u => u.id === id)) },
+    { t:`Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Schick 2 „${nm('cav')}“ zu den Fernkämpfern in der Mitte!`, allow:['spawn2', 'order'], hl:'.spawn[data-slot="2"] .main', world:() => FLAGS[mid], start:() => { gold(190); for (const id of TUT.enemyIds) { const u = G.units.find(u => u.id === id); if (u) { delete u.tutStill; delete u.tutDummy; u.cd = 0.4; u.hp = Math.min(u.hp, KINDS[u.k].hp * 0.55); } } focus(FLAGS[mid]); }, done:() => TUT.enemyIds.length && TUT.enemyIds.every(id => !G.units.some(u => u.id === id)) },
     { t:`Faul sein erlaubt: Tippe bei „${nm('ranged')}“ auf AUTO. Dann wird sie von selbst nachgebildet, solange das Geld reicht.`, allow:['auto'], hl:'.spawn[data-slot="1"] .auto', start:() => gold(120), done:() => Object.values(T().auto).some(Boolean) },
     possStep(kOf('melee'), [[-2.2, 6], [0, 7], [2.2, 6]], 0.3, `Jetzt der Clou: Tippe auf deinen „${nm('melee')}“ beim Pfeil und dann auf „Übernehmen“.`),
     { t:`Du steckst drin! Hau die drei Puppen um. ${atk} = Schlag, ${spc} = Raserei.`, hl:'#egoAtk', start:() => { TUT.enterAt = now() + 1500; }, after:egoKeep, done:dead },
@@ -4949,7 +5152,7 @@ function startTutorial(adv) {
   leaveNet(); FACE.other = { crop:robotFace(), url:null };
   const facs = [myFac, FAC[myFac].other];
   const tsd = adv ? TUT_PRO_SEED : TUT_SEED;
-  G = newGame(facs, tsd); G.tut = true; G.teams[0].rally = frontOf(0, 6); G.bears = []; G.bearQ = null; G.teams[1].incMul = 0; G.teams[1].gold = 0; G.teams[0].gold = 60; G.teams[0].incMul = 0; G.towerOff = [false, true];
+  G = newGame(facs, tsd, false, { squad:false }); G.tut = true; G.teams[0].rally = frontOf(0, 6); G.bears = []; G.bearQ = null; G.teams[1].incMul = 0; G.teams[1].gold = 0; G.teams[0].gold = 60; G.teams[0].incMul = 0; G.towerOff = [false, true];
   V.tut = true; beginMatch('ai', facs, 0, tsd); pushSnap(snapOf(G)); startSim(false);
   const nar = myFac === 'viking' ? { name:'Jarl Knut', k:0 } : { name:'Opa Heinz', k:2 };
   Object.assign(TUT, { on:true, i:-1, nar, flags:{}, wait:0, enemyIds:[], dummy:null, r0:0, cam:null, camSeq:null, egoId:null, dIds:[] });
@@ -5068,16 +5271,16 @@ function holeLayers() {
   }
   chunk.dispose(); const edgeGeo = new THREE.BufferGeometry(); edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(edgePos, 3)); edgeGeo.computeVertexNormals();
   const group = new THREE.Group(), layers = [
-    { geo:new THREE.PlaneGeometry(5.2, 5.2).rotateX(-Math.PI / 2), mat:new THREE.MeshBasicMaterial({ map:T.crack, transparent:true, depthWrite:false }), dy:0.005, order:2 },
-    { geo:waterGeo, mat:new THREE.MeshPhongMaterial({ map:T.water, color:0x8fb0c4, shininess:140, specular:lin(0x6fa8c8), emissive:lin(0x020a10) }), dy:-0.04, order:3 },
-    { geo:edgeGeo, mat:new THREE.MeshPhongMaterial({ color:lin(0xdff6ff), emissive:lin(0x0c3a52), shininess:100, specular:lin(0xffffff), flatShading:true }), dy:0, order:4 }
+    { geo:new THREE.PlaneGeometry(5.2, 5.2).rotateX(-Math.PI / 2), mat:new THREE.MeshBasicMaterial({ map:T.crack, transparent:true, depthWrite:false }), dy:0.022, order:2 },
+    { geo:waterGeo, mat:new THREE.MeshPhongMaterial({ map:T.water, color:0x8fb0c4, shininess:140, specular:lin(0x6fa8c8), emissive:lin(0x020a10) }), dy:0.008, order:3 },
+    { geo:edgeGeo, mat:new THREE.MeshPhongMaterial({ color:lin(0xdff6ff), emissive:lin(0x0c3a52), shininess:100, specular:lin(0xffffff), flatShading:true }), dy:0.012, order:4 }
   ].map(part => { const im = new THREE.InstancedMesh(part.geo, part.mat, GW * GH); im.count = 0; im.visible = false; im.frustumCulled = false; im.renderOrder = part.order; im.userData.holeLayer = true; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); group.add(im); return { im, dy:part.dy }; });
   scene.add(group); return (WV.holeLayers = { group, layers, mt:new THREE.Matrix4(), p:new THREE.Vector3(), q:new THREE.Quaternion(), sc:new THREE.Vector3(1, 1, 1), up:new THREE.Vector3(0, 1, 0) });
 }
 function syncHoleLayers() {
   if (!WV.holeDirty) return; WV.holeDirty = false; const H = holeLayers(); let i = 0;
   for (const v of WV.holes.values()) {
-    H.q.setFromAxisAngle(H.up, v.angle);
+    H.q.setFromAxisAngle(H.up, v.angle); H.sc.setScalar((v.r || 1.14) / 1.08);
     for (const layer of H.layers) { H.p.copy(v.g.position); H.p.y += layer.dy; H.mt.compose(H.p, H.q, H.sc); layer.im.setMatrixAt(i, H.mt); }
     i++;
   }
@@ -5118,11 +5321,11 @@ function itemMesh(ty) {
 }
 function updateWorld(dt) {
   const s = V.latest; if (!s) return;
-  if (NET.role === 'guest' && MAP && WV.holeSnapshot !== s.ih) { WV.holeSnapshot = s.ih; MAP.holes = (s.ih || []).map(h => ({ x:h[1] / 10, z:h[2] / 10 })); }
+  if (NET.role === 'guest' && MAP && WV.holeSnapshot !== s.ih) { WV.holeSnapshot = s.ih; MAP.holes = (s.ih || []).map(h => ({ x:h[1] / 10, z:h[2] / 10, r:(h[3] || 11.4) / 10 })); }
   { const seenH = new Set(); for (const h of s.ih || []) { seenH.add(h[0]); let v = WV.holes.get(h[0]); if (!v) {
         const x = h[1] / 10, z = h[2] / 10, g = new THREE.Object3D(); g.position.set(x, Math.max(groundY(x, z), WL + 0.1) + 0.06, z);
-        v = { g, angle:(x * 13 + z * 7) % TAU }; WV.holes.set(h[0], v); WV.holeDirty = true;
-        if (WV.holeInit) { if (typeof emitFX === 'function') emitFX('ice', x, WL + 0.4, z, { n:14 }); else puff(x, WL + 0.4, z, 0xdff6ff, 14, 0.6); if (typeof waterRipple === 'function') waterRipple(x, z, 1.4); SFX.play('splinter', { x, z }); SFX.play('splat', { x, z, vol:0.7 }); word(pick(['KNACKS!', 'EINGEBROCHEN!', 'PLATSCH!']), x, WL + 2.6, z, { color:'#9be7ff', scale:1.2 }); }
+        const hr = (h[3] || 11.4) / 10; v = { g, r:hr, angle:(x * 13 + z * 7) % TAU }; WV.holes.set(h[0], v); WV.holeDirty = true;
+        if (WV.holeInit) { emitFX('ice', x, WL + 0.4, z, { n:Math.round(10 * hr) }); for (let q = 0; q < 10; q++) { const a = q / 10 * TAU; puff(x + Math.cos(a) * hr, WL + 0.3, z + Math.sin(a) * hr, 0xdff6ff, 1, 0.7); } waterRipple(x, z, 1.2 * hr); SFX.play('splinter', { x, z }); SFX.play('splat', { x, z, vol:0.7 }); word(pick(['KNACKS!', 'EINGEBROCHEN!', 'PLATSCH!']), x, WL + 2.6, z, { color:'#9be7ff', scale:1.2 }); }
       } }
     for (const id of WV.holes.keys()) if (!seenH.has(id)) { WV.holes.delete(id); WV.holeDirty = true; }
     syncHoleLayers(); WV.holeInit = true;
@@ -5171,15 +5374,17 @@ function updateWorld(dt) {
     }
     v.aura.visible = false; v.body.position.y = 0; v.body.rotation.z = 0;
     v.walk += dt * (b[4] === 2 ? 11 : b[4] ? 5 : 0); v.legs.forEach((l, k) => l.rotation.x = b[4] ? Math.sin(v.walk + (k % 2 ? Math.PI : 0) + (k > 1 ? 1 : 0)) * 0.6 : 0);
-    if (b[3] !== v.atk) { v.atk = b[3]; v.swipe = 0.5; v.side = -(v.side || 1); const yw = v.g.rotation.y; clawStreak(v.g.position.x + Math.sin(yw) * 0.9, y + 1.3, v.g.position.z + Math.cos(yw) * 0.9, yw, v.side, 1.1); SFX.play('rage', { x, z, vol:0.8 }); if (Math.random() < 0.5) word('GRRR!', x, y + 3, z, { color:'#ffffff', scale:0.9 }); }
-    if (v.swipe > 0) { v.swipe -= dt; v.body.rotation.x = -Math.sin((0.5 - v.swipe) / 0.5 * Math.PI) * 0.45; v.legs[0].rotation.x = -1.6 * Math.sin((0.5 - v.swipe) / 0.5 * Math.PI); } else v.body.rotation.x = 0;
+    if ((b[9] || 0) !== (v.raise || 0)) { v.raise = b[9] || 0; v.rear = 0.4; SFX.play('rumble', { x, z, vol:0.7 }); }
+    if (v.rear > 0) { v.rear -= dt; const q = Math.sin(clamp(1 - v.rear / 0.4, 0, 1) * Math.PI / 2); v.body.rotation.x = -0.32 * q; v.legs[0].rotation.x = -1.3 * q; v.legs[1].rotation.x = -0.5 * q; }
+    if (b[3] !== v.atk) { v.atk = b[3]; v.swipe = 0.5; v.rear = 0; v.side = -(v.side || 1); const yw = v.g.rotation.y; clawStreak(v.g.position.x + Math.sin(yw) * 0.9, y + 1.3, v.g.position.z + Math.cos(yw) * 0.9, yw, v.side, 1.1); SFX.play('rage', { x, z, vol:0.8 }); if (Math.random() < 0.5) word('GRRR!', x, y + 3, z, { color:'#ffffff', scale:0.9 }); }
+    if (v.swipe > 0) { v.swipe -= dt; v.body.rotation.x = -Math.sin((0.5 - v.swipe) / 0.5 * Math.PI) * 0.45; v.legs[0].rotation.x = -1.6 * Math.sin((0.5 - v.swipe) / 0.5 * Math.PI); } else if (!(v.rear > 0)) { v.body.rotation.x = 0; v.legs[1].rotation.x = 0; }
     v.head.rotation.x = 0; v.head.rotation.y = Math.sin(clock * 0.7 + b[6]) * 0.3;
     const hpP = b[5] ?? 100; v.hp.visible = hpP < 100; if (v.hp.visible) { v.hp.position.set(v.g.position.x, y + 3.4, v.g.position.z); v.hp.quaternion.copy(camera.quaternion); v.hpf.scale.x = Math.max(0.01, hpP / 100); }
   });
   if (s.bev && s.bev.length) { for (const e of s.bev) { if (WV.bevSeen === undefined) { WV.bevSeen = e[0]; continue; } const df = (e[0] - WV.bevSeen + 10000) % 10000; if (df === 0 || df > 5000) continue; WV.bevSeen = e[0];
       const x = e[2] / 10, z = e[3] / 10, y = groundY(x, z), mine = e[1] === V.myTeam;
       word(mine ? 'EISBÄR GEZÄHMT!' : 'Gegner zähmt Eisbär!', x, y + 3.5, z, { color:mine ? '#9be7ff' : '#ff9b8a', scale:1.4 }); if (typeof emitFX === 'function') emitFX('tame', x, y + 0.8, z, { col:FAC[V.facs[e[1]] || 'viking'].col, n:14 }); else puff(x, y + 0.8, z, 0xdff4ff, 14, 0.6);
-      SFX.play('capture', { x, z, vol:mine ? 1 : 0.5 }); if (mine) egoHint('Der Eisbär kämpft jetzt für dich! Übernimm ihn für Bärenklauen!', 2600); } }
+      SFX.play('capture', { x, z, vol:mine ? 1 : 0.5 }); if (mine) shake(0.2); if (mine) egoHint('Der Eisbär kämpft jetzt für dich! Übernimm ihn für Bärenklauen!', 2600); } }
   else if (WV.bevSeen === undefined) WV.bevSeen = 0;
   const seen = new Set();
   for (const it of s.it || []) { seen.add(it[0]); let v = WV.items.get(it[0]); if (!v) { v = itemMesh(it[1]); WV.items.set(it[0], v); const x = it[2] / 10, z = it[3] / 10; v.g.position.set(x, groundY(x, z) + 1.1, z); puff(x, groundY(x, z) + 0.5, z, it[1] === 1 ? 0xff6bd5 : 0xf0bf4c, 5, 0.6); }
@@ -5198,8 +5403,11 @@ function padAnim(dt) {
   for (const v of PADV) {
     v.t += dt; const snap = clamp(v.t / 0.12, 0, 1), settle = clamp((v.t - 0.22) / Math.max(0.1, PAD_CD - 0.22), 0, 1);
     let angle = v.cd > 0 ? 0.78 * Math.sin(snap * Math.PI / 2) * (1 - settle * settle * (3 - 2 * settle)) : 0;
-    if (v.armed && v.cd <= 0) angle = Math.abs(Math.sin(clock * 35)) * 0.03;
-    v.hinge.rotation.x = angle; v.spring.scale.y = 1 + Math.sin(angle) * PAD_D * 2.5;
+    const armed = v.armed && v.cd <= 0;
+    if (armed && !v.wasArmed) { const p = v.g.position; SFX.play('creak', { x:p.x, z:p.z, vol:0.8 }); SFX.play('tick', { x:p.x, z:p.z, vol:0.7 }); }
+    v.wasArmed = armed;
+    if (armed) angle = -0.05 + Math.sin(clock * 40) * 0.012; // spring compresses: about to launch
+    v.hinge.rotation.x = angle; v.spring.scale.y = armed ? 0.5 : 1 + Math.sin(angle) * PAD_D * 2.5;
     v.arr.material.emissive.setHex(v.cd > 0 ? 0x200804 : (Math.sin(clock * 5) > 0 ? 0x803018 : 0x401008));
   }
 }
@@ -5321,7 +5529,7 @@ let lastFrame = now(), clock = 0;
 function animateRig(u, dt, moving, attacking) {
   if (u.rag) { ragdollRig(u, dt); return; }
   if (u.dancing && !u.arm) { danceRig(u, dt); return; } else if (u.bear) { bearRig(u, dt, moving); return; } else if (u.wasDance !== !!u.dancing) { u.wasDance = !!u.dancing; if (u.armL) { u.armL.rotation.z = 0; u.armR.rotation.z = 0; } u.rig.rotation.set(0, 0, 0); u.rig.position.y = 0; if (u.legL) { u.legL.rotation.set(0, 0, 0); u.legR.rotation.set(0, 0, 0); } }
-  if (u.arm) { u.wheels.forEach(w => w.rotation.x += dt * (moving ? 3 : 0)); u.atkT += dt; const p = u.atkT; u.arm.rotation.x = p < 0.22 ? lerp(-0.3, 0.7, sstep(0, 0.22, p)) : p < 0.32 ? 0.7 - Math.sin((p - 0.22) / 0.1 * Math.PI) * 0.06 : p < 1.6 ? lerp(0.7, -0.3, sstep(0.32, 1.6, p)) : -0.3; u.rig.rotation.x = p < 0.3 ? -Math.sin(p / 0.3 * Math.PI) * 0.06 : 0; if (u.pop !== undefined) { u.pop += dt; const s2 = Math.min(1, u.pop / 0.4); u.g.scale.setScalar(Math.max(0.01, s2)); if (s2 >= 1) delete u.pop; } if (u.headTarget !== undefined) u.neck.scale.setScalar(lerp(u.neck.scale.x, u.isPoss ? u.headTarget : 0.001, Math.min(1, dt * 6))); return; }
+  if (u.arm) { u.wheels.forEach(w => w.rotation.x += dt * (moving ? 3 : 0)); u.atkT += dt; const p = u.atkT; u.arm.rotation.x = p < 0 ? lerp(-0.3, -0.95, sstep(-SIEGE_WIND, -0.08, p)) + (p > -0.2 ? Math.sin(clock * 60) * 0.02 : 0) : p < 0.22 ? lerp(-0.3, 0.7, sstep(0, 0.22, p)) : p < 0.32 ? 0.7 - Math.sin((p - 0.22) / 0.1 * Math.PI) * 0.06 : p < 1.6 ? lerp(0.7, -0.3, sstep(0.32, 1.6, p)) : -0.3; u.rig.rotation.x = p < 0.3 ? -Math.sin(p / 0.3 * Math.PI) * 0.06 : 0; if (u.pop !== undefined) { u.pop += dt; const s2 = Math.min(1, u.pop / 0.4); u.g.scale.setScalar(Math.max(0.01, s2)); if (s2 >= 1) delete u.pop; } if (u.headTarget !== undefined) u.neck.scale.setScalar(lerp(u.neck.scale.x, u.isPoss ? u.headTarget : 0.001, Math.min(1, dt * 6))); return; }
   const K = KINDS[u.k], cav = K.role === 'cav';
   if (u.ph === undefined) { u.ph = Math.random() * 10; u.mb = 0; }
   u.ph += dt;
@@ -5431,7 +5639,8 @@ function frame() {
       if (TUT.on) tutCamTick(dt);
     }
     SFX.music(!!(V.playing && V.poss && (V.poss.dance || now() < (V.discoUntil || 0))));
-    renderUnits(t, dt); updateWorld(dt); padAnim(dt); clawTick(dt); updateFreeArrows(dt); updateFireballs(dt); updateGrenades(dt); debrisTick(dt);
+    renderUnits(t, dt); updateWorld(dt); padAnim(dt); clawTick(dt); updateFreeArrows(dt); updateFireballs(dt); updateGrenades(dt); debrisTick(dt); siegeWarnTick(); hlTick(dt);
+    if (V.homeRings) { const vis = !!(V.latest && V.latest.ph && V.latest.ph[0] === 0); V.homeRings.forEach(m => m.visible = vis); }
   }
   flagViews.forEach((F, i) => { const pos = F.cloth.geometry.attributes.position, a = pos.array; for (let v = 0; v < a.length; v += 3) { const x = F.base[v]; a[v + 2] = Math.sin(clock * 5 + x * 2.2 + i) * 0.12 * x; } pos.needsUpdate = true; });
   waterClock.value = clock; windClock.value = clock;
@@ -5451,7 +5660,7 @@ function frame() {
     p.m.position.lerpVectors(p.from, p.to, k); p.m.position.y += Math.sin(k * Math.PI) * p.arc;
     if (p.kind === 'arrow') { if (prev.distanceToSquared(p.m.position) > 1e-6) p.m.lookAt(fxAim.copy(p.m.position).multiplyScalar(2).sub(prev)); }
     else { p.m.rotation.x += dt * 14; p.m.rotation.y += dt * 9; }
-    if (k >= 1 && (p.kind === 'boulder' || p.kind === 'cake')) { scene.remove(p.m); const c = p.kind === 'cake'; emitFX('explosion', p.to.x, p.to.y - 0.6, p.to.z, { col:c ? 0xf6b8d0 : 0xb9ad9a, n:18, size:1.3 }); emitFX('land', p.to.x, p.to.y - 0.8, p.to.z, { col:c ? 0xffffff : 0x8a7a66, n:8, size:1.4 }); word(c ? 'SPLATSCH!' : 'KRAWUMM!', p.to.x, p.to.y + 2, p.to.z, { color:c ? '#ffd6e6' : '#ffb35c', scale:1.3 }); SFX.play(c ? 'splat' : 'crash', { x:p.to.x, z:p.to.z, vol:1 }); aoeRing(p.to.x, p.to.z, 4.2 * (p.sal ? 0.8 : 1.1), c ? 0xff8fc0 : 0xffa040); fx.projs.splice(i, 1); continue; }
+    if (k >= 1 && (p.kind === 'boulder' || p.kind === 'cake')) { { const L = listenerPos(), d = Math.hypot(L.x - p.to.x, L.z - p.to.z); if (d < 16) shake(0.2 * (1 - d / 16)); } scene.remove(p.m); const c = p.kind === 'cake'; emitFX('explosion', p.to.x, p.to.y - 0.6, p.to.z, { col:c ? 0xf6b8d0 : 0xb9ad9a, n:18, size:1.3 }); emitFX('land', p.to.x, p.to.y - 0.8, p.to.z, { col:c ? 0xffffff : 0x8a7a66, n:8, size:1.4 }); word(c ? 'SPLATSCH!' : 'KRAWUMM!', p.to.x, p.to.y + 2, p.to.z, { color:c ? '#ffd6e6' : '#ffb35c', scale:1.3 }); SFX.play(c ? 'splat' : 'crash', { x:p.to.x, z:p.to.z, vol:1 }); aoeRing(p.to.x, p.to.z, 4.2 * (p.sal ? 0.8 : 1.1), c ? 0xff8fc0 : 0xffa040); fx.projs.splice(i, 1); continue; }
     if (k >= 1) { scene.remove(p.m); if (p.kind !== 'teeth') SFX.play('impact', { x:p.to.x, z:p.to.z, vol:0.75 }); puff(p.to.x, p.to.y, p.to.z, p.kind === 'teeth' ? 0xffffff : 0xfff1a8, 2, 0.5); if (p.kind === 'teeth' && Math.random() < 0.15) word('KLAPPER!', p.to.x, p.to.y + 1.6, p.to.z, { color:'#ffffff' }); fx.projs.splice(i, 1); }
   }
   for (let i = fx.words.length - 1; i >= 0; i--) {
@@ -5473,6 +5682,7 @@ function frame() {
   }
   for (let i = V.markers.length - 1; i >= 0; i--) { const m = V.markers[i]; m.t += dt; m.m.scale.setScalar(1 + m.t * 2.5); m.m.material.opacity = Math.max(0, 0.9 - m.t * 1.6); if (m.t > 0.6) { scene.remove(m.m); m.m.geometry.dispose(); m.m.material.dispose(); V.markers.splice(i, 1); } }
   hudT -= dt; if (hudT <= 0 && V.mode !== 'menu') { hudT = 0.12; updateHud(); hintTick(); tutTick(); }
+  if (SHAKE.a > 0.003 && V.mode !== 'menu') { const a = SHAKE.a; camera.position.x += (Math.random() - .5) * a; camera.position.y += (Math.random() - .5) * a * 0.7; camera.position.z += (Math.random() - .5) * a; SHAKE.a = Math.max(0, a - dt * 1.4); }
   contactTick(); if (PERF.level === 1 && PERF.frames % 2 === 0) renderer.shadowMap.needsUpdate = true; renderer.render(scene, camera);
 }
 function renderUnits(t, dt) {
@@ -5514,6 +5724,8 @@ function renderUnits(t, dt) {
     u.wasPad = airborne;
     if (!airborne && !wet && u.speed > 3 && Math.random() < dt * (mine ? 10 : 2)) emitFX(mine && (V.poss.dashT > 0 || tpk(V.myTeam, 'turbo')) ? 'dash' : 'dust', x, y + 0.08, z, { n:1, size:0.35, dx:-Math.sin(u.g.rotation.y), dz:-Math.cos(u.g.rotation.y) });
     u.wasJ = jt > 0;
+    if (u.frenzy && Math.random() < dt * 8) puff(x + (Math.random() - .5) * 0.7, y + 1.7 + Math.random() * 0.5, z + (Math.random() - .5) * 0.7, 0xff4a2a, 1, 0.32);
+    if (u.slowed && Math.random() < dt * 6) puff(x + (Math.random() - .5) * 0.6, y + 0.25, z + (Math.random() - .5) * 0.6, 0xffb3d1, 1, 0.3);
     if (u.padY !== undefined) u.g.position.set(x, u.padY, z);
     else if (flight) u.g.position.set(x, y, z);
     else if (!mine && !u.rag && Math.hypot(u.g.position.x - x, u.g.position.z - z) < 3) { const f = Math.min(1, dt * 15); u.g.position.set(lerp(u.g.position.x, x, f), y + jh, lerp(u.g.position.z, z, f)); } else u.g.position.set(x, y + jh, z);
@@ -5534,9 +5746,11 @@ function renderUnits(t, dt) {
     if (!u.rag) u.g.rotation.y += angDiff(want, u.g.rotation.y) * Math.min(1, dt * (mine ? 20 : sgR ? 3.5 : 12));
     animateRig(u, dt, moving && !u.rag && !airborne, u.atkT < 1.5);
     if (flight) { const kind = mine ? flight.kind : af[7] === 1 ? 'dash' : af[7] === 2 ? 'impact' : 'fall';
+      if (kind === 'impact' && !u.wasImpact) { u.wasImpact = true; emitFX('hit', x, y + 1.1, z, { n:6, size:0.7 }); SFX.play('impact', { x, z, vol:0.9 }); if (now() - (V.rummsT || 0) > 250) { V.rummsT = now(); word(pick(['RUMMS!', 'WUMMS!', 'BAMM!']), x, y + 2.6, z, { color:'#ffcf6a', scale:1.05 }); } }
       u.airPoseT = (u.airPoseT || 0) + dt; u.rig.rotation.x = kind === 'dash' ? 0.2 : -u.airPoseT * 5; u.rig.rotation.z = kind === 'dash' ? 0 : Math.sin(u.id) * u.airPoseT * 2.5;
       if (u.armL) { u.armL.rotation.x = -2.7 + Math.sin(clock * 16) * 0.2; u.armR.rotation.x = -2.5; }
     } else if (u.airPoseT) { u.airPoseT = 0; u.rig.rotation.set(0, 0, 0); }
+    if (!flight) u.wasImpact = false;
     unitShadowRange(u);
     { const ist = WV.ic.get(u.id) || 0;
       if ((ist & 1) && !u.rag && !u.arm) { u.slide = Math.min(1, (u.slide || 0) + dt * 6); } else if (u.slide) u.slide = Math.max(0, u.slide - dt * 4);
@@ -5579,6 +5793,6 @@ function renderUnits(t, dt) {
 document.fonts && document.fonts.load('40px "Lilita One"').then(() => { spriteCache.clear(); if (V.mode === 'menu') buildBases(V.facs); }).catch(() => {});
 menuScene(); applyCam(); setQuality(PERF.level);
 requestAnimationFrame(frame);
-window.__wvr = { startAir, airStep, ramImpulse, startFall, iceVelocity, iceStep, hitBear, tameBearStep, baseGap, baseApproach, baseAttackSlots, tutCommand, tutEnemySelected, tutTick, tutSteps, sendCmd, setOrderMode, endTutorial, toMenu, processSnap, holeAt, genCode, leaveNet, worldStep, puffTick, emitFX, waterRipple, waterMotionFX, camera, get water() { return water; }, dropPart, debrisTick, disposeUnit, egoUpdate, inWater, wadeAt, unitY, contactMesh, puffMesh, renderer, PERF, perfTick, setQuality, puff, fx, padStep, padHeight, padFlight, onPad, spawnUnit, pushSnap, renderUnits, updateWorld, beginMatch, startSim, stopSim, playAi, hostBroadcast, hostReadGuest, joinOnline, localRoom, peerTransport, get protocol() { return NET_VER; }, get NETS() { return NET; }, PADV:()=>PADV, clawLife:v=>{ CLAW_LIFE = v; }, clawStreak:(...a)=>clawStreak(...a), holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, breakIce:(G,u)=>breakIce(G,u), onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, set G(value) { G = value; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
+window.__wvr = { startAir, airStep, ramImpulse, startFall, iceVelocity, iceStep, hitBear, tameBearStep, baseGap, baseApproach, baseAttackSlots, tutCommand, tutEnemySelected, tutTick, tutSteps, sendCmd, setOrderMode, endTutorial, toMenu, processSnap, holeAt, genCode, leaveNet, worldStep, puffTick, emitFX, waterRipple, waterMotionFX, camera, get water() { return water; }, dropPart, debrisTick, disposeUnit, egoUpdate, inWater, wadeAt, unitY, contactMesh, puffMesh, renderer, PERF, perfTick, setQuality, puff, fx, padStep, padHeight, padFlight, onPad, spawnUnit, pushSnap, renderUnits, updateWorld, beginMatch, startSim, stopSim, playAi, hostBroadcast, hostReadGuest, joinOnline, localRoom, peerTransport, get protocol() { return NET_VER; }, get NETS() { return NET; }, PADV:()=>PADV, clawLife:v=>{ CLAW_LIFE = v; }, clawStreak:(...a)=>clawStreak(...a), holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, iceImpact:(G,x,z,r,t)=>iceImpact(G,x,z,r,t), los:(a,b,c,d)=>los(a,b,c,d), knockFly, advanceGround, CFG, highlight, phaseOf, onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, set G(value) { G = value; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
 })();
 </script>
