@@ -17,6 +17,15 @@
 - **Arktis:** schnelles, rutschiges Eis. Katapulttreffer brechen dauerhafte Löcher ins Eis, Eisbären lassen sich zähmen.
 - **Klippen:** Abgründe und Sprungpads. Reiter stoßen Gegner in die Tiefe.
 
+## Grafik
+
+Unter „Grafik“ im Menü oder im Pausenmenü: **Automatisch**, Hoch, Mittel, Niedrig oder Sehr niedrig. Unter „Erweitert“ lassen sich Schatten, Partikel und Render-Auflösung einzeln festlegen.
+
+- **Automatisch** misst die Bildrate im laufenden Spiel und regelt Auflösung, Schatten und Effekte schrittweise nach. Es senkt die Qualität erst, wenn es mehrere Sekunden lang ruckelt, und hebt sie erst nach längerer ruhiger Phase wieder an.
+- Eine fest gewählte Stufe bleibt gespeichert.
+- Die Einstellung ändert nur die Darstellung. Spielablauf und Online-Partien bleiben gleich.
+- Für Entwickler: `?perf=1` an die Adresse hängen blendet eine Leistungsanzeige ein (FPS, Frame-Zeit, Draw Calls, Dreiecke, Einheiten, Partikel, Stufe, Pixel Ratio).
+
 ## Online-Spiel
 
 Einer tippt auf „Erstellen“, der andere öffnet dieselbe Seite und gibt den Code bei „Beitreten“ ein. Die Geräte verbinden sich direkt miteinander, eine Anmeldung ist nicht nötig.
