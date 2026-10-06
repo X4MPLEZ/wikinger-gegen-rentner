@@ -5799,7 +5799,7 @@ function animateRig(u, dt, moving, attacking) {
   if (u.pop !== undefined) { u.pop += dt; const s = Math.min(1, u.pop / 0.3); u.g.scale.setScalar(s < 1 ? s * (1 + 0.35 * Math.sin(s * Math.PI)) : 1); u.rig.position.y += Math.sin(s * Math.PI) * 0.5; if (s >= 1) delete u.pop; }
 }
 /* Hidden performance overlay: add ?perf=1 to the URL. Measures CPU time per frame section, draw calls, triangles, shadows. */
-const PROF = { on:/[?&#]perf=1/.test(location.search + location.hash), s:{}, frames:0, t0:0, worst:0, ft:[], el:null, last:'' };
+const PROF = { on:/[?&#]perf=1/.test(location.search + location.hash) || store.get('wvr-perf') === '1', s:{}, frames:0, t0:0, worst:0, ft:[], el:null, last:'' };
 function profFlush() {
   const P = PROF, t = performance.now(), el = t - P.t0; if (!P.t0) { P.t0 = t; return; } if (el < 500) return;
   const n = Math.max(1, P.frames), ri = renderer.info, sec = Object.entries(P.s).map(([k, v]) => k + ' ' + (v / n).toFixed(1)).join(' · ');
@@ -5811,7 +5811,9 @@ function profFlush() {
   P.s = {}; P.frames = 0; P.t0 = t; P.worst = 0; P.ft.length = 0;
 }
 function pm(k) { const n2 = performance.now(); PROF.s[k] = (PROF.s[k] || 0) + n2 - PROF.p0; PROF.p0 = n2; }
-if (PROF.on) { PROF.el = document.createElement('pre'); PROF.el.id = 'perfHud'; PROF.el.style.cssText = 'position:fixed;left:6px;top:6px;z-index:99;margin:0;padding:6px 8px;background:rgba(0,0,0,.62);color:#bff7c4;font:11px/1.35 ui-monospace,monospace;pointer-events:none;white-space:pre;border-radius:6px'; document.body.appendChild(PROF.el); }
+function profEl() { if (PROF.el) return; PROF.el = document.createElement('pre'); PROF.el.id = 'perfHud'; PROF.el.style.cssText = 'position:fixed;left:6px;top:6px;z-index:99;margin:0;padding:6px 8px;background:rgba(0,0,0,.62);color:#bff7c4;font:11px/1.35 ui-monospace,monospace;pointer-events:none;white-space:pre;border-radius:6px'; document.body.appendChild(PROF.el); }
+if (PROF.on) profEl();
+addEventListener('keydown', e => { if (e.code !== 'F9') return; e.preventDefault(); PROF.on = !PROF.on; store.set('wvr-perf', PROF.on ? '1' : ''); if (PROF.on) { profEl(); PROF.t0 = 0; PROF.s = {}; PROF.frames = 0; PROF.ft.length = 0; PROF.worst = 0; } if (PROF.el) PROF.el.hidden = !PROF.on; }); // F9: hidden performance overlay (also ?perf=1)
 /* =====================================================================
    GRAPHICS QUALITY. Purely visual and local: nothing here touches the simulation, the AI or the network,
    so two players on LOW and HIGH play exactly the same game.

@@ -24,7 +24,7 @@ Unter „Grafik“ im Menü oder im Pausenmenü: **Automatisch**, Hoch, Mittel, 
 - **Automatisch** misst die Bildrate im laufenden Spiel und regelt Auflösung, Schatten und Effekte schrittweise nach. Es senkt die Qualität erst, wenn es mehrere Sekunden lang ruckelt, und hebt sie erst nach längerer ruhiger Phase wieder an.
 - Eine fest gewählte Stufe bleibt gespeichert.
 - Die Einstellung ändert nur die Darstellung. Spielablauf und Online-Partien bleiben gleich.
-- Für Entwickler: `?perf=1` an die Adresse hängen blendet eine Leistungsanzeige ein (FPS, Frame-Zeit, Draw Calls, Dreiecke, Einheiten, Partikel, Stufe, Pixel Ratio).
+- Für Entwickler: Taste F9 (oder `?perf=1` an der Adresse) blendet eine Leistungsanzeige ein (FPS, Frame-Zeit, Draw Calls, Dreiecke, Einheiten, Partikel, Stufe, Pixel Ratio).
 
 ## Online-Spiel
 
