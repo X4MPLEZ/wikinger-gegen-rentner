@@ -19,9 +19,10 @@
 
 ## Grafik
 
-Unter „Grafik“ im Menü oder im Pausenmenü: **Automatisch**, Hoch, Mittel, Niedrig oder Sehr niedrig. Unter „Erweitert“ lassen sich Schatten, Partikel und Render-Auflösung einzeln festlegen.
+Unter „Grafik“ im Menü oder im Pausenmenü: **Automatisch**, Hoch, Mittel, Niedrig oder Sehr niedrig. Unter „Erweitert“ lassen sich Schatten, Partikel, Render-Auflösung und Bildrate einzeln festlegen.
 
 - **Automatisch** misst die Bildrate im laufenden Spiel und regelt Auflösung, Schatten und Effekte schrittweise nach. Es senkt die Qualität erst, wenn es mehrere Sekunden lang ruckelt, und hebt sie erst nach längerer ruhiger Phase wieder an.
+- Reicht selbst „Sehr niedrig“ nur für etwa 30–45 Bilder pro Sekunde, begrenzt das Spiel auf gleichmäßige 30. Auf sehr schwachen Geräten senkt es danach noch die Auflösung.
 - Eine fest gewählte Stufe bleibt gespeichert.
 - Die Einstellung ändert nur die Darstellung. Spielablauf und Online-Partien bleiben gleich.
 - Für Entwickler: Taste F9 (oder `?perf=1` an der Adresse) blendet eine Leistungsanzeige ein (FPS, Frame-Zeit, Draw Calls, Dreiecke, Einheiten, Partikel, Stufe, Pixel Ratio).

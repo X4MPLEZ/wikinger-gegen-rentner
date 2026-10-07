@@ -141,6 +141,7 @@ details.help ul{margin:8px 0 2px;padding-left:1.1em;line-height:1.5;font-size:.8
 #hud button,#hud .stat,#hud .hp,#hud #mini,#ego button{pointer-events:auto}
 #perkPick button{pointer-events:auto;touch-action:manipulation}
 .panel{background:var(--panel);border:1px solid var(--line);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.gfx-lite .panel,.gfx-lite .tut-card{-webkit-backdrop-filter:none;backdrop-filter:none}.gfx-lite .panel{background:rgba(13,21,38,.88)}
 .hud-tl{position:absolute;left:10px;top:calc(env(safe-area-inset-top,0px) + 8px);display:flex;gap:6px;align-items:center}
 .stat{display:flex;align-items:center;gap:6px;border-radius:10px;padding:5px 9px;font-variant-numeric:tabular-nums}
 .stat b{font-weight:700;font-size:1.02rem}
@@ -447,7 +448,7 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
       <button id="egoAtk" aria-label="Angriff"></button>
     </div>
     <div id="egoHint" class="panel"></div>
-    <div id="plHint" class="panel" hidden><span class="sic" data-si="mouse"></span> Klicken, um die Maus zu fangen</div>
+    <div id="plHint" class="panel" hidden><span class="sic" data-si="mouse"></span><span> Klicken, um die Maus zu fangen</span></div>
     <div id="danceBan" hidden><span class="sic" data-si="dance"></span> Discogranate – du tanzt!</div>
   </div>
 
@@ -566,6 +567,7 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
         <label class="krow"><span>Schatten</span><select id="gfxSh"><option value="auto">Automatisch</option><option value="high">Hoch</option><option value="low">Niedrig</option><option value="off">Aus</option></select></label>
         <label class="krow"><span>Partikel</span><select id="gfxFx"><option value="auto">Automatisch</option><option value="high">Hoch</option><option value="mid">Mittel</option><option value="low">Niedrig</option></select></label>
         <label class="krow"><span>Render-Auflösung</span><select id="gfxRes"><option value="auto">Automatisch</option><option value="high">Hoch</option><option value="mid">Mittel</option><option value="low">Niedrig</option></select></label>
+        <label class="krow"><span>Bildrate</span><select id="gfxFps"><option value="auto">Automatisch</option><option value="30">Max. 30 (gleichmäßiger)</option><option value="off">Unbegrenzt</option></select></label>
       </details>
       <p class="note">Ändert nur die Darstellung auf diesem Gerät. Spielablauf und Mehrspieler bleiben gleich.</p>
       <div class="row"><button class="btn gold" id="gfxBack">Fertig</button></div>
@@ -2296,8 +2298,15 @@ function textCanvas(text, opt = {}) {
    ===================================================================== */
 const canvas = $('#c');
 let renderer;
-const QSTART = (() => { try { const st = JSON.parse(localStorage.getItem('wvr-set') || 'null') || {}, m = st.gfx || 'auto'; return m === 'auto' ? parseInt(localStorage.getItem('wvr-qauto') ?? '-1', 10) : ({ high:0, mid:2, low:4, vlow:6 })[m] ?? -1; } catch (_) { return -1; } })();
-try { renderer = new THREE.WebGLRenderer({ canvas, antialias:QSTART < 6, powerPreference:'high-performance' }); } // MSAA only costs on the weakest tier, where it is skipped
+// Kantenglättung (MSAA) can only be chosen when the WebGL context is created: off for 'Niedrig' and below (saved choice
+// or the level AUTO learned last time); on a first start a throw-away context reveals software or very old GPUs.
+const QSTART = (() => {
+  try { const st = JSON.parse(localStorage.getItem('wvr-set') || 'null') || {}, m = st.gfx || 'auto', l = m === 'auto' ? parseInt(localStorage.getItem('wvr-qauto') ?? '-1', 10) : ({ high:0, mid:2, low:4, vlow:6 })[m] ?? -1; if (l >= 0) return l; } catch (_) {}
+  try { const gl = document.createElement('canvas').getContext('webgl'), ext = gl && gl.getExtension('WEBGL_debug_renderer_info'), gpu = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || '') : '', lose = gl && gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext();
+    if (/swiftshader|llvmpipe|software|basic render/i.test(gpu)) return 6; if (/hd graphics [2-5]\d{2,3}\b|gma|mali-4|adreno \(tm\) [34]\d\d/i.test(gpu)) return 4; } catch (_) {}
+  return -1;
+})();
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias:QSTART < 4, powerPreference:'high-performance' }); }
 catch (e) { document.body.innerHTML = '<p style="padding:24px;font:16px system-ui;color:#fff;background:#0d1526">Dieses Gerät kann die 3D-Grafik nicht anzeigen (WebGL fehlt).</p>'; return; }
 const COARSE = matchMedia('(pointer:coarse)').matches;
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, COARSE ? 1.6 : 1.75));
@@ -2331,6 +2340,8 @@ function mesh(geo, mat, x = 0, y = 0, z = 0, parent) { const m = new THREE.Mesh(
 function flat(geo) { const g = geo.toNonIndexed(); g.computeVertexNormals(); return g; }
 function shadows(o, cast = true, recv = false) { o.traverse(m => { if (m.isMesh) { if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere(); m.castShadow = cast && m.geometry.boundingSphere.radius * Math.max(Math.abs(m.scale.x), Math.abs(m.scale.y), Math.abs(m.scale.z)) > 0.22; m.receiveShadow = recv; } }); return o; }
 const water = mesh(new THREE.PlaneGeometry(900, 900).rotateX(-Math.PI / 2), new THREE.MeshPhongMaterial({ color:lin(0x3b8fb8), specular:lin(0x88bbd6), shininess:70, transparent:true, opacity:0.88 }), 0, WL, 0);
+const WATER_HI = water.material, WATER_LO = new THREE.MeshLambertMaterial({ color:lin(0x3f93bb), transparent:true, opacity:0.88 }); // cheap water for light tiers
+const AUDIO = { lite:false };
 water.receiveShadow = true; scene.add(water);
 // World-space ripples vary brightness without extra geometry, reflection passes or lights.
 const waterClock = { value:0 };
@@ -2630,7 +2641,7 @@ function buildBases(facs) {
 /* ---------- units ---------- */
 const V2 = THREE.Vector2;
 function lathe(profile, seg = 14) { return new THREE.LatheGeometry(profile.map(([a, b]) => new V2(a, b)), seg); }
-const UG = {
+function makeUG() { return { // shared unit geometries; built a second time with fewer segments for the low-detail models
   body:lathe([[0, 0], [0.2, 0], [0.218, 0.06], [0.215, 0.14], [0.205, 0.3], [0.2, 0.44], [0.185, 0.58], [0.16, 0.7], [0.12, 0.77], [0.07, 0.81], [0, 0.82]], 18),
   dress:lathe([[0, 0], [0.33, 0], [0.335, 0.04], [0.31, 0.12], [0.27, 0.3], [0.23, 0.46], [0.19, 0.64], [0.15, 0.78], [0.09, 0.88], [0, 0.9]], 18),
   leg:new THREE.CylinderGeometry(0.058, 0.05, 0.46, 8).translate(0, -0.23, 0),
@@ -2648,7 +2659,8 @@ const UG = {
   thumb:new THREE.SphereGeometry(0.026, 6, 5).translate(0.035, -0.43, 0.03), trim:new THREE.TorusGeometry(0.212, 0.022, 5, 20).rotateX(Math.PI / 2), collar:new THREE.TorusGeometry(0.1, 0.028, 6, 16).rotateX(Math.PI / 2),
   button:new THREE.SphereGeometry(0.022, 6, 5), bracer:new THREE.CylinderGeometry(0.056, 0.052, 0.12, 10), mantle:new THREE.TorusGeometry(0.2, 0.075, 7, 16, Math.PI).rotateX(Math.PI / 2).rotateY(Math.PI),
   beard:new THREE.ConeGeometry(0.34, 0.62, 10).rotateX(Math.PI), braid:new THREE.SphereGeometry(0.075, 8, 6), buckle:new THREE.BoxGeometry(0.075, 0.06, 0.03),
-};
+}; }
+const UG = makeUG();
 const HEAD_SCALE = 0.62, BIG_HEAD = 1.35;
 const blobMat = basic(0x000000, 0.25), ringMat = basic(0xfff1a8, 0.95), hpBgMat = basic(0x10141f, 0.85);
 const hpMats = [new THREE.MeshBasicMaterial({ color:lin(0x71c271) }), new THREE.MeshBasicMaterial({ color:lin(0xe3604c) })];
@@ -2657,33 +2669,52 @@ function headMat(k) { return headMats[k] || (headMats[k] = new THREE.MeshLambert
 const hpGroup = new THREE.Group(); hpGroup.visible = false; scene.add(hpGroup); // per-unit bars are proxies; hpBatch() draws all of them with 2 instanced draw calls
 const HPB = (() => { const N = 320, bg = new THREE.InstancedMesh(UG.hpbg, hpBgMat, N), fg = new THREE.InstancedMesh(UG.hpfg, new THREE.MeshBasicMaterial({ color:0xffffff }), N);
   for (const im of [bg, fg]) { im.count = 0; im.frustumCulled = false; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.renderOrder = 5; scene.add(im); }
-  fg.setColorAt(0, new THREE.Color()); fg.instanceColor.setUsage(THREE.DynamicDrawUsage); return { N, bg, fg, m:new THREE.Matrix4(), c:new THREE.Matrix4() }; })();
+  fg.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(N * 3), 3); fg.instanceColor.setUsage(THREE.DynamicDrawUsage); /* setColorAt() would size it by the current count (0) */ return { N, bg, fg, m:new THREE.Matrix4(), c:new THREE.Matrix4() }; })();
 /* Living units are drawn with dynamic instancing: each frame all parts that share geometry + material (e.g. every
    Berserker left arm) are written into one InstancedMesh, one set for shadow-casting near units and one for the rest.
    The real meshes stay in the scene graph for animation and matrices but sit on layer 1, which neither the camera nor
    the shadow camera renders. ~10 draw calls per unit become a few dozen for the whole army. */
+/* Low-detail unit models (LOD): every kind is built once more with roughly half the segments on spheres, cylinders,
+   cones, tori and lathes (about 40 % of the triangles). Light tiers draw all units with them, the other tiers only
+   distant units. Same parts, same materials, so the instanced drawing just swaps the geometry. */
+function withLowPoly(fn) {
+  const caps = { SphereGeometry:[[1, 6], [2, 4]], CylinderGeometry:[[3, 5]], ConeGeometry:[[2, 4]], TorusGeometry:[[2, 3], [3, 6]], LatheGeometry:[[1, 6]], CircleGeometry:[[1, 6]] }, saved = {};
+  for (const name in caps) { const C = saved[name] = THREE[name]; THREE[name] = function (...a) { for (const [i, min] of caps[name]) if (typeof a[i] === 'number' && a[i] > min) a[i] = Math.max(min, Math.round(a[i] * 0.5)); return new C(...a); }; }
+  try { return fn(); } finally { Object.assign(THREE, saved); }
+}
+let UG_LO = null; const LO_TPL = new Map();
+function loTemplate(k) {
+  if (LO_TPL.has(k)) return LO_TPL.get(k);
+  let U = null;
+  try { withLowPoly(() => { if (!UG_LO) UG_LO = makeUG(); const saved = { ...UG }; Object.assign(UG, UG_LO); try { U = buildUnit(k); } finally { Object.assign(UG, saved); } }); } catch (_) { U = null; }
+  if (U) { scene.remove(U.g); hpGroup.remove(U.hp); }
+  LO_TPL.set(k, U); return U;
+}
 const UB = { groups:new Map(), list:[] };
 function ubRegister(u) {
+  const lo = loTemplate(u.k);
+  if (lo) { const a = [], b = []; u.g.traverse(m => { if (m.isMesh) a.push(m); }); lo.g.traverse(m => { if (m.isMesh) b.push(m); }); if (a.length === b.length) a.forEach((m, i) => { if (b[i].geometry !== m.geometry && b[i].material === m.material) m.userData.lo = b[i].geometry; }); }
   u.parts = []; u.g.traverse(m => { if (!m.isMesh || m.isInstancedMesh || m === u.blob || m === u.ring || Array.isArray(m.material) || m.material.transparent) return; const g = m.geometry; if (!g.userData.sharedUnitGeo && !sharedDetailGeometries.has(g)) return; if (!g.boundingSphere) g.computeBoundingSphere(); u.parts.push(m); m.layers.set(1); });
 }
 function ubRelease(u) { if (u.parts) { for (const m of u.parts) m.layers.set(0); u.parts = null; } }
 function ubDetach(obj) { obj.traverse(m => { if (m.isMesh) { m.layers.set(0); m.userData.ubOff = true; } }); } // a part flying off as debris renders on its own again
 function ubMake(geo, mat, cast, r, cap = 16) { const im = new THREE.InstancedMesh(geo, mat, cap); im.count = 0; im.frustumCulled = false; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.castShadow = cast; im.receiveShadow = false; im.visible = false; scene.add(im); return im; }
-function ubEntry(m, near) {
-  let gm = UB.groups.get(m.geometry); if (!gm) UB.groups.set(m.geometry, gm = new Map());
+function ubEntry(m, near, lod) {
+  const geo = lod && m.userData.lo ? m.userData.lo : m.geometry;
+  let gm = UB.groups.get(geo); if (!gm) UB.groups.set(geo, gm = new Map());
   let pair = gm.get(m.material);
-  if (!pair) { const r = m.geometry.boundingSphere.radius * Math.max(m.scale.x, m.scale.y, m.scale.z); pair = [true, false].map(cast => ({ im:ubMake(m.geometry, m.material, cast), n:0, cap:16, cast, r })); gm.set(m.material, pair); UB.list.push(...pair); }
+  if (!pair) { const r = m.geometry.boundingSphere.radius * Math.max(m.scale.x, m.scale.y, m.scale.z); pair = [true, false].map(cast => ({ im:ubMake(geo, m.material, cast), n:0, cap:16, cast, r })); gm.set(m.material, pair); UB.list.push(...pair); }
   return pair[near ? 0 : 1];
 }
 function unitBatch() {
   for (const e of UB.list) e.n = 0;
-  const p = V.poss || camS, px = p.x || 0, pz = p.z || 0, d2 = QS.shDist * QS.shDist;
+  const p = V.poss || camS, px = p.x || 0, pz = p.z || 0, d2 = QS.shDist * QS.shDist, cx = camera.position.x, cz = camera.position.z, ld2 = QS.lod[0] * QS.lod[0];
   for (const list of [V.units.values(), V.dying]) for (const u of list) { // dying units keep their batching during the death animation
     if (!u.parts || !u.g.visible || !u.g.parent) continue;
-    const near = (u.g.position.x - px) ** 2 + (u.g.position.z - pz) ** 2 < d2;
+    const near = (u.g.position.x - px) ** 2 + (u.g.position.z - pz) ** 2 < d2, lod = QS.lowPoly || (u.g.position.x - cx) ** 2 + (u.g.position.z - cz) ** 2 > ld2;
     for (const m of u.parts) {
       if (m.userData.ubOff || !m.visible || !m.parent || !m.parent.visible) continue;
-      const e = ubEntry(m, near);
+      const e = ubEntry(m, near, lod);
       if (e.n >= e.cap) { const im = ubMake(e.im.geometry, e.im.material, e.cast, e.r, e.cap * 2); im.instanceMatrix.array.set(e.im.instanceMatrix.array); scene.remove(e.im); e.im.dispose(); e.im = im; e.cap *= 2; }
       e.im.instanceMatrix.array.set(m.matrixWorld.elements, e.n++ * 16);
     }
@@ -3045,6 +3076,7 @@ const FX_PROFILES = {
 for (let i = 0; i < PUFF_CAP; i++) puffPool.push({ m:new THREE.Object3D(), color:new THREE.Color() });
 const puffGeo = new THREE.IcosahedronGeometry(0.35, 0);
 const puffMesh = new THREE.InstancedMesh(puffGeo, basic(0xffffff, 0.78), PUFF_CAP);
+puffMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(PUFF_CAP * 3), 3); puffMesh.instanceColor.setUsage(THREE.DynamicDrawUsage); // full-size colour buffer (was 0 long, so every particle drew white)
 puffMesh.count = 0; puffMesh.frustumCulled = false; puffMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(puffMesh);
 function releasePuff(p) { puffPool.push(p); }
 function puff(x, y, z, col = 0xffffff, n = 5, size = 1, kind = 'smoke', dx = 0, dz = 0) {
@@ -3211,7 +3243,7 @@ const SFX = (() => {
   function bus(vol, pan, wet) {
     const g = ac.createGain(); g.gain.value = vol; let n = g;
     if (pan && ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.value = clamp(pan, -1, 1); g.connect(p); n = p; }
-    n.connect(comp); if (wet) { const w = ac.createGain(); w.gain.value = wet; n.connect(w); w.connect(rev); }
+    n.connect(comp); if (wet && !AUDIO.lite) { const w = ac.createGain(); w.gain.value = wet; n.connect(w); w.connect(rev); }
     return g;
   }
   function env(g, t, a, d, peak) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
@@ -3313,7 +3345,7 @@ const SFX = (() => {
     if (name === 'teeth' && !o.noThrow) play('omaThrow', { ...o, vol:(o.vol || 1) * 1.1 });
     const f = LIB[name]; if (!f) return;
     const tn = now(); if (GAP[name] && last[name] && tn - last[name] < GAP[name]) return;
-    if (tn - burstT > 100) { burstT = tn; burst = 0; } if (++burst > 10) return;
+    if (tn - burstT > 100) { burstT = tn; burst = 0; } if (++burst > (AUDIO.lite ? 5 : 10)) return;
     let vol = o.vol || 1, pan = 0;
     if (o.x !== undefined) {
       const at = listenerPos(), d = Math.hypot(o.x - at.x, o.z - at.z);
@@ -4332,7 +4364,7 @@ function enterEgo() {
   sendCmd({ t:'poss', id });
   const K = KINDS[u.k];
   V.poss = { id, k:u.k, x:u.g.position.x, z:u.g.position.z, yaw:u.g.rotation.y, camYaw:u.g.rotation.y, pitch:0.16, a:0, s:0, cdT:0, spT:0, dashT:0, rageT:0, t0:now(), confirmed:false, ad:null };
-  mlReset(); EG.look = null; EG.joy = null; EG.intro = 1.6; EG.kick = 0; $('#xhair').hidden = K.role !== 'ranged' && K.role !== 'siege'; $('#xhair').className = '';
+  mlReset(); ML.lockErr = 0; ML.noLock = false; EG.look = null; EG.joy = null; EG.intro = 1.6; EG.kick = 0; $('#xhair').hidden = K.role !== 'ranged' && K.role !== 'siege'; $('#xhair').className = '';
   V.selected.clear(); gest = null; pointers.clear();
   $('#hud').hidden = true; $('#ego').hidden = false; drawLasso(null); document.body.classList.add('egoOn');
   if (!COARSE && canvas.requestPointerLock && !V.tutNoLock) { try { lockPointer(); } catch (_) {} }
@@ -4362,16 +4394,20 @@ const PL = { on:false };
    Touch: drags on the canvas. Both only ADD to ML.mx/my (mouse pixels) or ML.tx/ty (touch pixels).
    egoUpdate applies the sums once per frame to P.camYaw / P.pitch (the authoritative ego yaw) and clears them.
    No dt factor: a mouse delta is already a distance, so turning speed does not depend on the frame rate. */
-const ML = { mx:0, my:0, tx:0, ty:0, ema:0, guardUntil:0, lockFailed:false, dropped:0, pend:null };
+const ML = { mx:0, my:0, tx:0, ty:0, ema:0, guardUntil:0, lockErr:0, noLock:false, dropped:0, pend:null };
 const LOOK = { mouseYaw:0.0026, mousePitch:0.002, touchYaw:0.008, touchPitch:0.006, pitchMin:-0.42, pitchMax:0.75 };
 function mlReset(guardMs = 0) { ML.mx = ML.my = ML.tx = ML.ty = 0; ML.ema = 0; ML.pend = null; ML.guardUntil = now() + guardMs; }
-const canLock = () => !COARSE && !!canvas.requestPointerLock && !navigator.webdriver && !ML.lockFailed;
+const canLock = () => !COARSE && !!canvas.requestPointerLock && !navigator.webdriver && !ML.noLock; // noLock only for the current ego session
 document.addEventListener('pointerlockchange', () => {
   PL.on = document.pointerLockElement === canvas; mlReset(PL.on ? 80 : 0); // the first events after locking can carry the warp distance
-  if (!PL.on) { EG.fire = false; EG.look = null; }
-  const h = $('#plHint'); if (h) h.hidden = PL.on || !V.poss || COARSE;
+  if (PL.on) { ML.lockErr = 0; ML.noLock = false; }
+  EG.fire = false; EG.look = null;
+  plHintUi();
 });
-document.addEventListener('pointerlockerror', () => { ML.lockFailed = true; mlReset(); }); // browser refused: fall back to click-and-drag look
+// A refused request is NOT final: Chrome refuses e.g. a re-lock right after Esc. Every new click tries again; only after
+// three refusals in a row does this ego session fall back to dragging (with edge turning, so 360° still work).
+document.addEventListener('pointerlockerror', () => { ML.lockErr++; if (ML.lockErr >= 3) ML.noLock = true; mlReset(); plHintUi(); });
+function plHintUi() { const h = $('#plHint'); if (!h) return; h.hidden = PL.on || !V.poss || COARSE; if (!h.hidden) h.lastChild.textContent = ML.noLock ? ' Maustaste halten und ziehen zum Umschauen' : ' Klicken, um die Maus zu fangen'; }
 function mlTake(mx, my, m) { ML.mx += mx; ML.my += my; ML.ema = ML.ema * 0.75 + m * 0.25; }
 document.addEventListener('mousemove', e => {
   if (!PL.on || !V.poss) return;
@@ -4386,12 +4422,12 @@ document.addEventListener('mousemove', e => {
   if (m * LOOK.mouseYaw * SET.sens > 0.6 && m > ML.ema * 6 + 40) { ML.pend = { mx, my, m, t:now() }; return; }
   mlTake(mx, my, m);
 });
-function lockPointer() {
+function lockPointer() { // plain request: works in every browser (the raw-input variant is refused on some systems)
   if (!canLock() || document.pointerLockElement) return;
-  const plain = () => { try { const r2 = canvas.requestPointerLock(); if (r2 && r2.catch) r2.catch(() => {}); } catch (_) {} };
-  try { const r = canvas.requestPointerLock({ unadjustedMovement:true }); if (r && r.catch) r.catch(plain); } catch (_) { plain(); } // raw input where supported (no OS acceleration spikes)
+  try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (_) {}
 }
-function applyLook(P) { // the only place that turns input into yaw/pitch
+function applyLook(P, dt = 0) { // the only place that turns input into yaw/pitch
+  if (EG.look && EG.look.mouse && !PL.on && dt) { const ex = EG.look.x, W = innerWidth, edge = ex < 28 ? -1 : ex > W - 28 ? 1 : 0; if (edge) ML.mx += edge * 820 * dt; } // drag fallback: holding at the screen edge keeps turning
   const K = KINDS[P.k], sens = (K.role === 'ranged' ? 0.8 : 1) * SET.sens, inv = SET.invY ? -1 : 1;
   if (ML.mx || ML.my) { P.camYaw -= ML.mx * LOOK.mouseYaw * sens; P.pitch += ML.my * LOOK.mousePitch * sens * inv; }
   if (ML.tx || ML.ty) { const ts = K.role === 'ranged' ? 0.75 : 1; P.camYaw -= ML.tx * LOOK.touchYaw * ts; P.pitch += ML.ty * LOOK.touchPitch * ts; }
@@ -4401,8 +4437,9 @@ function applyLook(P) { // the only place that turns input into yaw/pitch
 function egoDown(e) {
   const left = e.clientX < innerWidth * 0.45;
   if (e.pointerType === 'mouse' && PL.on) { const mb = 'Mouse' + e.button; if (isB('attack', mb)) EG.fire = true; egoAct(mb, true, null); return; }
-  if (e.pointerType === 'mouse' && canLock()) { lockPointer(); return; } // this click only captures the mouse; looking starts once the lock is active
-  if (e.pointerType === 'mouse') { EG.look = { id:e.pointerId, x:e.clientX, y:e.clientY, sx:e.clientX, sy:e.clientY, moved:false, mouse:true }; return; } // fallback without pointer lock
+  if (e.pointerType === 'mouse') { // not captured yet: try to capture; until it engages (or if the browser refuses) dragging turns the view
+    if (canLock()) lockPointer();
+    EG.look = { id:e.pointerId, x:e.clientX, y:e.clientY, sx:e.clientX, sy:e.clientY, moved:false, mouse:true }; return; }
   if (left && !EG.joy) { EG.joy = { id:e.pointerId, cx:e.clientX, cy:e.clientY, dx:0, dy:0 }; const j = $('#joy'); j.hidden = false; j.style.left = e.clientX + 'px'; j.style.top = e.clientY + 'px'; j.firstElementChild.style.transform = 'translate(-50%,-50%)'; }
   else if (!EG.look) EG.look = { id:e.pointerId, x:e.clientX, y:e.clientY, sx:e.clientX, sy:e.clientY, moved:false, t:now() };
 }
@@ -4522,7 +4559,7 @@ function egoUpdate(dt) {
       EG.sgRing.visible = true; EG.sgRing.position.set(tx, groundY(tx, tz) + 0.15, tz); EG.sgRing.children[0].rotation.y += dt * 0.6; }
     else if (EG.sgRing) EG.sgRing.visible = false; }
   const P = V.poss; if (!P) return;
-  applyLook(P);
+  applyLook(P, dt);
   const K = KINDS[P.k];
   const tn = now(), rdt = Math.min(0.5, (tn - (P.lastT || tn)) / 1000); P.lastT = tn;
   P.cdT = Math.max(0, P.cdT - rdt); P.spT = Math.max(0, P.spT - rdt); { const mu = V.units.get(P.id); if (mu && now() - (P.spSent || 0) > 600) { if (mu.spcd > 0.4 && P.spT < mu.spcd - 0.3) P.spT = mu.spcd; else if (mu.spcd <= 0.05 && P.spT > 0.6 && now() - (P.spSent || 0) > 1500) P.spT = 0; } } P.rageT = Math.max(0, P.rageT - rdt);
@@ -4641,37 +4678,39 @@ $('#modeAtk').addEventListener('click', () => setOrderMode('attack'));
 $('#modeMv').addEventListener('click', () => { setOrderMode('move'); hintDone('mode'); });
 $('#possBtn').addEventListener('click', () => { hintDone('poss'); enterEgo(); });
 let hudT = 0;
+// HUD writes only touch the DOM when a value really changed: no needless style/layout work on weak devices
+const txt = (el, v) => { v = String(v); if (el._t !== v) { el._t = v; el.textContent = v; } }, hid = (el, h) => { h = !!h; if (el.hidden !== h) el.hidden = h; }, attr = (el, k, v) => { if (el.getAttribute(k) !== v) el.setAttribute(k, v); }, sty = (el, k, v) => { const c = '_s' + k; if (el[c] !== v) { el[c] = v; el.style[k] = v; } };
 function updateHud() {
   const s = V.latest; if (!s) return;
   const me = V.myTeam, en = 1 - me;
-  $('#gold').textContent = s.g[me];
+  txt($('#gold'), s.g[me]);
   const mine = s.f.filter(f => f[0] === me).length, theirs = s.f.filter(f => f[0] === en).length;
-  const inc = $('#inc'); inc.textContent = '+' + String(s.in ? s.in[me] : CFG.baseInc).replace('.', ',') + '/s'; inc.classList.toggle('bonus', mine > theirs);
+  const inc = $('#inc'); txt(inc, '+' + String(s.in ? s.in[me] : CFG.baseInc).replace('.', ',') + '/s'); inc.classList.toggle('bonus', mine > theirs);
   { const chip = $('#phaseChip'), ph = s.ph, fm = v => Math.floor(v / 60) + ':' + String(v % 60).padStart(2, '0'); let txt = '', cls = '';
     if (ph && !V.tut) { if (ph[0] === 0 && ph[1] >= 0 && ph[1] <= 60) txt = 'Sturm in ' + fm(ph[1]); else if (ph[0] === 1) { cls = 'storm'; txt = ph[1] >= 0 && ph[1] <= 60 ? 'Endkampf in ' + fm(ph[1]) : 'STURM · Basen ×1,5'; } else if (ph[0] === 2) { cls = 'final'; txt = s.t >= CFG.crumbleT ? 'ENDKAMPF · Basen bröckeln' : 'ENDKAMPF · Basen ×2,2'; } }
-    if (chip.textContent !== txt) chip.textContent = txt; chip.hidden = !txt; chip.className = 'panel ' + cls; }
+    if (chip.textContent !== txt) chip.textContent = txt; hid(chip, !txt); if (chip.className !== 'panel ' + cls) chip.className = 'panel ' + cls; }
   const pop = s.u.filter(e => teamOfKind(e[1], s.fa) === me).length + s.q[me].length;
-  $('#pop').textContent = pop + '/' + CFG.pop;
-  $$('#flagdots i').forEach((d, i) => { const o = s.f[i] ? s.f[i][0] : -1; d.style.background = o < 0 ? '#d6d9df' : FAC[V.facs[o]].css; });
+  txt($('#pop'), pop + '/' + CFG.pop);
+  $$('#flagdots i').forEach((d, i) => { const o = s.f[i] ? s.f[i][0] : -1; sty(d, 'background', o < 0 ? '#d6d9df' : FAC[V.facs[o]].css); });
   baseBars(s);
   const au = s.au ? s.au[me] : '';
   $$('.spawn').forEach(b => {
     const k = +b.dataset.k, K = KINDS[k], inQ = [...s.q[me]].filter(c => +c === k).length, q = b.querySelector('.q');
-    q.hidden = !inQ; q.textContent = inQ;
+    hid(q, !inQ); txt(q, inQ);
     b.classList.toggle('poor', s.g[me] < K.cost || pop >= CFG.pop || s.q[me].length >= CFG.queueMax);
-    b.querySelector('.prog').style.width = (s.q[me].length && +s.q[me][0] === k ? s.qp[me] : 0) + '%';
-    b.querySelector('.auto').setAttribute('aria-pressed', String(au.includes(String(k))));
+    sty(b.querySelector('.prog'), 'width', (s.q[me].length && +s.q[me][0] === k ? s.qp[me] : 0) + '%');
+    attr(b.querySelector('.auto'), 'aria-pressed', String(au.includes(String(k))));
   });
   for (const id of V.selected) if (!V.units.has(id)) V.selected.delete(id);
   { const own = ownUnits(), sz = V.selected.size; const same = list => list.length > 0 && list.length === sz && list.every(u => V.selected.has(u.id));
-    $$('.chip[data-sel]').forEach(b => { const w = b.dataset.sel; const on = w === 'none' ? false : w === 'all' ? same(own) : same(own.filter(u => KINDS[u.k].role === w)); b.setAttribute('aria-pressed', String(on)); }); }
-  $('#selCount').textContent = V.selected.size; $('#selCount').hidden = !V.selected.size;
-  $('#possBtn').hidden = !(V.selected.size === 1 && V.playing && !V.ending && (() => { const u = V.units.get([...V.selected][0]); return !!u; })());
+    $$('.chip[data-sel]').forEach(b => { const w = b.dataset.sel; const on = w === 'none' ? false : w === 'all' ? same(own) : same(own.filter(u => KINDS[u.k].role === w)); attr(b, 'aria-pressed', String(on)); }); }
+  txt($('#selCount'), V.selected.size); hid($('#selCount'), !V.selected.size);
+  hid($('#possBtn'), !(V.selected.size === 1 && V.playing && !V.ending && (() => { const u = V.units.get([...V.selected][0]); return !!u; })()));
   const cd = $('#countdown');
   let cdTxt = null;
   if (s.cd > 0 && s.o < 0) cdTxt = String(Math.ceil(s.cd)); else if (s.t < 0.8 && s.o < 0) cdTxt = 'LOS!';
   if (cdTxt !== V.cdLast) { V.cdLast = cdTxt; if (cdTxt) SFX.play(cdTxt === 'LOS!' ? 'go' : 'count'); }
-  cd.hidden = !cdTxt; if (cdTxt) cd.textContent = cdTxt;
+  hid(cd, !cdTxt); if (cdTxt) txt(cd, cdTxt);
   drawMini();
   perkUi();
   if (s.o >= 0 && V.playing && !V.ending) startBaseFall(s);
@@ -4740,6 +4779,21 @@ function startSim(withAi) {
 }
 function stopSim() { if (simTimer) clearInterval(simTimer); simTimer = null; }
 function loadMap(seed) { if (!MAP || MAP.seed !== seed) setMap(genMap(seed)); buildMapView(MAP); }
+/* Compile the shaders of effects that only appear later (arrows, cakes, swings, rings, grenades, ghosts, frost, bears,
+   instanced units) during the countdown, so the first catapult shot or swing does not freeze a weak device. */
+function warmShaders() {
+  try {
+    const g = new THREE.Group(), add = o => { o.position.set(0, -60, 0); g.add(o); return o; };
+    for (const k in projGeo) add(projGeo[k].clone());
+    add(new THREE.Mesh(swingGeo, new THREE.MeshBasicMaterial({ transparent:true, opacity:0.75, side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending })));
+    add(new THREE.Mesh(swingGeo, new THREE.MeshBasicMaterial({ transparent:true, opacity:0.75, side:THREE.DoubleSide, depthWrite:false })));
+    add(new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ transparent:true, opacity:0.85, depthWrite:false })));
+    add(nadeMesh(1)); add(ghostMesh()); add(new THREE.Mesh(UG.button, FROST_MAT));
+    const bm = bearMesh(); add(bm.g);
+    for (const geo of [UG.hand, UG.head]) for (const mat of [vcMat, headMat(0)]) add(new THREE.InstancedMesh(geo, mat, 1)).castShadow = true;
+    scene.add(g); renderer.compile(scene, camera); scene.remove(g); bm.g.position.set(0, 0, 0); g.remove(bm.g); hpGroup.remove(bm.hp); if (WV.bearPool.length < 4) WV.bearPool.push(bm);
+  } catch (_) {}
+}
 function beginMatch(mode, facs, myTeam, seed) {
   menuUnits.forEach(disposeUnit); menuUnits = [];
   resetView(); loadMap(seed);
@@ -4750,6 +4804,7 @@ function beginMatch(mode, facs, myTeam, seed) {
   showScreen(null); $('#hud').hidden = false; $('#ego').hidden = true; $('#netwarn').hidden = true;
   hintState.done = new Set(); hintState.cur = null; V.warnedPoss = false; V.cdLast = null; V.siegeTip = false;
   if (!V.tut) setTimeout(() => toast(HINTS[0].text, 4500), 1200);
+  setTimeout(warmShaders, 60);
 }
 function robotFace(lvl = aiLvl) {
   const c = cnv(256, 256), x = c.getContext('2d'), Lv = { easy:{ a:'#d9f2d4', b:'#7cc46e', c:'#3f7f39', eye:'#7dff9a', mouth:'smile' }, medium:{ a:'#d9e6f5', b:'#7aa2cf', c:'#3d5f8a', eye:'#5ee0ff', mouth:'bars' }, hard:{ a:'#f5e2c9', b:'#d99a4a', c:'#8a5418', eye:'#ffb02e', mouth:'bars', brow:1 }, insane:{ a:'#f2c9c9', b:'#c45050', c:'#6b1b1b', eye:'#ff3c2e', mouth:'teeth', brow:2 }, extreme:{ a:'#4a4f5a', b:'#20232b', c:'#08090c', eye:'#ff1a1a', mouth:'teeth', brow:3, horns:1 } }[lvl] || null;
@@ -5088,13 +5143,13 @@ function gfxUi() {
   const sc = $('#gfxScr'); if (!sc || sc.hidden) return; const m = QS.mode();
   $$('#gfxQ button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.q === m)));
   const pr = renderer.getPixelRatio(), T = QS.tier();
-  $('#gfxNow').textContent = (m === 'auto' ? 'Passt sich laufend an dein Gerät an. Zurzeit: ' + T.name + (LADDER[QS.lvl].m < 1 ? ' mit etwas geringerer Auflösung' : '') + '.' : 'Feste Stufe: ' + T.name + '.') + ' Bild: ' + (() => { const v = renderer.getDrawingBufferSize(new THREE.Vector2()); return v.x + ' × ' + v.y; })() + ' Pixel' + (sun.castShadow ? ', Schatten ' + sun.shadow.mapSize.x : ', ohne Echtzeit-Schatten') + '.';
-  $('#gfxSh').value = SET.gfxSh || 'auto'; $('#gfxFx').value = SET.gfxFx || 'auto'; $('#gfxRes').value = SET.gfxRes || 'auto';
+  $('#gfxNow').textContent = (m === 'auto' ? 'Passt sich laufend an dein Gerät an. Zurzeit: ' + T.name + (LADDER[QS.lvl].m < 1 ? ' mit etwas geringerer Auflösung' : '') + '.' : 'Feste Stufe: ' + T.name + '.') + ' Bild: ' + (() => { const v = renderer.getDrawingBufferSize(new THREE.Vector2()); return v.x + ' × ' + v.y; })() + ' Pixel' + (sun.castShadow ? ', Schatten ' + sun.shadow.mapSize.x : ', ohne Echtzeit-Schatten') + (QS.cap ? ', Bildrate auf ' + QS.cap + ' begrenzt' : '') + '.';
+  $('#gfxSh').value = SET.gfxSh || 'auto'; $('#gfxFx').value = SET.gfxFx || 'auto'; $('#gfxRes').value = SET.gfxRes || 'auto'; $('#gfxFps').value = SET.gfxFps || 'auto';
 }
 ['#btnGfx', '#btnGfx2'].forEach((id, i) => $(id).addEventListener('click', () => { gfxFrom = i ? 'pause' : 'menu'; showScreen('gfxScr'); gfxUi(); }));
 $('#gfxBack').addEventListener('click', () => showScreen(gfxFrom));
 $$('#gfxQ button').forEach(b => b.addEventListener('click', () => setGfx(b.dataset.q)));
-[['#gfxSh', 'gfxSh'], ['#gfxFx', 'gfxFx'], ['#gfxRes', 'gfxRes']].forEach(([id, key]) => $(id).addEventListener('change', e => { SET[key] = e.target.value; saveBinds(); applyQuality(); gfxUi(); }));
+[['#gfxSh', 'gfxSh'], ['#gfxFx', 'gfxFx'], ['#gfxRes', 'gfxRes'], ['#gfxFps', 'gfxFps']].forEach(([id, key]) => $(id).addEventListener('change', e => { SET[key] = e.target.value; saveBinds(); applyQuality(); gfxUi(); }));
 let keysFrom = 'menu';
 ['#btnKeys', '#btnKeys2'].forEach((id, i) => $(id).addEventListener('click', () => { keysFrom = i ? 'pause' : 'menu'; REB.act = null; renderKeys(); showScreen('keysScr'); }));
 $('#keysBack').addEventListener('click', () => { REB.act = null; showScreen(keysFrom); });
@@ -5828,7 +5883,8 @@ const GTIERS = [
   { id:'vlow', name:'Sehr niedrig', pr:0.8, sc:0.75, mp:0.9, sh:0, shR:0, shEvery:0, unitSh:9, shDist:0, veg:false, fx:0.25, fxCap:48, ripples:6, deco:false, wind:0, lod:[20, 38] },
 ];
 // AUTO walks this ladder. Odd rungs only lower the render resolution (helps a GPU limit); a CPU limit skips them.
-const LADDER = [{ t:0, m:1 }, { t:0, m:0.86 }, { t:1, m:1 }, { t:1, m:0.88 }, { t:2, m:1 }, { t:2, m:0.88 }, { t:3, m:1 }];
+const LADDER = [{ t:0, m:1 }, { t:0, m:0.86, res:1 }, { t:1, m:1 }, { t:1, m:0.88, res:1 }, { t:2, m:1 }, { t:2, m:0.88, res:1 }, { t:3, m:1 }, { t:3, m:0.82, res:1 }, { t:3, m:0.66, res:1 }]; // the last two: AUTO only, for very weak GPUs
+const LMAX = LADDER.length - 1;
 const MANUAL_LVL = { high:0, mid:2, low:4, vlow:6 };
 function guessQuality() { // first-start estimate only; measured frame times take over during play
   let gpu = ''; try { const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'); if (ext) gpu = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || ''); } catch (_) {}
@@ -5842,7 +5898,7 @@ function guessQuality() { // first-start estimate only; measured frame times tak
   return l;
 }
 const QS = {
-  lvl:0, fr:0, ft:16.7, cpu:4, p95:16.7, bad:0, good:0, hold:3, t:0, upFails:0, lastUp:-1e9, downLoad:0, bound:'', fc:0, ver:0, ring:new Float32Array(120), ri:0, ptT:0,
+  lvl:0, fr:0, cap:0, autoCap:0, capT:0, lastDraw:0, ft:16.7, cpu:4, p95:16.7, bad:0, good:0, hold:3, t:0, upFails:0, lastUp:-1e9, downLoad:0, bound:'', fc:0, ver:0, ring:new Float32Array(120), ri:0, ptT:0,
   shEvery:1, unitSh:0.22, shDist:70, fx:1, fxCap:192, ripples:40, waterFx:1, lod:[60, 95], frameT0:0, simMs:0, cpuLast:0, learned:false,
   mode() { return SET.gfx || 'auto'; },
   tier() { return GTIERS[LADDER[this.lvl].t]; },
@@ -5851,10 +5907,10 @@ const QS = {
 function initQuality() {
   const m = QS.mode();
   if (m !== 'auto') QS.lvl = MANUAL_LVL[m] ?? 2;
-  else { const saved = parseInt(store.get('wvr-qauto'), 10); QS.learned = Number.isFinite(saved); QS.lvl = QS.learned ? clamp(saved, 0, 6) : guessQuality(); }
+  else { const saved = parseInt(store.get('wvr-qauto'), 10); QS.learned = Number.isFinite(saved); QS.lvl = QS.learned ? clamp(saved, 0, LMAX) : guessQuality(); }
   applyQuality();
 }
-function setGfx(mode) { SET.gfx = mode; saveBinds(); if (mode !== 'auto') QS.lvl = MANUAL_LVL[mode]; else { const saved = parseInt(store.get('wvr-qauto'), 10); QS.lvl = Number.isFinite(saved) ? clamp(saved, 0, 6) : guessQuality(); } QS.bad = QS.good = 0; QS.hold = 3; QS.upFails = 0; applyQuality(); gfxUi(); }
+function setGfx(mode) { SET.gfx = mode; saveBinds(); if (mode !== 'auto') QS.lvl = MANUAL_LVL[mode]; else { const saved = parseInt(store.get('wvr-qauto'), 10); QS.lvl = Number.isFinite(saved) ? clamp(saved, 0, LMAX) : guessQuality(); } QS.bad = QS.good = 0; QS.hold = 3; QS.upFails = 0; QS.autoCap = 0; QS.capT = 0; applyQuality(); gfxUi(); }
 function applyQuality() {
   const L = LADDER[QS.lvl], T = GTIERS[L.t], ov = (key, map) => { const v = SET[key]; return v && v !== 'auto' && map[v] !== undefined ? map[v] : null; };
   const shT = GTIERS[ov('gfxSh', { high:0, low:2, off:3 }) ?? L.t], fxT = GTIERS[ov('gfxFx', { high:0, mid:1, low:2 }) ?? L.t], resO = ov('gfxRes', { high:0, mid:1, low:2 }), resT = GTIERS[resO ?? L.t], resM = resO === null ? L.m : 1;
@@ -5871,17 +5927,22 @@ function applyQuality() {
   contactMat.opacity = shOn && shT.unitSh < 1 ? 0.4 : 0.6; // without real unit shadows the soft contact shadow carries the grounding
   QS.fx = fxT.fx; QS.fxCap = fxT.fxCap; QS.ripples = fxT.ripples; QS.waterFx = fxT === GTIERS[0] || fxT === GTIERS[1] ? 1 : 1.8;
   QS.lod = T.lod; windStrength.value = T.wind; QS.deco = T.deco;
+  // light tiers: no blurred HUD glass (the browser re-blurs the moving 3D image behind every panel each frame),
+  // per-vertex lit water instead of per-pixel, no clouds, low-poly heads, no reverb, fewer simultaneous sounds
+  const lt = L.t; document.body.classList.toggle('gfx-lite', lt >= 1);
+  water.material = lt >= 2 ? WATER_LO : WATER_HI; clouds.forEach(c => { c.visible = lt < 3; });
+  QS.lowPoly = lt >= 2; AUDIO.lite = lt >= 2;
   applyMapQuality();
 }
 function applyMapQuality() {
   if (!mapGroup) return;
   for (const o of mapGroup.children) { if (o.userData.deco) o.visible = QS.deco !== false; if (o.userData.shadowTier === 1) o.castShadow = QS.vegSh !== false; }
 }
-function qualityStep(dir, bound) {
-  const from = QS.lvl; let to = from + dir;
-  if (dir > 0 && bound === 'CPU' && to % 2 === 1) to++; // a CPU limit is not helped by fewer pixels: go straight to lighter features
-  if (dir < 0 && QS.mode() === 'auto' && to % 2 === 1 && QS.bound === 'CPU') to--;
-  to = clamp(to, 0, 6); if (to === from) return false;
+function qualityStep(dir, bound, n = 1) {
+  const from = QS.lvl, d = Math.sign(dir); let to = from;
+  for (let i = 0; i < n; i++) { to += d; if (bound === 'CPU') while (to > 0 && to < LMAX && LADDER[to].res) to += d; } // a CPU limit is not helped by fewer pixels: go straight to lighter features
+  to = clamp(to, 0, LMAX); if (bound === 'CPU' && d > 0 && LADDER[to].res) return false; // nothing left that would help the CPU
+  if (to === from) return false;
   QS.lvl = to; QS.hold = 3; QS.bad = QS.good = 0; store.set('wvr-qauto', String(to)); applyQuality(); gfxUi(); return true;
 }
 function perfTick(rawDt, force) {
@@ -5892,6 +5953,11 @@ function perfTick(rawDt, force) {
   QS.ft += (ms - QS.ft) * k; QS.cpu += (QS.cpuLast - QS.cpu) * k; QS.t += rawDt;
   if ((QS.ptT -= rawDt) <= 0) { QS.ptT = 1; const a = Array.from(QS.ring).filter(v => v > 0).sort((x, y) => x - y); QS.p95 = a[Math.floor(a.length * 0.95)] || ms; }
   QS.bound = QS.ft > 19 ? (QS.cpu > QS.ft * 0.78 ? 'CPU' : 'GPU') : '';
+  // Frame-rate cap: on weak devices a steady 30 fps feels smoother than 30-48 fps that jump between vsync intervals.
+  // 'auto' caps once the lightest settings still only reach about 30-47 fps for several seconds.
+  const fm = SET.gfxFps || 'auto', want = fm === '30' ? 30 : fm === 'off' ? 0 : QS.autoCap;
+  if (fm === 'auto' && !QS.autoCap) { if (QS.lvl >= (QS.mode() === 'auto' ? 6 : 4) && QS.ft > 21.3 && QS.ft < 34) QS.capT += rawDt; else QS.capT = Math.max(0, QS.capT - rawDt); if (QS.capT > 7) { QS.autoCap = 30; QS.hold = 3; QS.bad = 0; } }
+  if (QS.cap !== want) { QS.cap = want; QS.lastDraw = 0; gfxUi(); }
   if (QS.mode() !== 'auto') return;
   if ((QS.hold -= rawDt) > 0) return;
   // did the last downgrade actually help? Two steps without any gain mean the limit is elsewhere (e.g. the browser caps
@@ -5900,20 +5966,22 @@ function perfTick(rawDt, force) {
     if (QS.useless >= 2) { QS.useless = 0; QS.downBlock = true; QS.lvl = QS.preUseless; QS.hold = 3; store.set('wvr-qauto', String(QS.lvl)); applyQuality(); gfxUi(); return; } }
   const units = V.units.size, fight = units >= 36 || fx.puffs.length > 90;
   // too slow: below ~44 fps on average, sustained for several seconds (shorter in a big fight, much shorter if hopeless)
-  if (QS.ft > 22.5) QS.bad += rawDt * (QS.ft > 34 ? 1.7 : 1); else QS.bad = Math.max(0, QS.bad - rawDt * 0.6);
+  const slow = QS.cap ? 38 : 22.5; // capped at 30 fps: only count it as slow when even 30 cannot be held
+  if (QS.ft > slow) QS.bad += rawDt * (QS.ft > 34 && !QS.cap ? 1.7 : 1); else QS.bad = Math.max(0, QS.bad - rawDt * 0.6);
   const need = !QS.learned && QS.t < 12 && QS.ft > 30 ? 2.5 : fight ? 4.5 : 7;
-  if (QS.bad > need && QS.lvl < 6 && !(QS.downBlock && QS.ft < 45)) {
+  if (QS.bad > need && QS.lvl < LMAX && !(QS.downBlock && QS.ft < 45) && (QS.lvl < 6 || QS.cap || QS.ft >= 34 || SET.gfxFps === 'off')) { // below 'Sehr niedrig' only when even a 30-fps cap would not hold
     if (QS.t - QS.lastUp < 45) QS.upFails++; // the last upgrade did not hold: wait longer next time
     if (!QS.useless) QS.preUseless = QS.lvl;
-    QS.downLoad = Math.max(units, 8); const ft0 = QS.ft; if (qualityStep(+1, QS.bound)) QS.chk = { ft:ft0, t:QS.t }; return;
+    QS.downLoad = Math.max(units, 8); const ft0 = QS.ft; if (qualityStep(+1, QS.bound, QS.ft > 45 && !QS.cap ? 2 : 1)) QS.chk = { ft:ft0, t:QS.t }; return; // far too slow (under 22 fps): two rungs at once
   }
   // very smooth for a long time, and the scene is at least as busy as when we had to step down: try one step up
-  if (QS.ft < 15.4 && QS.p95 < 20.5) QS.good += rawDt; else QS.good = Math.max(0, QS.good - rawDt * 3);
+  if (QS.ft < 15.4 && QS.p95 < 20.5 && !QS.cap) QS.good += rawDt; else QS.good = Math.max(0, QS.good - rawDt * 3);
   const wait = QS.upFails >= 3 ? Infinity : 32 * Math.pow(2, QS.upFails);
   if (QS.good > wait && QS.lvl > 0 && units >= QS.downLoad * 0.7) { if (qualityStep(-1)) QS.lastUp = QS.t; }
 }
 function frame() {
   requestAnimationFrame(frame);
+  if (QS.cap) { const pn = performance.now(); if (pn - QS.lastDraw < 1000 / QS.cap - 4) return; QS.lastDraw = pn; } // 30-fps cap: skip every other vsync for even frame pacing
   const t = now(), rawDt = (t - lastFrame) / 1000, dt = Math.min(0.1, rawDt); lastFrame = t; clock += dt; if (rawDt < 1) perfTick(rawDt);
   QS.frameT0 = performance.now(); QS.fr++;
   const pf = PROF.on; if (pf) { PROF.p0 = performance.now(); PROF.frames++; PROF.ft.push(rawDt * 1000); PROF.worst = Math.max(PROF.worst, rawDt * 1000); }
@@ -5986,6 +6054,7 @@ function frame() {
   QS.cpuLast = performance.now() - QS.frameT0 + QS.simMs; QS.simMs = 0; // main-thread work this frame (render + logic + simulation)
   if (pf) { pm('render'); profFlush(); }
 }
+const FROST_MAT = new THREE.MeshPhongMaterial({ color:lin(0xcff4ff), emissive:lin(0x2a7aa8), shininess:160, specular:lin(0xffffff), flatShading:true, transparent:true, opacity:0.85 }); // one shared material for every frozen unit
 const LODS = { fr:new THREE.Frustum(), m:new THREE.Matrix4(), center:new THREE.Vector3() }; LODS.sph = new THREE.Sphere(LODS.center, 2.2);
 function renderUnits(t, dt) {
   camera.updateMatrixWorld(); LODS.m.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); LODS.fr.setFromProjectionMatrix(LODS.m);
@@ -6064,7 +6133,7 @@ function renderUnits(t, dt) {
       if ((ist & 1) && !u.rag && !u.arm) { u.slide = Math.min(1, (u.slide || 0) + dt * 6); } else if (u.slide) u.slide = Math.max(0, u.slide - dt * 4);
       if (u.slide > 0) { const q = u.slide; u.rig.rotation.x = -1.35 * q; u.rig.position.y = lerp(u.rig.position.y, 0.32, q); if (u.armL && !u.bear) { u.armL.rotation.x = lerp(u.armL.rotation.x, -3.0, q); u.armR.rotation.x = lerp(u.armR.rotation.x, -3.0, q); } if (u.legL) { u.legL.rotation.x *= 1 - q; u.legR.rotation.x *= 1 - q; } if ((ist & 1) && Math.random() < dt * 14) puff(x + (Math.random() - .5), y + 0.15, z + (Math.random() - .5), 0xeefaff, 1, 0.35); }
       if ((ist & 1) && !u.slipW) { u.slipW = 1; if (Math.random() < 0.7) word(pick(['HUCH!', 'RUTSCH!', 'UIII!', 'GLATTEIS!']), x, y + 2.6, z, { color:'#bfefff', scale:0.85 }); SFX.play('whoosh', { x, z, vol:0.5 }); } else if (!(ist & 1)) u.slipW = 0;
-      if ((ist & 4) && !u.frost && !u.arm) { const fg = new THREE.Group(), fm = new THREE.MeshPhongMaterial({ color:lin(0xcff4ff), emissive:lin(0x2a7aa8), shininess:160, specular:lin(0xffffff), flatShading:true, transparent:true, opacity:0.85 }); for (let i = 0; i < 9; i++) { const c2 = mesh(new THREE.OctahedronGeometry(0.09 + Math.random() * 0.08, 0), fm, (Math.random() - .5) * 0.55, 0.3 + Math.random() * 1.25, (Math.random() - .5) * 0.45, fg); c2.scale.y = 1.8 + Math.random(); c2.rotation.set(Math.random(), Math.random(), Math.random()); } (u.torso || u.rig).add(fg); u.frost = fg; }
+      if ((ist & 4) && !u.frost && !u.arm) { const fg = new THREE.Group(), fm = FROST_MAT; for (let i = 0; i < 9; i++) { const c2 = mesh(new THREE.OctahedronGeometry(0.09 + Math.random() * 0.08, 0), fm, (Math.random() - .5) * 0.55, 0.3 + Math.random() * 1.25, (Math.random() - .5) * 0.45, fg); c2.scale.y = 1.8 + Math.random(); c2.rotation.set(Math.random(), Math.random(), Math.random()); } (u.torso || u.rig).add(fg); u.frost = fg; }
       if (u.frost) { u.frost.visible = !!(ist & 4); if (u.frost.visible) u.frost.children.forEach((c2, k) => c2.scale.x = c2.scale.z = 0.9 + Math.sin(clock * 3 + k) * 0.15); }
       if (ist & 4) { u.rig.position.x = Math.sin(clock * 55 + u.id) * 0.035; if (Math.random() < dt * 5) puff(x + (Math.random() - .5) * 0.9, y + 0.4 + Math.random() * 1.6, z + (Math.random() - .5) * 0.9, 0xcff4ff, 1, 0.3); if ((u.team === V.myTeam || mine) && Math.random() < dt * 0.35) word(pick(['BRRR!', 'KALT!', 'Zähneklappern …']), x, y + 2.8, z, { color:'#9be7ff', scale:0.8 }); } else if (u.rig.position.x) u.rig.position.x = 0;
       if (mine) { const fr = $('#frost'); if (fr) fr.classList.toggle('on', !!(ist & 4)); } }
