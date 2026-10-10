@@ -167,7 +167,8 @@ details.help ul{margin:8px 0 2px;padding-left:1.1em;line-height:1.5;font-size:.8
 .seg button{background:none;border-radius:999px;padding:6px 12px;font-size:.8rem;font-weight:600;color:var(--dim);white-space:nowrap}
 .seg button[aria-pressed="true"].atk{background:var(--gold);color:#2a1c04}
 .seg button[aria-pressed="true"].mv{background:var(--move);color:#0a2233}
-.chip{border-radius:999px;padding:7px 11px;font-size:.8rem;font-weight:600;white-space:nowrap}
+.chip{border-radius:999px;padding:7px 11px;font-size:.8rem;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+#ctxHint{font-size:.78rem;color:#e9eef7;padding:5px 11px;border-radius:999px;max-width:min(92vw,420px);text-align:center;line-height:1.25;transition:opacity .25s}#ctxHint:empty{display:none}#ctxHint b{color:var(--gold)}
 .chip:active{transform:scale(.95)}
 .chip[data-sel][aria-pressed="true"]{border:2px solid var(--gold);box-shadow:0 0 0 3px rgba(240,191,76,.35),0 0 12px rgba(240,191,76,.55);color:#ffe7a6;background:rgba(60,46,12,.85)}
 #rallyBtn{display:flex;align-items:center;gap:5px}#rallyBtn .i{font-size:1rem}
@@ -291,6 +292,7 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
 .tut-acts .btn{pointer-events:auto;padding:.45em .8em;font-size:.82rem}
 #tutRing{position:absolute;z-index:13;border:3px solid var(--gold);border-radius:14px;pointer-events:none;animation:ringPulse 1.1s ease-in-out infinite}
 .tutGlow{outline:3px solid var(--gold);outline-offset:3px;animation:ringPulse 1.1s ease-in-out infinite}
+.btn.pulse{animation:ringPulse 1.1s ease-in-out infinite}
 @keyframes ringPulse{0%,100%{box-shadow:0 0 0 0 rgba(240,191,76,.6)}50%{box-shadow:0 0 0 10px rgba(240,191,76,0)}}
 .tutOn #toast{top:calc(env(safe-area-inset-top,0px) + 240px)}
 #menuTR{position:absolute;right:12px;top:max(12px,env(safe-area-inset-top));z-index:2;display:flex;gap:8px}
@@ -355,7 +357,8 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
   #toast{top:calc(env(safe-area-inset-top,0px) + 10px);max-width:44vw}
   .hud-orders{left:calc(env(safe-area-inset-left,0px) + 8px);right:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);align-items:flex-start}
   .hud-orders .ctl{flex-direction:column;align-items:stretch}
-  .hud-orders .ctl.orders2{flex-direction:row;flex-wrap:wrap;max-width:190px}
+  .hud-orders .ctl.orders2{flex-direction:row;flex-wrap:wrap;max-width:200px}
+  #ctxHint{text-align:left;max-width:200px;border-radius:12px}
   .seg{flex-direction:column;border-radius:12px}.seg button{border-radius:9px}
   .hud-spawn{left:auto;right:calc(env(safe-area-inset-right,0px) + 8px);margin:0;grid-template-columns:1fr;width:168px;gap:5px}
   .hud-spawn .spawn .main{padding-top:3px!important;padding-bottom:4px!important}
@@ -412,12 +415,13 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
           <button class="mv" id="modeMv" aria-pressed="false">Laufen</button>
         </div>
       </div>
+      <div id="ctxHint" class="panel"></div>
       <div class="ctl orders2">
         <button class="chip panel" data-sel="all">Alle</button>
         <button class="chip panel" data-sel="melee">Nah</button>
         <button class="chip panel" data-sel="ranged">Fern</button>
         <button class="chip panel" data-sel="cav">Reiter</button>
-        <button class="chip panel" data-sel="none" aria-label="Auswahl aufheben"><svg class="si" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button>
+        <button class="chip panel" data-sel="none" aria-label="Auswahl aufheben"><svg class="si" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Abwählen</button>
         <button class="chip panel" id="rallyBtn" aria-pressed="false" aria-label="Sammelfahne versetzen"><span id="rallyIco"></span>Fahne</button>
         <span id="selCount">0</span>
       </div>
@@ -601,6 +605,8 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
       <div class="stats"><div><b id="stTime">0:00</b><span>Dauer</span></div><div><b id="stKills">0</b><span>Besiegt</span></div><div><b id="stFlags">0</b><span>Max. Fahnen</span></div></div>
       <div class="cmp" id="endCmp"></div>
       <button class="btn gold" id="btnAgain">Revanche auf neuer Karte</button>
+      <button class="btn gold" id="btnRematch" hidden>Noch eine Runde!</button>
+      <p class="note" id="rematchNote" hidden></p>
       <button class="btn" id="btnMenu">Zum Menü</button>
     </div>
   </div>
@@ -705,14 +711,14 @@ const ICON = {
    GAME DATA
    ===================================================================== */
 const KINDS = [
-  { key:'berserker', fac:'viking',  role:'melee',  name:'Berserker',      hp:125, dmg:18, cd:0.95, range:1.5, aggro:8,  speed:5.0, cost:55, build:1.3, r:0.5,  sp:'Raserei', trait:'Blutrausch: nach jedem Sieg schlägt er kurz schneller' },
+  { key:'berserker', fac:'viking',  role:'melee',  name:'Berserker',      hp:125, dmg:18, cd:0.95, range:1.5, aggro:8,  speed:5.0, cost:55, build:1.3, r:0.5,  sp:'Raserei + Wurf', trait:'Blutrausch: nach jedem Sieg schlägt er kurz schneller. Spezial: packt den Vordermann und wirft ihn in seine Kumpels' },
   { key:'bogen',     fac:'viking',  role:'ranged', name:'Bogenschützin',  hp:76,  dmg:14, cd:1.2,  range:14,  aggro:16, speed:4.0, cost:60, build:1.45, r:0.5,  sp:'Pfeilfächer', proj:'arrow', pspeed:26, trait:'Weitschuss: größte Reichweite' },
   { key:'opa',       fac:'rentner', role:'melee',  name:'Krückstock-Opa', hp:175, dmg:15, cd:1.0,  range:1.5, aggro:8,  speed:4.4, cost:55, build:1.3, r:0.5,  sp:'Stockwirbel', trait:'Standfest: lässt sich kaum wegstoßen' },
   { key:'oma',       fac:'rentner', role:'ranged', name:'Gebiss-Oma',     hp:90,  dmg:12, cd:1.2,  range:12,  aggro:14, speed:3.9, cost:60, build:1.45, r:0.5,  sp:'Gebiss-Salve', proj:'teeth', pspeed:17, trait:'Klebegebiss: Treffer bremsen Gegner' },
-  { key:'ziege',     fac:'viking',  role:'cav',    name:'Ziegenreiter',   hp:135, dmg:16, cd:1.0,  range:1.8, aggro:10, speed:7.0, cost:75, build:1.8, r:0.75, sp:'Ramm-Anlauf', trait:'Hörnerstoß: Anlauf-Treffer schleudern Gegner weg' },
+  { key:'ziege',     fac:'viking',  role:'cav',    name:'Ziegenreiter',   hp:135, dmg:16, cd:1.0,  range:1.8, aggro:10, speed:7.0, cost:75, build:1.8, r:0.75, sp:'Ramm-Anlauf', trait:'Hörnerstoß: Anlauf-Treffer schleudern Gegner weg. Fliegende Körper kegeln alle um, die im Weg stehen' },
   { key:'rollator',  fac:'rentner', role:'cav',    name:'Rollator-Raser', hp:134, dmg:16, cd:1.0,  range:1.8, aggro:10, speed:7.8, cost:75, build:1.8, r:0.75, sp:'Turbo', trait:'Vollgas: schnellste Einheit, Anlauf trifft besonders hart' },
-  { key:'katapult',  fac:'viking',  role:'siege',  name:'Wikinger-Katapult', hp:700, dmg:70, cd:4.2, range:21, aggro:23, speed:1.8, cost:220, build:5, r:1.4, sp:'', proj:'boulder', pspeed:14, aoe:4.2 },
-  { key:'torte',     fac:'rentner', role:'siege',  name:'Torten-Katapult',   hp:700, dmg:70, cd:4.2, range:21, aggro:23, speed:1.8, cost:220, build:5, r:1.4, sp:'', proj:'cake', pspeed:14, aoe:4.2 },
+  { key:'katapult',  fac:'viking',  role:'siege',  name:'Wikinger-Katapult', hp:700, dmg:70, cd:4.2, range:21, aggro:23, speed:1.8, cost:220, build:5, r:1.4, sp:'', proj:'boulder', pspeed:14, aoe:4.2, trait:'Der Fels rollt nach dem Einschlag weiter und walzt alles um' },
+  { key:'torte',     fac:'rentner', role:'siege',  name:'Torten-Katapult',   hp:700, dmg:70, cd:4.2, range:21, aggro:23, speed:1.8, cost:220, build:5, r:1.4, sp:'', proj:'cake', pspeed:14, aoe:4.2, trait:'Hinterlässt eine Sahnepfütze: Wer drin steht, kommt kaum voran' },
   { key:'baerv', fac:'viking', role:'melee', bear:true, name:'Eisbär', hp:460, dmg:26, cd:1.15, range:2.0, aggro:10, speed:4.8, cost:0, build:0, r:0.95, sp:'Bärenklauen' },
   { key:'baerr', fac:'rentner', role:'melee', bear:true, name:'Eisbär', hp:460, dmg:26, cd:1.15, range:2.0, aggro:10, speed:4.8, cost:0, build:0, r:0.95, sp:'Bärenklauen' },
 ];
@@ -777,7 +783,7 @@ const QUOTES = {
   7:{ spawn:['Wer bestellt Torte?','Frisch gebacken und geschleudert!'], die:['Die Sahne ist sauer…'], hit:['SPLATSCH!','SAHNE!'] },
   5:{ spawn:['Platz da, ich hab Vorfahrt!','Tempo 6 war gestern!','Turbo an!'], die:['Der TÜV hatte recht…'], hit:['HUP HUP!','RUMMS!'] },
 };
-const SP_WORD = { 0:'RASEREI!', 1:'PFEILFÄCHER!', 2:'STOCKWIRBEL!', 3:'GEBISS-SALVE!', 4:'MÄÄÄÄH!', 5:'HUP HUP!', 8:'BÄRENKLAUEN!', 9:'BÄRENKLAUEN!' };
+const SP_WORD = { 0:'RASEREI! WURF!', 1:'PFEILFÄCHER!', 2:'STOCKWIRBEL!', 3:'GEBISS-SALVE!', 4:'MÄÄÄÄH!', 5:'HUP HUP!', 8:'BÄRENKLAUEN!', 9:'BÄRENKLAUEN!' };
 
 /* =====================================================================
    MAP GENERATION (deterministic from a seed, point-symmetric)
@@ -1160,7 +1166,7 @@ function newGame(facs, seed, chaos, opts = {}) {
     chaos:!!chaos, offerN:0, nextOffer:0.3, pz:0, fb:[], fbId:0, fp:[], fpId:0, teams:[0,1].map(i => ({ pk:{}, offer:null, offerDl:0, pkN:0, lastPk:null, fireT:0, hq:[], hqS:0, autoI:0, fac:facs[i], gold:CFG.startGold, q:[], qt:0, rally:rallyDefault(i), hp:CFG.baseHp, tcd:1, tatk:0, ttgt:-1, kills:0, maxFlags:0, auto:{}, pos:null, posIn:null, rush:0, rushAt:[0, 0], incMul:1 })),
     units:[], flags:FLAGS.map(() => ({ owner:-1, p:0 })), proj:[], items:[], itemT:22, itemId:0, pe:[], peS:0, bears:(MAP.bears || []).map((b, i) => ({ id:i, x:b.x, z:b.z, hx:b.x, hz:b.z, yaw:0, cd:0, atk:0, mv:0, wt:Math.random() * 3, hp:520, mhp:520 })) };
   G.st = [0, 1].map(() => ({ made:0, lost:0, baseDmg:0, flagT:0, leadT:0, rams:0, cliff:0, bears:0, cats:0, holes:0, egoKills:0 }));
-  G.hl = []; G.hlS = 0; G.phase = 0;
+  G.hl = []; G.hlS = 0; G.phase = 0; G.rolls = []; G.goo = []; G.rollId = 0; G.gooId = 0;
   if (opts.squad !== false) for (let i = 0; i < 2; i++) { const ks = FAC[facs[i]].kinds; [ks[0], ks[0], ks[1]].forEach(k => spawnUnit(G, i, k)); }
   return G;
 }
@@ -1434,7 +1440,7 @@ function possAttack(G, u, byId) {
     const In = G.teams[u.team].posIn; let tx = u.x + Math.sin(u.yaw) * 12, tz = u.z + Math.cos(u.yaw) * 12;
     if (In && Array.isArray(In.gp) && In.gp.every(Number.isFinite)) { tx = In.gp[0]; tz = In.gp[1]; }
     const dx = tx - u.x, dz = tz - u.z, dd = Math.hypot(dx, dz) || 1, R = K.range + 9; if (dd > R) { tx = u.x + dx / dd * R; tz = u.z + dz / dd * R; }
-    const dist = Math.min(dd, R), hp0 = siegeImpact(u.team, u.x, u.z, tx, tz); tx = hp0.tx; tz = hp0.tz; G.proj.push({ t:Math.max(0.5, dist / K.pspeed) * Math.max(0.35, hp0.k), dmg:K.dmg * 1.6, tgt:-1, team:u.team, k:u.k, aoe:K.aoe * 1.15, tx, tz, bp:true });
+    const dist = Math.min(dd, R), hp0 = siegeImpact(u.team, u.x, u.z, tx, tz); tx = hp0.tx; tz = hp0.tz; G.proj.push({ sx:u.x, sz:u.z, t:Math.max(0.5, dist / K.pspeed) * Math.max(0.35, hp0.k), dmg:K.dmg * 1.6, tgt:-1, team:u.team, k:u.k, aoe:K.aoe * 1.15, tx, tz, bp:true });
     u.at = -4; u.shot = [Math.round(tx * 10), Math.round(tz * 10)]; u.run = 0; return;
   }
   if (K.role === 'ranged' && u.aim) {
@@ -1460,12 +1466,12 @@ function possSpecial(G, u, byId) {
   if (K.role === 'siege') {
     const In = G.teams[u.team].posIn; let tx = u.x + Math.sin(u.yaw) * 12, tz = u.z + Math.cos(u.yaw) * 12;
     if (In && Array.isArray(In.gp) && In.gp.every(Number.isFinite)) { tx = In.gp[0]; tz = In.gp[1]; }
-    for (let i = 0; i < 3; i++) { const a = i / 3 * TAU, hq = siegeImpact(u.team, u.x, u.z, tx + Math.cos(a) * 3, tz + Math.sin(a) * 3); G.proj.push({ t:(0.9 + i * 0.25) * Math.max(0.5, hq.k), dmg:K.dmg * 0.95, tgt:-1, team:u.team, k:u.k, aoe:K.aoe * 0.8, tx:hq.tx, tz:hq.tz, bp:true }); }
+    for (let i = 0; i < 3; i++) { const a = i / 3 * TAU, hq = siegeImpact(u.team, u.x, u.z, tx + Math.cos(a) * 3, tz + Math.sin(a) * 3); G.proj.push({ sx:u.x, sz:u.z, t:(0.9 + i * 0.25) * Math.max(0.5, hq.k), dmg:K.dmg * 0.95, tgt:-1, team:u.team, k:u.k, aoe:K.aoe * 0.8, tx:hq.tx, tz:hq.tz, bp:true }); }
     u.spcd = 14 * pk(G, u.team, 'charge', [1, 0.34]);
     u.shot = [Math.round(tx * 10), Math.round(tz * 10)]; return;
   }
   if (K.bear) { u.clawT = 1.25; u.clawP = 0; u.spcd = 6; return; }
-  if (u.k === 0) u.rage = pk(G, u.team, 'walhalla', [4, 10]);
+  if (u.k === 0) { u.rage = pk(G, u.team, 'walhalla', [4, 10]); const fx0 = Math.sin(u.yaw), fz0 = Math.cos(u.yaw); enemiesInCone(G, u, 2.8, 0.95).filter(c => KINDS[c.e.k].role !== 'siege').slice(0, 1).forEach(c => { hit(G, c.e.id, 22, u.team, byId, u.k, true); c.e.kbT = G.t; c.e.kbTeam = u.team; knockFly(c.e, 0, 0, 10, fx0, fz0, 4.8); }); } // Viking throw: whoever stands in front is hurled away and bowls through his friends
   else if ((u.k === 1 || u.k === 3) && u.aim) {
     const vl = pkL(G, u.team, 'volley'), [ax, ay, az] = u.aim, n = (u.k === 1 ? 5 : 6) + 5 * vl, spread = vl ? 0.05 : (u.k === 1 ? 0.075 : 0.11);
     for (let i = 0; i < n; i++) { const a = (i - (n - 1) / 2) * spread, c = Math.cos(a), sn = Math.sin(a), dx = ax * c + az * sn, dz = -ax * sn + az * c; G.fpId = (G.fpId + 1) % 10000; G.fp.push({ id:G.fpId, x:u.x + dx * 0.5, y:u.y + 1.9 + ay * 0.5, z:u.z + dz * 0.5, dx, dy:ay + (i % 2 ? 0.02 : -0.01), dz, t:K.range * 2.2 / CFG.arrowSpeed, team:u.team, k:u.k, dmg:u.k === 1 ? 24 : 26, nb:vl ? 1 : 0 }); }
@@ -1661,10 +1667,56 @@ function iceStep(G) {
     if (u.cold > 0) { u.cold -= DT; u.hp -= 6 * DT * arm; u.hurt = Math.max(u.hurt || 0, 0.5); }
   }
 }
+/* ---------- Kegeln: a body that was knocked flying bowls over everyone it hits ----------
+   Rule (same for both sides): a flying body moving faster than 4 m/s knocks every standing unit it touches down and
+   sends it flying a bit too, losing a third of its own speed per hit. Chains of 3+ are a STRIKE highlight. */
+function bowlStep(G) {
+  for (const u of G.units) {
+    const a = u.air; if (!a || a.kind !== 'impact' || u.hp <= 0) continue;
+    const sp = Math.hypot(a.vx, a.vz); if (sp < 4) continue;
+    const ru = KINDS[u.k].r;
+    for (const e of G.units) {
+      if (e === u || e.hp <= 0 || e.air || e.pj || e.down > 0 || e.tutDummy && !e.tutPush) continue;
+      if (KINDS[e.k].role === 'siege') continue;
+      const dx = e.x - u.x, dz = e.z - u.z, rr = ru + KINDS[e.k].r + 0.35; if (dx * dx + dz * dz > rr * rr || Math.abs((e.y || 0) - a.y) > 1.6) continue;
+      const d = Math.hypot(dx, dz) || 1, push = Math.min(7, 2.5 + sp * 0.45);
+      e.bowledBy = u.id; e.kbT = G.t; e.kbTeam = u.kbTeam;
+      knockFly(e, 0, 0, push, a.vx / sp + dx / d * 0.35, a.vz / sp + dz / d * 0.35, 2.6 + Math.min(1.5, sp * 0.1));
+      e.hp -= 8; e.hurt = 2; e.kbN = ((e.kbN || 0) + 1) % 100; G.st && u.kbTeam !== undefined && u.kbTeam !== e.team && G.st[u.kbTeam].rams++;
+      a.vx *= 0.66; a.vz *= 0.66;
+      const chain = (u.bowl || 0) + 1; e.bowl = chain; u.bowl = chain; // chain length travels with the bodies
+      if (chain >= 3 && (chain === 3 || chain === 5 || chain === 8) && u.kbTeam !== undefined) highlight(G, 'strike', u.kbTeam, chain, e.x, e.z);
+      if (Math.hypot(a.vx, a.vz) < 4) break;
+    }
+  }
+  for (const u of G.units) if (!u.air && u.bowl && !(u.down > 0)) u.bowl = 0;
+}
+/* ---------- Rolling boulders (Viking catapult): the rock keeps rolling after impact and bowls through ---------- */
+function rollStep(G) {
+  if (!G.rolls || !G.rolls.length) return;
+  for (let i = G.rolls.length - 1; i >= 0; i--) {
+    const r = G.rolls[i]; r.t += DT; r.v = Math.max(0, r.v - 4.5 * DT); r.ang += r.v * DT / 0.9;
+    const nx = r.x + r.dx * r.v * DT, nz = r.z + r.dz * r.v * DT;
+    const stop = r.v < 0.6 || !walkable(nx, nz) || fallZone(nx, nz) || inWater(nx, nz) || unitY(nx, nz) - unitY(r.x, r.z) > 0.6 * r.v * DT + 0.25;
+    if (!stop) { r.x = nx; r.z = nz; }
+    for (const e of G.units) { if (e.hp <= 0 || e.air || e.pj || e.down > 0 || KINDS[e.k].role === 'siege') continue; const dx = e.x - r.x, dz = e.z - r.z; if (dx * dx + dz * dz > (1.5 + KINDS[e.k].r) ** 2) continue;
+      e.kbT = G.t; e.kbTeam = r.team; knockFly(e, 0, 0, 3 + r.v * 0.3, r.dx + dx * 0.2, r.dz + dz * 0.2, 3.5); e.hp -= 14 * (e.team === r.team ? 0.5 : 1); e.hurt = 2; e.kbN = ((e.kbN || 0) + 1) % 100; e.bowl = (e.bowl || 0) + 1; r.v *= 0.8; r.hits++; if (r.hits === 3) highlight(G, 'boulder', r.team, 3, r.x, r.z); }
+    if (stop || r.t > 4) { r.dead = (r.dead || 0) + DT; if (r.dead > 0.6) G.rolls.splice(i, 1); else r.v = 0; }
+  }
+}
+/* ---------- Cream puddles (pensioner cake catapult): sticky ground, everyone wades slowly ---------- */
+function gooStep(G) {
+  if (!G.goo || !G.goo.length) return;
+  for (let i = G.goo.length - 1; i >= 0; i--) {
+    const g = G.goo[i]; g.t -= DT; if (g.t <= 0) { G.goo.splice(i, 1); continue; }
+    for (const e of G.units) { if (e.hp <= 0 || e.air || e.pj || KINDS[e.k].role === 'siege') continue; const dx = e.x - g.x, dz = e.z - g.z; if (dx * dx + dz * dz < g.r * g.r) { e.slowT = Math.max(e.slowT || 0, 0.3); e.gooed = 1; } }
+  }
+}
 function worldStep(G, byId) {
   if (MAP.frozen || (G.holes && G.holes.length)) iceStep(G);
   if (MAP.pads && MAP.pads.length) padStep(G);
   if (G.gr) { for (const g of G.gr) { g.t -= DT; if (g.t <= 0) { let n = 0; for (const e of G.units) if (e.team !== g.team && e.hp > 0 && (e.x - g.x) ** 2 + (e.z - g.z) ** 2 < 25) { e.dance = 7.5; e.tgt = -1; n++; } G.geS = ((G.geS || 0) + 1) % 10000; (G.ge || (G.ge = [])).push([G.geS, g.team, n]); if (G.ge.length > 6) G.ge.shift(); } } G.gr = G.gr.filter(g => g.t > 0); }
+  bowlStep(G); rollStep(G); gooStep(G);
   // One authoritative trajectory owns airborne x/y/z until actual impact.
   for (const u of G.units) if (u.air && u.hp > 0) { const landed = airStep(u, DT), input = G.teams[u.team].posIn; if (landed && u.poss && input && input.id === u.id) G.teams[u.team].posIn = { ...input, x:u.x, z:u.z, flying:false, air:u.airAck, av:undefined }; }
   // cacti prick
@@ -1734,7 +1786,7 @@ function step(G) {
       if (u.down <= 0) { u.kb = null; u.re = 0; u.path = null; }
       continue;
     }
-    if (u.wind) { u.wind.t -= DT; if (u.wind.t <= 0) { const w = u.wind, dd = Math.hypot(w.tx - u.x, w.tz - u.z), hw = siegeImpact(u.team, u.x, u.z, w.tx, w.tz); G.proj.push({ t:Math.max(0.6, dd / K.pspeed) * Math.max(0.4, hw.k), dmg:K.dmg * (u.chick > 0 ? 0.6 : 1), tgt:w.tgt, team:u.team, k:u.k, aoe:K.aoe, tx:hw.tx, tz:hw.tz }); u.wind = null; } continue; }
+    if (u.wind) { u.wind.t -= DT; if (u.wind.t <= 0) { const w = u.wind, dd = Math.hypot(w.tx - u.x, w.tz - u.z), hw = siegeImpact(u.team, u.x, u.z, w.tx, w.tz); G.proj.push({ sx:u.x, sz:u.z, t:Math.max(0.6, dd / K.pspeed) * Math.max(0.4, hw.k), dmg:K.dmg * (u.chick > 0 ? 0.6 : 1), tgt:w.tgt, team:u.team, k:u.k, aoe:K.aoe, tx:hw.tx, tz:hw.tz }); u.wind = null; } continue; }
     if (u.hp < maxHp(u) && (u.x - BASES[u.team].x) ** 2 + (u.z - BASES[u.team].z) ** 2 < CFG.healR * CFG.healR) u.hp = Math.min(maxHp(u), u.hp + CFG.heal * DT);
     if (G.chaos && pkL(G, u.team, 'heal')) u.hp = Math.min(maxHp(u), u.hp + 5 * DT);
     const hurt = u.hurt > 0, leash = hurt ? CFG.leash + 12 : CFG.leash, scan = (hurt ? Math.max(K.aggro, 13.5) : K.aggro) + desertRange(K);
@@ -1769,7 +1821,7 @@ function step(G) {
           const hm = homeMul(G, u);
           if (u.tgt === -3) { const b = G.bears.find(o => o.id === u.btg); u.at = -3; if (K.proj) G.proj.push({ t:dist / K.pspeed, dmg:K.dmg, tgt:-3, bear:u.btg, team:u.team, k:u.k, aoe:K.aoe, tx, tz }); else hitBear(G, b, K.dmg * charge, u.team, u.k); }
           else if (K.proj && K.role === 'siege') u.wind = { t:SIEGE_WIND, tx, tz, tgt:u.at }; // the arm winds up first: everyone can see it coming
-          else if (K.proj) G.proj.push({ t:dist / K.pspeed, dmg:K.dmg * hm * (u.chick > 0 ? 0.6 : 1), tgt:u.at, team:u.team, k:u.k, aoe:K.aoe, tx, tz });
+          else if (K.proj) G.proj.push({ sx:u.x, sz:u.z, t:dist / K.pspeed, dmg:K.dmg * hm * (u.chick > 0 ? 0.6 : 1), tgt:u.at, team:u.team, k:u.k, aoe:K.aoe, tx, tz });
           else { hit(G, u.at, K.dmg * hm * charge * (u.chick > 0 ? 0.6 : 1), u.team, byId, u.k); traitHit(G, u, tgt, charge > 1); }
           u.run = 0;
         }
@@ -1826,7 +1878,10 @@ function step(G) {
         const core = 0.6 + KINDS[e.k].r; if (dd < core && KINDS[e.k].role === 'siege') { e.squash = 0; hit(G, e.id, maxHp(e) * 0.5 / (e.poss ? CFG.possArmor : 1), p.team, byId, -1, p.bp); continue; }
         if (dd < core) { e.squash = 1; hit(G, e.id, e.hp * 10 + 9999, p.team, byId, -1, p.bp); continue; }
         const f = 1 - (dd - core) / Math.max(0.5, p.aoe - core); hit(G, e.id, p.dmg * (0.2 + 1.3 * f * f), p.team, byId, p.k, p.bp); } const eb = BASES[1 - p.team]; if (baseGap(eb, p.tx, p.tz) < p.aoe) hit(G, -2, p.dmg, p.team, byId, p.k);
-      if (sg && MAP.ice) iceImpact(G, p.tx, p.tz, clamp(p.aoe * 0.48, 1.4, 2.4), p.team); }
+      if (sg && MAP.ice) iceImpact(G, p.tx, p.tz, clamp(p.aoe * 0.48, 1.4, 2.4), p.team);
+      if (sg && !p.bp) { const K = KINDS[p.k], sx = p.sx ?? BASES[p.team].x, sz = p.sz ?? BASES[p.team].z, ddx = p.tx - sx, ddz = p.tz - sz, dl = Math.hypot(ddx, ddz) || 1; // the shot's direction decides where the rock rolls on
+        if (K.proj === 'boulder' && walkable(p.tx, p.tz) && !(MAP.ice && onIce(p.tx, p.tz))) G.rolls.push({ id:(G.rollId = (G.rollId + 1) % 1000), x:p.tx, z:p.tz, dx:ddx / dl, dz:ddz / dl, v:11, t:0, ang:0, team:p.team, hits:0 });
+        else if (K.proj === 'cake') G.goo.push({ id:(G.gooId = (G.gooId + 1) % 1000), x:p.tx, z:p.tz, r:3.6, t:9, t0:9, team:p.team }); } }
     else hit(G, p.tgt, p.dmg, p.team, byId, p.k, p.bp); }
   for (const p of G.fp) {
     const n = 8, sd = CFG.arrowSpeed * DT / n, eb = BASES[1 - p.team];
@@ -1903,6 +1958,7 @@ function snapOf(G) {
     sp:G.proj.filter(p => p.aoe && KINDS[p.k] && KINDS[p.k].role === 'siege').map(p => [Math.round(p.tx * 10), Math.round(p.tz * 10), Math.round(p.t * 10), p.team, Math.round(p.aoe * 10)]),
     ...(G.chaos ? { ch:1, pk:[Object.assign({}, T0.pk), Object.assign({}, T1.pk)], of:[T0.offer, T1.offer], pn:[T0.pkN, T1.pkN], lp:[T0.lastPk, T1.lastPk], no:Math.max(0, Math.ceil(G.nextOffer - G.t)), on:G.offerN, pz:Math.ceil(G.pz), fb:G.fb.map(b => [b.id, Math.round(b.x * 10), Math.round(b.z * 10), Math.round(b.t * 10), b.team, b.lvl]) } : {}),
     gr:(G.gr || []).map(g => [g.id, Math.round(g.x * 10), Math.round(g.z * 10), Math.round(g.sx * 10), Math.round(g.sz * 10), Math.round(g.t * 10), g.team, Math.round((g.t0 || 1) * 10)]),
+    ro:(G.rolls || []).map(r => [r.id, Math.round(r.x * 10), Math.round(r.z * 10), Math.round(r.ang * 100), r.v > 0 ? 1 : 0, Math.round(r.dx * 100), Math.round(r.dz * 100)]), go:(G.goo || []).map(g => [g.id, Math.round(g.x * 10), Math.round(g.z * 10), Math.round(g.r * 10), Math.round(g.t * 10), Math.round(g.t0 * 10)]),
     hq:[T0.hq.slice(), T1.hq.slice()], dz:G.dz ? G.dz.slice() : [], ge:G.ge ? G.ge.slice() : [], it:(G.items || []).map(i => [i.id, i.ty, Math.round(i.x * 10), Math.round(i.z * 10)]), nd:[T0.nades || 0, T1.nades || 0], pe:G.pe ? G.pe.slice() : [], ct:G.ct ? G.ct.slice() : [], br:(G.bears || []).map(b => [Math.round(b.x * 10), Math.round(b.z * 10), Math.round(b.yaw * 100), b.atk, b.mv, Math.round(b.hp / b.mhp * 100), b.id, b.tameTeam === undefined ? 0 : Math.round(b.tameT * 100) + 1, b.tameTeam === undefined ? 0 : b.tameTeam + 1, b.raise || 0]), bev:G.bev ? G.bev.slice() : [], pj:G.units.filter(u => u.pj).map(u => [u.id, Math.round(u.pj.sx * 10), Math.round(u.pj.sz * 10), Math.round(u.pj.tx * 10), Math.round(u.pj.tz * 10), Math.round(u.pj.t * 100), u.pj.ack]), pd:(G.padSt || []).map(st => [st.n, Math.ceil(st.cd * 10), st.arm > 0 ? 1 : 0]), fz:G.units.filter(u => u.fall > 0).map(u => u.id), af:G.units.filter(u => u.air).map(u => [u.id, Math.round(u.x * 10), Math.round(u.y * 10), Math.round(u.z * 10), Math.round(u.air.vx * 100), Math.round(u.air.vy * 100), Math.round(u.air.vz * 100), u.air.kind === 'dash' ? 1 : u.air.kind === 'impact' ? 2 : 0, u.airAck]), ih:(G.holes || []).map(h => [h.id, Math.round(h.x * 10), Math.round(h.z * 10), Math.round((h.r || 1.14) * 10)]), ic:G.units.filter(u => u.slipT > 0 || u.inHole || u.cold > 0).map(u => [u.id, (u.slipT > 0 ? 1 : 0) | (u.inHole ? 2 : 0) | (u.cold > 0 ? 4 : 0)]), fp:G.fp.map(p => [p.id, Math.round(p.x * 10), Math.round(p.y * 10), Math.round(p.z * 10), Math.round(p.dx * 100), Math.round(p.dy * 100), Math.round(p.dz * 100), p.team, p.k]),
     u:G.units.map(u => { const e = [u.id, u.k, Math.round(u.x * 10), Math.round(u.z * 10), Math.max(1, Math.round(u.hp / maxHp(u) * 100)), u.at, u.atk, (u.poss ? 1 : 0) | (u.down > 0 ? 2 : 0) | (u.bite > 0 ? 4 : 0) | (u.dance > 0 ? 8 : 0) | (u.chick > 0 ? 16 : 0) | (u.jumpT > 0 ? 32 : 0) | (u.frenzy > 0 ? 64 : 0) | (u.slowT > 0 ? 128 : 0) | ((u.kbN || 0) << 8)];
       if (u.poss) e.push(u.sp, Math.round(u.yaw * 100), u.rage > 0 ? 1 : 0, Math.max(0, Math.ceil(u.spcd * 10)), u.spm ? 1 : 0, u.shot ? u.shot[0] : 0, u.shot ? u.shot[1] : 0, u.padAck || 0, u.airAck || 0); return e; }),
@@ -2319,8 +2375,8 @@ scene.background = SKY;
 const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
 scene.fog = new THREE.Fog(lin(0xd7e8ef), 140, 340);
 const camera = new THREE.PerspectiveCamera(46, 1, 0.3, 600);
-scene.add(new THREE.HemisphereLight(lin(0xcfe4ff), lin(0x74836a), 0.8));
-const sun = new THREE.DirectionalLight(lin(0xffe4c6), 1.16);
+scene.add(new THREE.HemisphereLight(lin(0xbfd8ff), lin(0x6e7a62), 0.72));
+const sun = new THREE.DirectionalLight(lin(0xffe2b8), 1.3);
 sun.castShadow = true; sun.shadow.mapSize.set(COARSE ? 1024 : 2048, COARSE ? 1024 : 2048);
 Object.assign(sun.shadow.camera, { left:-38, right:38, top:38, bottom:-38, near:1, far:160 }); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.045; sun.shadow.radius = 2;
 scene.add(sun, sun.target);
@@ -2333,7 +2389,16 @@ const clouds = (() => {
   return list;
 })();
 const matCache = {};
+/* ART STYLE: "Kinderbuch-Diorama". Flat, saturated colours, cel shading with a soft 4-step ramp, warm sun + cool sky fill,
+   dark ink outlines on figures, hand-drawn-style textures. Every lit surface uses the same toon ramp so units,
+   terrain and props read as one world. */
+const TOON_RAMP = (() => { const c = cnv(8, 1), x = c.getContext('2d'); [[0, 0, 0.44], [0.38, 0.5, 0.64], [0.62, 0.72, 0.86], [0.8, 1, 1]].forEach(([a, b, v]) => { x.fillStyle = `rgb(${v * 255 | 0},${v * 255 | 0},${v * 255 | 0})`; x.fillRect(Math.round(a * 8), 0, Math.max(1, Math.round((b - a) * 8)), 1); }); const t = new THREE.CanvasTexture(c); t.minFilter = t.magFilter = THREE.NearestFilter; t.generateMipmaps = false; return t; })();
+const TOON = true;
+THREE.MeshLambertMaterial = (Lam => function (o = {}) { if (!TOON || o.noToon) return new Lam(o); const m = new THREE.MeshToonMaterial(Object.assign({ gradientMap:TOON_RAMP }, o)); m.isLitFlat = true; return m; })(THREE.MeshLambertMaterial); // every Lambert in the file becomes cel-shaded
 const lam = c => matCache[c] || (matCache[c] = new THREE.MeshLambertMaterial({ color:lin(c) }));
+// Ink outline: the same instances drawn once more, back faces only, pushed out along the normals (shares the matrix buffer)
+const INK = new THREE.MeshBasicMaterial({ color:lin(0x1c1526), side:THREE.BackSide }); INK.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(normal) * 0.028;'); }; INK.customProgramCacheKey = () => 'ink';
+function inkify(root) { const add = []; root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !o.userData.isInk && o.material && !o.material.transparent) add.push(o); }); for (const o of add) { const c = new THREE.Mesh(o.geometry, INK); c.userData.isInk = true; c.renderOrder = -1; o.add(c); } return root; } // outlines for the few non-instanced figures (catapults, bears, bases)
 const basic = (c, o = 1) => new THREE.MeshBasicMaterial({ color:lin(c), transparent:o < 1, opacity:o, depthWrite:o >= 1 });
 const ctex = c => { const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t; };
 function mesh(geo, mat, x = 0, y = 0, z = 0, parent) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); if (parent) parent.add(m); return m; }
@@ -2406,15 +2471,15 @@ function buildMapView(m) {
       if (Math.random() < 2) mesh(new THREE.SphereGeometry(0.1, 6, 5), lam(0xff5f8f), 0.05, 2.45, 0.05, g); return g; })();
     const qy = new THREE.Quaternion(), yAx = new THREE.Vector3(0, 1, 0), pv = new THREE.Vector3(), sv = new THREE.Vector3();
     const placeY = (x, z, s, a, y0 = 0) => (t, i, m4) => { qy.setFromAxisAngle(yAx, a(t)); m4.compose(pv.set(x(t), sampleH(m, x(t), z(t)) + y0, z(t)), qy, sv.setScalar(s(t))); return false; };
-    chunkedInstances(bakeTemplate(cactGeo), [...(m.cacti || []), ...cdeco.map(t => ({ x:t.x, z:t.z, s:t.s }))], placeY(t => t.x, t => t.z, t => t.s, t => t.x * 3.1), { shadowTier:1 });
+    chunkedInstances(bakeTemplate(cactGeo), [...(m.cacti || []), ...cdeco.map(t => ({ x:t.x, z:t.z, s:t.s }))], placeY(t => t.x, t => t.z, t => t.s, t => t.x * 3.1), { shadowTier:1, ink:true });
     const palmGeo = (() => { const g = new THREE.Group(); for (let k = 0; k < 6; k++) { const seg = mesh(new THREE.CylinderGeometry(0.15 - k * 0.012, 0.18 - k * 0.012, 0.6, 7), lam(0x8b6a43), k * 0.07, 0.3 + k * 0.56, 0, g); seg.rotation.z = -0.12; }
       for (let k = 0; k < 7; k++) { const a = k / 7 * TAU, lf = mesh(new THREE.ConeGeometry(0.28, 2.2, 4).rotateX(Math.PI / 2).translate(0, 0, 1.1), lam(0x4f9a3a), 0.42, 3.4, 0, g); lf.rotation.y = a; lf.rotation.x = 0.55; lf.scale.set(1, 0.25, 1); } return g; })();
-    chunkedInstances(bakeTemplate(palmGeo), palms, placeY(t => t.x, t => t.z, t => t.s, t => t.z * 2.3), { shadowTier:1 });
+    chunkedInstances(bakeTemplate(palmGeo), palms, placeY(t => t.x, t => t.z, t => t.s, t => t.z * 2.3), { shadowTier:1, ink:true });
     const iglooGeo = (() => { const g = new THREE.Group(), snow = lam(0xf4f8fb), sh = lam(0xdfe8ef);
       mesh(new THREE.SphereGeometry(1.8, 16, 10, 0, TAU, 0, Math.PI / 2), snow, 0, 0, 0, g);
       for (let k = 1; k < 4; k++) mesh(new THREE.TorusGeometry(1.8 * Math.cos(k * 0.38), 0.03, 4, 28).rotateX(Math.PI / 2), sh, 0, 1.8 * Math.sin(k * 0.38), 0, g);
       const tun = mesh(new THREE.CylinderGeometry(0.75, 0.75, 1.4, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), snow, 0, 0, 1.8, g); mesh(new THREE.CircleGeometry(0.55, 12, 0, Math.PI), lam(0x2a3442), 0, 0.02, 2.51, g); return g; })();
-    chunkedInstances(bakeTemplate(iglooGeo), [...(m.igloos || []), ...idec.map(t => ({ x:t.x, z:t.z, a:t.x }))], placeY(t => t.x, t => t.z, () => 1, t => t.a), { recv:true });
+    chunkedInstances(bakeTemplate(iglooGeo), [...(m.igloos || []), ...idec.map(t => ({ x:t.x, z:t.z, a:t.x }))], placeY(t => t.x, t => t.z, () => 1, t => t.a), { recv:true, ink:true });
   }
   { // grass tufts and flowers
     const gr = rng(m.seed + 11), tufts = [], flowers = [];
@@ -2471,7 +2536,7 @@ function buildMapView(m) {
   { const iceR = m.rocks.filter(R => R.ice), stoneR = m.rocks.filter(R => !R.ice), qq = new THREE.Quaternion(), yA = new THREE.Vector3(0, 1, 0), pp = new THREE.Vector3(), ss = new THREE.Vector3();
     if (iceR.length) { const tpl = new THREE.Group(); for (let k = 0; k < 5; k++) { const a = k * 1.3, hgt = 1.6 + (k % 3) * 0.7, sh = mesh(flat(new THREE.ConeGeometry(0.45, hgt, 5)), iceMat, Math.cos(a) * 0.45, hgt / 2, Math.sin(a) * 0.45, tpl); sh.rotation.z = Math.cos(a) * 0.25; sh.rotation.x = Math.sin(a) * 0.25; }
       chunkedInstances(bakeTemplate(tpl), iceR, (R, i, m4) => { qq.setFromAxisAngle(yA, -R.x); m4.compose(pp.set(R.x, sampleH(m, R.x, R.z), R.z), qq, ss.setScalar(R.r)); return false; }, { recv:true }); }
-    chunkedInstances([{ geo:rockGeo, mat:lam(rockCol) }], stoneR, (R, i, m4) => { qq.setFromAxisAngle(yA, R.x); m4.compose(pp.set(R.x, sampleH(m, R.x, R.z) + R.r * 0.3, R.z), qq, ss.set(R.r * 1.1, R.r * (m.type === 'wueste' ? 1.1 : 0.8), R.r)); return false; }, { recv:true }); }
+    chunkedInstances([{ geo:rockGeo, mat:lam(rockCol) }], stoneR, (R, i, m4) => { qq.setFromAxisAngle(yA, R.x); m4.compose(pp.set(R.x, sampleH(m, R.x, R.z) + R.r * 0.3, R.z), qq, ss.set(R.r * 1.1, R.r * (m.type === 'wueste' ? 1.1 : 0.8), R.r)); return false; }, { recv:true, ink:true }); }
   if (m.lift) for (const B of m.br) {
     const br = new THREE.Group(), wood = lam(0x8a5a35), rope = lam(0xc9b48a), N = Math.ceil((B.z1 - B.z0) / 0.55);
     for (let i = 0; i <= N; i++) { const z = B.z0 + (B.z1 - B.z0) * i / N, y = deckY(B, z) - 0.08; const pl = mesh(new THREE.BoxGeometry(2.9, 0.09, 0.42), wood, B.x + (i % 2 ? 0.04 : -0.04), y, z, br); pl.rotation.y = (i % 3 - 1) * 0.03; }
@@ -2633,7 +2698,7 @@ function buildBases(facs) {
     const sh = Object.assign(buildUnit(vik ? 1 : 3), { wob:0, wobV:0, atkT:9, walk:0, speed:0, flash:0 });
     scene.remove(sh.g); sh.g.position.set(perch.x, perch.y, perch.z); perch.parent.add(sh.g);
     if (sh.blob) sh.blob.visible = false;
-    bakeTree(g, new Set(), { nocache:true, skip:new Set([sh.g]) }); shadows(g, true, true);
+    bakeTree(g, new Set(), { nocache:true, skip:new Set([sh.g]) }); shadows(g, true, true); inkify(g);
     scene.add(g); baseViews.push({ g, shake:0, smokeT:0, y:g.position.y, shooter:sh, orig, perchPath:path });
   });
 }
@@ -2694,11 +2759,12 @@ const UB = { groups:new Map(), list:[] };
 function ubRegister(u) {
   const lo = loTemplate(u.k);
   if (lo) { const a = [], b = []; u.g.traverse(m => { if (m.isMesh) a.push(m); }); lo.g.traverse(m => { if (m.isMesh) b.push(m); }); if (a.length === b.length) a.forEach((m, i) => { if (b[i].geometry !== m.geometry && b[i].material === m.material) m.userData.lo = b[i].geometry; }); }
-  u.parts = []; u.g.traverse(m => { if (!m.isMesh || m.isInstancedMesh || m === u.blob || m === u.ring || Array.isArray(m.material) || m.material.transparent) return; const g = m.geometry; if (!g.userData.sharedUnitGeo && !sharedDetailGeometries.has(g)) return; if (!g.boundingSphere) g.computeBoundingSphere(); u.parts.push(m); m.layers.set(1); });
+  u.parts = []; u.g.traverse(m => { if (!m.isMesh || m.isInstancedMesh || m.userData.isInk || m === u.blob || m === u.ring || Array.isArray(m.material) || m.material.transparent) return; const g = m.geometry; if (!g.userData.sharedUnitGeo && !sharedDetailGeometries.has(g)) return; if (!g.boundingSphere) g.computeBoundingSphere(); u.parts.push(m); m.layers.set(1); });
 }
 function ubRelease(u) { if (u.parts) { for (const m of u.parts) m.layers.set(0); u.parts = null; } }
 function ubDetach(obj) { obj.traverse(m => { if (m.isMesh) { m.layers.set(0); m.userData.ubOff = true; } }); } // a part flying off as debris renders on its own again
-function ubMake(geo, mat, cast, r, cap = 16) { const im = new THREE.InstancedMesh(geo, mat, cap); im.count = 0; im.frustumCulled = false; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.castShadow = cast; im.receiveShadow = false; im.visible = false; scene.add(im); return im; }
+function ubMake(geo, mat, cast, r, cap = 16) { const im = new THREE.InstancedMesh(geo, mat, cap); im.count = 0; im.frustumCulled = false; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.castShadow = cast; im.receiveShadow = false; im.visible = false; scene.add(im);
+  const ol = new THREE.InstancedMesh(geo, INK, cap); ol.instanceMatrix = im.instanceMatrix; ol.count = 0; ol.frustumCulled = false; ol.castShadow = false; ol.visible = false; ol.renderOrder = -1; scene.add(ol); im.userData.ol = ol; return im; }
 function ubEntry(m, near, lod) {
   const geo = lod && m.userData.lo ? m.userData.lo : m.geometry;
   let gm = UB.groups.get(geo); if (!gm) UB.groups.set(geo, gm = new Map());
@@ -2715,11 +2781,11 @@ function unitBatch() {
     for (const m of u.parts) {
       if (m.userData.ubOff || !m.visible || !m.parent || !m.parent.visible) continue;
       const e = ubEntry(m, near, lod);
-      if (e.n >= e.cap) { const im = ubMake(e.im.geometry, e.im.material, e.cast, e.r, e.cap * 2); im.instanceMatrix.array.set(e.im.instanceMatrix.array); scene.remove(e.im); e.im.dispose(); e.im = im; e.cap *= 2; }
+      if (e.n >= e.cap) { const im = ubMake(e.im.geometry, e.im.material, e.cast, e.r, e.cap * 2); im.instanceMatrix.array.set(e.im.instanceMatrix.array); scene.remove(e.im); if (e.im.userData.ol) scene.remove(e.im.userData.ol); e.im.dispose(); e.im = im; e.cap *= 2; }
       e.im.instanceMatrix.array.set(m.matrixWorld.elements, e.n++ * 16);
     }
   }
-  for (const e of UB.list) { e.im.count = e.n; e.im.visible = e.n > 0; if (e.n) e.im.instanceMatrix.needsUpdate = true; e.im.castShadow = e.cast && e.r > QS.unitSh; }
+  for (const e of UB.list) { e.im.count = e.n; e.im.visible = e.n > 0; if (e.n) e.im.instanceMatrix.needsUpdate = true; e.im.castShadow = e.cast && e.r > QS.unitSh; const ol = e.im.userData.ol; if (ol) { ol.count = QS.ink ? e.n : 0; ol.visible = QS.ink && e.n > 0; } }
 }
 function hpBatch() {
   let n = 0; const { bg, fg, m, c, N } = HPB;
@@ -2765,7 +2831,7 @@ const detailGeometryCache = new Map(), sharedDetailGeometries = new Set(Object.v
    and one material (unitVCMat). Animated/referenced nodes keep their identity; their static children are baked in.
    Merged geometries are cached by content, so all units of one kind share them (no per-spawn geometry uploads). */
 const unitVCMat = new THREE.MeshLambertMaterial({ vertexColors:true }), vcMat = unitVCMat;
-const vcOK = m => !!m && m.isMeshLambertMaterial && !m.map && !m.transparent && m.opacity >= 1 && !m.vertexColors && m.side === THREE.FrontSide && m.onBeforeCompile === THREE.Material.prototype.onBeforeCompile && (!m.emissive || m.emissive.r + m.emissive.g + m.emissive.b === 0);
+const vcOK = m => !!m && (m.isMeshLambertMaterial || m.isLitFlat) && !m.map && !m.transparent && m.opacity >= 1 && !m.vertexColors && m.side === THREE.FrontSide && m.onBeforeCompile === THREE.Material.prototype.onBeforeCompile && (!m.emissive || m.emissive.r + m.emissive.g + m.emissive.b === 0);
 function geoKey(g) { if (g.userData.hk) return g.userData.hk; const a = g.attributes.position.array, ix = g.index ? g.index.array : null, ca = g.attributes.color ? g.attributes.color.array : null; let h = a.length * 7 + (ix ? ix.length : 0); for (let i = 0; i < a.length; i++) h = (h * 31 + Math.round(a[i] * 1000)) | 0; if (ca) for (let i = 0; i < ca.length; i++) h = (h * 13 + Math.round(ca[i] * 255)) | 0; if (ix) for (let i = 0; i < ix.length; i += 3) h = (h * 17 + ix[i]) | 0; return (g.userData.hk = g.type[0] + h.toString(36)); }
 function mergeParts(items, vc, nocache) { // items: [{ geo, matrix (null = identity), color }]
   const key = nocache ? null : items.map(it => geoKey(it.geo) + (it.matrix ? ':' + it.matrix.elements.map(v => Math.round(v * 1e4)).join(',') : '') + (vc && !it.geo.attributes.color ? '#' + it.color.getHexString() : '')).join('|') + (vc ? 'v' : 'm');
@@ -2832,6 +2898,7 @@ function chunkedInstances(parts, list, place, opts = {}) { // parts: [{ geo, mat
       g2.boundingSphere = new THREE.Sphere(c, r);
       const im = new THREE.InstancedMesh(g2, mat, cell.length); cell.forEach((e, i) => { im.setMatrixAt(i, e.m4); if (e.c) im.setColorAt(i, e.c); });
       im.castShadow = opts.cast !== false; im.receiveShadow = !!opts.recv; if (opts.deco) im.userData.deco = true; if (opts.shadowTier !== undefined) im.userData.shadowTier = opts.shadowTier; mapGroup.add(im); out.push(im);
+      if (opts.ink) { const ol = new THREE.InstancedMesh(g2, INK, cell.length); ol.instanceMatrix = im.instanceMatrix; ol.castShadow = false; ol.userData.ink = true; ol.renderOrder = -1; mapGroup.add(ol); }
     }
   }
   return out;
@@ -2853,7 +2920,7 @@ function buildCatapult(k) {
   const torso = new THREE.Group(); rig.add(torso); const neck = new THREE.Group(); neck.position.set(0, 1.3, 0.75); neck.scale.setScalar(0.001); torso.add(neck);
   const head = mesh(UG.head, headMat(k === 6 ? 0 : 2), 0, 0.5, 0, neck);
   Object.assign(U, { torso, neck, head, H:new THREE.Group(), armL:new THREE.Group(), armR:new THREE.Group() });
-  batchUnitDetails(U); shadows(g, UNIT_SHADOWS, false);
+  batchUnitDetails(U); shadows(g, UNIT_SHADOWS, false); inkify(rig);
   const blob = mesh(UG.blob, blobMat, 0, 0.05, 0, g); blob.scale.setScalar(2.6); blob.userData.ublob = true; blob.visible = !UNIT_SHADOWS || lowShadows();
   const ring = mesh(UG.ring, ringMat, 0, 0.07, 0, g); ring.visible = false; ring.scale.setScalar(2);
   const hp = new THREE.Group(); mesh(UG.hpbg, hpBgMat, 0, 0, -0.01, hp); const hpf = mesh(UG.hpfg, hpMats[0], -0.5, 0, 0, hp); hp.visible = false; hp.scale.setScalar(1.6); hpGroup.add(hp);
@@ -3508,7 +3575,7 @@ function resetView() {
   fx.words.forEach(w => scene.remove(w.s)); fx.words.length = 0;
   fx.puffs.forEach(releasePuff); fx.puffs.length = 0; puffMesh.count = 0; clearRipples();
   fx.coins.forEach(c => scene.remove(c.m)); fx.coins.length = 0;
-  if (typeof clearFreeArrows === 'function') clearFreeArrows(); fx.debris.forEach(d => removeOwnedObject(d.m)); fx.debris.length = 0; if (typeof grView !== 'undefined') { grView.forEach(v => scene.remove(v.m)); grView.clear(); } if (typeof fbView !== 'undefined') { fbView.forEach(v => scene.remove(v.g)); fbView.clear(); } V.ending = null; V.pkKey = null; V.pkPicked = null; V.lastPn = null; fx.swings.forEach(w => scene.remove(w.m)); fx.swings.length = 0;
+  if (typeof clearFreeArrows === 'function') clearFreeArrows(); fx.debris.forEach(d => removeOwnedObject(d.m)); fx.debris.length = 0; if (typeof grView !== 'undefined') { grView.forEach(v => scene.remove(v.m)); grView.clear(); } if (typeof roView !== 'undefined') { roView.forEach(v => scene.remove(v.m)); roView.clear(); goView.forEach(v => scene.remove(v.g)); goView.clear(); } if (typeof fbView !== 'undefined') { fbView.forEach(v => scene.remove(v.g)); fbView.clear(); } V.ending = null; V.pkKey = null; V.pkPicked = null; V.lastPn = null; fx.swings.forEach(w => scene.remove(w.m)); fx.swings.length = 0;
   V.dying.forEach(u => { if (u.ghost) scene.remove(u.ghost); }); V.markers.forEach(mk => scene.remove(mk.m)); V.markers.length = 0;
   if (typeof EG !== 'undefined' && EG.sgRing) EG.sgRing.visible = false; if (typeof tutArrow !== 'undefined') tutArrow.visible = false; if (typeof nadeAimView === 'function') nadeAimView(null);
   ['#foePerk', '#perkPick', '#danceBan', '#pauseTag', '#plHint', '#tutRing', '#countdown'].forEach(q => { const el = $(q); if (el) el.hidden = true; });
@@ -3572,7 +3639,7 @@ function processSnap(s) {
   if (prev) for (const [id] of prev) if (!cur.has(id)) {
     if (V.poss && V.poss.id === id && V.latest && V.latest !== s && unitMap(V.latest).has(id)) { cur.set(id, prev.get(id)); continue; }
     const u = V.units.get(id); if (!u) continue;
-    V.units.delete(id); V.selected.delete(id); if (V.enemySelected === id) V.enemySelected = null; u.dieT = 0; u.hp.visible = false; u.ring.visible = false; V.dying.push(u);
+    V.units.delete(id); V.selected.delete(id); u.dieT = 0; u.hp.visible = false; u.ring.visible = false; V.dying.push(u);
     const terminal = V.dzCause && V.dzCause.get(id), dc = terminal ? terminal[2] : 0; if (V.dzCause) V.dzCause.delete(id);
     if (terminal && terminal.length >= 6) { u.g.position.set(terminal[3] / 10, terminal[4] / 10, terminal[5] / 10); u.fallY = undefined;
       if (dc === 3 && terminal[4] / 10 > unitY(terminal[3] / 10, terminal[5] / 10) + 0.25) u.deadAir = { vx:(terminal[6] || 0) / 100, vy:(terminal[7] || 0) / 100, vz:(terminal[8] || 0) / 100 };
@@ -3647,6 +3714,8 @@ function hlText(ty, team, n) {
   if (ty === 'ram') return mine ? [n >= 5 ? 'RAMMBOCK-FESTIVAL!' : n === 4 ? 'VIERFACH-RAMME!' : 'DREIFACH-RAMME!', n + ' Gegner mit einem Anlauf umgenietet'] : [n + ' auf einmal umgerammt!', 'Achte auf seinen Reiter'];
   if (ty === 'cliff') return mine ? [n >= 4 ? 'MASSENSTURZ!' : 'AB IN DIE TIEFE!', n + ' Gegner über die Kante geschubst'] : ['KLIPPENSTURZ!', n + ' deiner Krieger sind abgestürzt'];
   if (ty === 'ice') return mine ? ['EINGEBROCHEN!', n + ' Gegner sind ins Eis gekracht'] : ['DAS EIS BRICHT!', n + ' deiner Krieger sind eingebrochen'];
+  if (ty === 'strike') return mine ? [n >= 5 ? 'ALLE NEUNE!' : 'STRIKE!', n + ' Gegner wie Kegel umgeworfen'] : ['UMGEKEGELT!', n + ' deiner Krieger liegen flach'];
+  if (ty === 'boulder') return mine ? ['STEINLAWINE!', 'Der Felsbrocken rollt und rollt'] : ['DER FELS ROLLT!', 'Weg von der Flugbahn!'];
   if (ty === 'cat') return mine ? ['KATAPULT ZERLEGT!', '+' + CFG.siegeBounty + ' ' + FAC[V.facs[V.myTeam]].res + ' Beute'] : ['KATAPULT VERLOREN!', 'Der Gegner kassiert Beute'];
   if (ty === 'save') return mine ? ['IN LETZTER SEKUNDE!', 'Fahne gerade noch gehalten'] : null;
   if (ty === 'phase') return n === 1 ? ['STURM!', 'Basen nehmen 50 % mehr Schaden, kein Heimvorteil mehr'] : n === 2 ? ['ENDKAMPF!', 'Die Mauern brechen: Basen nehmen vollen, doppelten Schaden'] : ['DIE BASEN BRÖCKELN!', 'Beide Basen verlieren jetzt ständig Leben'];
@@ -3656,7 +3725,7 @@ function hlPush(ty, team, n, x, z) {
   const t = hlText(ty, team, n); if (!t) return;
   if (ty !== 'phase' && now() - (HL.last[ty + team] || -1e9) < 12000) return; HL.last[ty + team] = now(); // only truly special moments, no spam
   if (HL.q.length > 2) HL.q.shift(); HL.q.push({ t, foe:team >= 0 && team !== V.myTeam, ty });
-  if (team === V.myTeam && (ty === 'ram' || ty === 'cliff' || ty === 'ice')) shake(0.3);
+  if (team === V.myTeam && (ty === 'ram' || ty === 'cliff' || ty === 'ice' || ty === 'strike' || ty === 'boulder')) shake(0.3);
   if (ty === 'phase') shake(0.35);
 }
 function hlTick(dt) {
@@ -3782,6 +3851,37 @@ function perkUi() {
   }
 }
 const fbView = new Map(), fbCore = new THREE.SphereGeometry(1, 14, 10);
+/* ---------- rolling boulders and cream puddles (view) ---------- */
+const roView = new Map(), goView = new Map(), gooMat = new THREE.MeshLambertMaterial({ color:lin(0xfff1f6), transparent:true, opacity:0.92, depthWrite:false }), gooGeo = new THREE.CircleGeometry(1, 26).rotateX(-Math.PI / 2);
+function updateRolls(dt) {
+  const s = V.latest, seen = new Set();
+  if (s && s.ro) for (const r of s.ro) {
+    seen.add(r[0]); let v = roView.get(r[0]);
+    if (!v) { const m = projGeo.boulder.clone(); m.scale.setScalar(1.25); m.castShadow = true; scene.add(m); v = { m, x:r[1] / 10, z:r[2] / 10, dust:0 }; roView.set(r[0], v); }
+    v.tx = r[1] / 10; v.tz = r[2] / 10; v.ang = r[3] / 100; v.mov = r[4]; v.dx = r[5] / 100; v.dz = r[6] / 100;
+  }
+  for (const [id, v] of roView) {
+    if (!seen.has(id)) { scene.remove(v.m); roView.delete(id); emitFX('land', v.x, groundY(v.x, v.z) + 0.3, v.z, { n:6, size:0.8 }); continue; }
+    const f = Math.min(1, dt * 14); v.x = lerp(v.x, v.tx, f); v.z = lerp(v.z, v.tz, f);
+    v.m.position.set(v.x, groundY(v.x, v.z) + 0.62, v.z); v.m.rotation.set(0, Math.atan2(v.dx, v.dz), 0); v.m.rotateX(v.ang);
+    if (v.mov) { v.dust += dt; if (v.dust > 0.06) { v.dust = 0; emitFX('dust', v.x - v.dx * 0.6, groundY(v.x, v.z) + 0.1, v.z - v.dz * 0.6, { n:2, size:0.8 }); } }
+  }
+}
+function updateGoo(dt) {
+  const s = V.latest, seen = new Set();
+  if (s && s.go) for (const g of s.go) {
+    seen.add(g[0]); let v = goView.get(g[0]);
+    if (!v) { const x = g[1] / 10, z = g[2] / 10, grp = new THREE.Group(); grp.position.set(x, groundY(x, z) + 0.07, z);
+      for (let i = 0; i < 6; i++) { const b = new THREE.Mesh(gooGeo, gooMat), a = i / 6 * TAU, rr = i ? 0.55 : 1; b.position.set(i ? Math.cos(a) * 0.5 : 0, 0.002 * i, i ? Math.sin(a) * 0.5 : 0); b.scale.setScalar(rr * (0.8 + ((i * 7) % 5) * 0.08)); grp.add(b); }
+      for (let i = 0; i < 5; i++) { const c = mesh(new THREE.SphereGeometry(0.22 + (i % 3) * 0.06, 8, 6), lam(i % 2 ? 0xff6b9a : 0xd0213a), (Math.random() - .5) * 1.6, 0.15, (Math.random() - .5) * 1.6, grp); c.scale.y = 0.6; } // cherries
+      grp.renderOrder = 2; scene.add(grp); v = { g:grp, x, z, r:g[3] / 10, t0:g[5] / 10 }; goView.set(g[0], v); word('SAHNE!', x, grp.position.y + 1.5, z, { color:'#ffd6e6', scale:1.1 }); }
+    v.t = g[4] / 10;
+  }
+  for (const [id, v] of goView) {
+    if (!seen.has(id)) { scene.remove(v.g); goView.delete(id); continue; }
+    const grow = Math.min(1, (v.t0 - v.t) / 0.35), fade = Math.min(1, v.t / 1.5); v.g.scale.setScalar(v.r * (0.2 + 0.8 * grow) * (0.7 + 0.3 * fade)); v.g.visible = fade > 0.02;
+  }
+}
 function updateFireballs(dt) {
   const s = V.latest, seen = new Set();
   if (s && s.fb) for (const f of s.fb) {
@@ -4093,12 +4193,6 @@ function pickUnit(sx, sy, own) {
   return best;
 }
 let lastTap = { t:0, k:-1 };
-function selectEnemy(u, method) {
-  if (!u || u.team === V.myTeam || tutBlock('enemy')) return false;
-  V.enemySelected = u.id; SFX.play('select');
-  if (typeof tutEnemySelected === 'function') tutEnemySelected(u.id, method);
-  return true;
-}
 function pickBase(sx, sy) {
   const bv = baseViews[1 - V.myTeam]; if (!bv) return null;
   setRay(sx, sy); return ray.intersectObject(bv.g, true).length ? BASES[1 - V.myTeam] : null;
@@ -4106,18 +4200,14 @@ function pickBase(sx, sy) {
 function tapAt(sx, sy, additive, mouseL) {
   if (!V.playing) return;
   const u = pickUnit(sx, sy, false);
+  if (u && u.team === V.myTeam && COARSE && V.selected.size && !V.selected.has(u.id) && !additive && !V.rallyMode) { commandAt(u.g.position); return; } // touch: tapping a comrade with a selection = go there (deselect with the X first to pick single units)
   if (u && u.team === V.myTeam) {
-    V.enemySelected = null;
     const t = now();
     if (t - lastTap.t < 320 && lastTap.id === u.id) { for (const o of ownUnits()) { const p = toScreen(o.g.position.x, o.g.position.y + 1, o.g.position.z); if (o.k === u.k && p.vis && p.x > 0 && p.y > 0 && p.x < innerWidth && p.y < innerHeight) V.selected.add(o.id); } }
     else { if (!additive) V.selected.clear(); V.selected.add(u.id); }
     lastTap = { t, k:u.k, id:u.id }; hintDone('select'); SFX.play('select'); return;
   }
-  if (u && u.team !== V.myTeam) {
-    if (mouseL && !COARSE && !selectEnemy(u, 'click')) return;
-    if (V.selected.size && !V.rallyMode) commandAt(u.g.position, false, u.id);
-    return;
-  }
+  if (u && u.team !== V.myTeam) { if (V.selected.size && !V.rallyMode) commandAt(u.g.position, false, u.id); return; } // a tap on an enemy is always an attack order, never a selection
   const eb = !V.rallyMode && pickBase(sx, sy);
   if (eb && V.selected.size) { commandAt(eb, false, -2); return; }
   if (mouseL && !COARSE && !V.rallyMode) { if (V.selected.size) { V.selected.clear(); SFX.play('tick'); } return; }
@@ -4170,9 +4260,7 @@ canvas.addEventListener('pointerdown', e => {
     else gest = { type:'mpan', sx:e.clientX, sy:e.clientY, moved:false, grab:planeAt(e.clientX, e.clientY), right:isB('order', mb), shift:e.shiftKey };
   } else if (pointers.size === 1) {
     gest = { type:'touch', sx:e.clientX, sy:e.clientY, moved:false, grab:planeAt(e.clientX, e.clientY) };
-    gest.lp = setTimeout(() => { if (gest && gest.type === 'touch' && !gest.moved) { const enemy = pickUnit(gest.sx, gest.sy, false);
-      if (enemy && enemy.team !== V.myTeam) { selectEnemy(enemy, 'longpress'); gest.type = 'done'; }
-      else { gest.type = 'lasso'; gest.pts = [[gest.sx, gest.sy]]; drawLasso(gest.pts); }
+    gest.lp = setTimeout(() => { if (gest && gest.type === 'touch' && !gest.moved) { gest.type = 'lasso'; gest.pts = [[gest.sx, gest.sy]]; drawLasso(gest.pts);
       try { navigator.vibrate && navigator.vibrate(12); } catch (_) {} } }, 330);
   } else if (pointers.size === 2) {
     const [a, b] = [...pointers.values()];
@@ -4705,6 +4793,9 @@ function updateHud() {
   { const own = ownUnits(), sz = V.selected.size; const same = list => list.length > 0 && list.length === sz && list.every(u => V.selected.has(u.id));
     $$('.chip[data-sel]').forEach(b => { const w = b.dataset.sel; const on = w === 'none' ? false : w === 'all' ? same(own) : same(own.filter(u => KINDS[u.k].role === w)); attr(b, 'aria-pressed', String(on)); }); }
   txt($('#selCount'), V.selected.size); hid($('#selCount'), !V.selected.size);
+  { const n = V.selected.size, one = n === 1 && V.units.get([...V.selected][0]), t = COARSE ? 'Tippe' : 'Klicke', ord = COARSE ? 'Tippe' : 'Rechtsklick';
+    const h = V.tut ? '' : V.rallyMode ? t + ' auf den Boden: Dort sammeln sich neue Krieger' : n === 0 ? '<b>' + t + '</b> auf einen Krieger oder „Alle“ zum Auswählen' : one ? '<b>' + ord + '</b> auf Ziel oder Gegner · <b>Übernehmen</b>: selbst steuern' : '<b>' + n + ' gewählt</b> · ' + ord + ' auf Boden, Gegner oder Basis' + (COARSE ? ' · „Abwählen“ für Einzelauswahl' : '');
+    const el = $('#ctxHint'); if (el._h !== h) { el._h = h; el.innerHTML = h; } }
   hid($('#possBtn'), !(V.selected.size === 1 && V.playing && !V.ending && (() => { const u = V.units.get([...V.selected][0]); return !!u; })()));
   const cd = $('#countdown');
   let cdTxt = null;
@@ -4859,7 +4950,8 @@ function endGame(s) {
   if (V.mode === 'ai' && !V.tut) $('#endSub').textContent += ' (Computer: ' + AI_LVL[aiLvl].name + ')';
   $('#btnAgain').hidden = V.mode !== 'ai';
   if (V.tut) { $('#endTitle').textContent = won ? 'Geschafft!' : 'Fast!'; $('#endSub').textContent = TUT.adv ? 'Profi-Prüfung bestanden! Jetzt zeig es dem Computer auf „Schwer“.' : 'Du kennst jetzt das Wichtigste. Ab gegen den Computer – oder ins Profi-Tutorial!'; $('#btnAgain').hidden = true; store.set('wvr-tut', '1'); $('#tutBadge').hidden = true; endTutorial(); }
-  if (V.mode === 'host') { hostBroadcast(); setTimeout(() => leaveNet(), 4000); }
+  { const on = (V.mode === 'host' || V.mode === 'guest') && NET.r && !NET.gone; $('#btnRematch').hidden = !on; $('#rematchNote').hidden = !on; NET.rmWant = false; NET.rmOther = false; NET.endSeed = V.mode === 'guest' ? (V.latest && V.latest.sd) : (G && G.seed);
+    if (on) { $('#btnRematch').textContent = 'Noch eine Runde!'; $('#rematchNote').textContent = 'Gleicher Gegner, neue Karte. Sobald ihr beide tippt, geht es los.'; if (V.mode === 'host') hostBroadcast(); NET.endPoll = setInterval(rematchTick, 300); } else if (V.mode === 'host') { hostBroadcast(); setTimeout(() => leaveNet(), 4000); } }
   setTimeout(() => { $('#hud').hidden = true; showScreen('end'); }, V.ending ? 200 : 1600);
 }
 
@@ -5027,6 +5119,7 @@ async function openMulti(code, role) {
   NET.p2p = subs.every(sb => sb.p2p); return W;
 }
 function leaveNet() {
+  if (NET.endPoll) { clearInterval(NET.endPoll); NET.endPoll = null; }
   NET.connectAttempt = (NET.connectAttempt || 0) + 1; NET.inlineLobby = false; setHostMenu(false);
   if (NET.connecting) { try { NET.connecting.leave(); } catch (_) {} NET.connecting = null; }
   if (NET.poll) clearInterval(NET.poll); NET.poll = null;
@@ -5090,9 +5183,22 @@ function hostReadGuest() {
   const In = g.presence.in; G.teams[1].posIn = In && typeof In === 'object' && In.id === G.teams[1].pos ? In : null;
   NET.guestPres = g.presence; if (g.presence.hpk && g.presence.hpk !== NET.lastHpk) { NET.lastHpk = g.presence.hpk; NET.rtt = Math.max(0, now() - g.presence.hpk); }
 }
+/* ---------- online rematch: both press, the host deals a new map in the same room ---------- */
+function rematchTick() {
+  if (!NET.r || V.playing) { clearInterval(NET.endPoll); NET.endPoll = null; return; }
+  const peers = NET.r.peers() || [], other = peers.find(p => !p.isMe && p.presence && p.presence.role === (V.mode === 'host' ? 'guest' : 'host') && p.presence.code === NET.code);
+  const b = $('#btnRematch'), n = $('#rematchNote');
+  if (!other) { b.hidden = true; n.textContent = 'Dein Gegner hat den Raum verlassen.'; clearInterval(NET.endPoll); NET.endPoll = null; if (V.mode === 'host') leaveNet(); return; }
+  NET.rmOther = !!other.presence.rm && other.presence.rm === NET.endSeed;
+  if (V.mode === 'guest' && other.presence.st === 'play' && Number.isFinite(other.presence.sd) && other.presence.sd !== NET.endSeed) { clearInterval(NET.endPoll); NET.endPoll = null; showScreen(null); beginMatch('guest', other.presence.fa, 1, other.presence.sd); return; }
+  if (NET.rmWant && NET.rmOther && V.mode === 'host') { clearInterval(NET.endPoll); NET.endPoll = null; const facs = G.teams.map(t => t.fac), seed = newSeed(); G = newGame(facs, seed, gameMode === 'chaos'); NET.lastSeq = 0; showScreen(null); beginMatch('host', facs, 0, seed); pushSnap(snapOf(G)); startSim(false); hostBroadcast(); return; }
+  b.textContent = NET.rmWant ? 'Warte auf Gegner …' : NET.rmOther ? 'Gegner will nochmal! Noch eine Runde!' : 'Noch eine Runde!'; b.classList.toggle('pulse', NET.rmOther && !NET.rmWant);
+  if (V.mode === 'host') hostBroadcast();
+}
+$('#btnRematch').addEventListener('click', () => { if (!NET.r) return; NET.rmWant = true; NET.r.presence({ rm:NET.endSeed }).catch(() => {}); $('#btnRematch').textContent = 'Warte auf Gegner …'; SFX.play('order'); });
 function hostBroadcast() {
   if (!NET.r || !G) return;
-  const patch = { hp:Math.round(now()), pk:NET.guestPres ? NET.guestPres.gp2 : 0, role:'host', code:NET.code, v:NET_VER, fa:G.teams.map(t => t.fac), sd:G.seed, st:'play', gp:NET.guestPeer, ack:NET.lastSeq, snap:NET.displaySnap && NET.displaySnap.t === +G.t.toFixed(2) ? NET.displaySnap : snapOf(G) };
+  const patch = { hp:Math.round(now()), pk:NET.guestPres ? NET.guestPres.gp2 : 0, role:'host', code:NET.code, v:NET_VER, fa:G.teams.map(t => t.fac), sd:G.seed, st:'play', gp:NET.guestPeer, rm:NET.rmWant ? NET.endSeed : null, ack:NET.lastSeq, snap:NET.displaySnap && NET.displaySnap.t === +G.t.toFixed(2) ? NET.displaySnap : snapOf(G) };
   const fp = faceChunkPatch(NET.guestPres); patch.fc = fp && fp.fc ? fp.fc : null;
   const got = faceChunkRecv(NET.guestPres); if (got) Object.assign(patch, got);
   if (patch.fc && JSON.stringify(patch).length > 3500) patch.fc = null;
@@ -5378,21 +5484,20 @@ function tutSteps(nar, adv) {
       after:() => { const T1 = G.teams[1], n = G.units.filter(u => u.team === 1).length + T1.q.length, on = n < 6; T1.auto[E.kinds[0]] = on; T1.auto[E.kinds[1]] = on; }, done:() => false },
   ];
   const steps = [
-    { t:`Moin! Ich bin ${nar.name}. In drei Minuten machst du aus ${E.name} Kleinholz. Los geht's!`, next:true },
+    { t:`Moin! Ich bin ${nar.name}. In drei Minuten machst du aus ${E.name} Kleinholz. Merk dir nur eins: Hier fliegt alles, was man umrennt. Los geht's!`, next:true },
     { t:`Bilde 2× „${nm('melee')}“ aus. ${F.res} hab ich dir zugesteckt.`, allow:['spawn0'], hl:'.spawn[data-slot="0"] .main', start:() => { gold(140); homeCam(); applyCam(); }, done:() => own('melee', true) >= 2 },
     { id:'firstFlag', t:pc ? `Wähle „Alle“ (${kl('selAll')}), dann ${kl('order')} auf die Fahne mit dem Pfeil. Deine beiden Krieger müssen erst dorthin laufen.` : `Tippe „Alle“ und dann auf die Fahne mit dem Pfeil. Deine beiden Krieger müssen erst dorthin laufen.`, allow:['order'], hlFn:() => V.selected.size ? null : '[data-sel="all"]', world:() => FLAGS[nf], start:() => { TUT.moveProof = null; G.flags[nf] = { owner:-1, p:0 }; flagZoom(FLAGS[nf]); }, command:c => { if (tutMovementOrder(c, FLAGS[nf], 2)) return true; toast('Wähle beide Krieger und schick sie zur Fahne mit dem Pfeil.', 1800); return false; }, done:() => tutMovementDone(FLAGS[nf]) && G.flags[nf].owner === me },
     { t:`Jede Fahne bringt mehr ${F.res} pro Sekunde. Je mehr Fahnen du hast, desto mehr Einkommen – schau oben links!`, hl:'#inc', next:true },
-    { id:'enemySelect', t:pc ? 'Wähle den Gegner beim Pfeil mit Linksklick aus. So siehst du, wen du angreifen möchtest.' : 'Halte den Gegner beim Pfeil länger gedrückt, ohne den Finger zu bewegen. Erst dann ist er ausgewählt.', allow:['enemy'], start:() => { tutEnemies(mid); for (const id of TUT.enemyIds) { const u = G.units.find(u => u.id === id); u.tutStill = true; u.tutDummy = true; } V.selected.clear(); focus(FLAGS[mid]); }, world:() => { const u = G.units.find(u => u.id === TUT.enemyIds[0]); return u ? { x:u.x, z:u.z } : FLAGS[mid]; }, done:() => TUT.flags.enemySelected === TUT.enemyIds[0] },
-    { t:`Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Schick 2 „${nm('cav')}“ zu den Fernkämpfern in der Mitte!`, allow:['spawn2', 'order'], hl:'.spawn[data-slot="2"] .main', world:() => FLAGS[mid], start:() => { gold(190); for (const id of TUT.enemyIds) { const u = G.units.find(u => u.id === id); if (u) { delete u.tutStill; delete u.tutDummy; u.cd = 0.4; u.hp = Math.min(u.hp, KINDS[u.k].hp * 0.55); } } focus(FLAGS[mid]); }, done:() => TUT.enemyIds.length && TUT.enemyIds.every(id => !G.units.some(u => u.id === id)) },
+    { t:`Konter: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Drei Fernkämpfer stehen an der mittleren Fahne. Bilde 2 „${nm('cav')}“ aus und ${COARSE ? 'tippe' : 'rechtsklicke'} mit Auswahl auf die Gegner!`, allow:['spawn2', 'order'], hl:'.spawn[data-slot="2"] .main', world:() => FLAGS[mid], start:() => { gold(190); tutEnemies(mid); V.selected.clear(); for (const id of TUT.enemyIds) { const u = G.units.find(u => u.id === id); if (u) { delete u.tutStill; delete u.tutDummy; u.cd = 0.4; u.hp = Math.min(u.hp, KINDS[u.k].hp * 0.55); } } focus(FLAGS[mid]); }, done:() => TUT.enemyIds.length && TUT.enemyIds.every(id => !G.units.some(u => u.id === id)) },
     { t:`Faul sein erlaubt: Tippe bei „${nm('ranged')}“ auf AUTO. Dann wird sie von selbst nachgebildet, solange das Geld reicht.`, allow:['auto'], hl:'.spawn[data-slot="1"] .auto', start:() => gold(120), done:() => Object.values(T().auto).some(Boolean) },
     possStep(kOf('melee'), [[-2.2, 6], [0, 7], [2.2, 6]], 0.3, `Jetzt der Clou: Tippe auf deinen „${nm('melee')}“ beim Pfeil und dann auf „Übernehmen“.`),
     { t:`Du steckst drin! Hau die drei Puppen um. ${atk} = Schlag, ${spc} = Raserei.`, hl:'#egoAtk', start:() => { TUT.enterAt = now() + 1500; }, after:egoKeep, done:dead },
     { t:`„${nm('ranged')}“: Ziel mit dem Kreuz und schieß die drei da hinten ab! ${spc} = Fächerschuss.`, start:() => prep(kOf('ranged'), [[-4, 13], [0, 15], [4, 13]], 0.25), after:egoKeep, done:dead },
-    { t:`„${nm('cav')}“! Der Riesenkopf wird von einem Spieler gesteuert. Ramm ihn mit ${spc} um und erwisch ihn für einen ${rush}!`,
+    { t:`„${nm('cav')}“! Der Riesenkopf wird von einem Spieler gesteuert. Ramm ihn mit ${spc} um: Wer fliegt, kegelt alle um, die im Weg stehen. Erwisch ihn für einen ${rush}!`,
       start:() => { prep(kOf('cav'), [], 0); cavDummy(); TUT.r0 = T().rush; },
       after:() => { egoKeep(); if (TUT.dummy && !G.units.some(u => u.id === TUT.dummy) && T().rush === TUT.r0) { cavDummy(); $('#tutText').textContent = 'Den musst DU erwischen! Da kommt der Nächste.'; } },
       world:() => { const d = G.units.find(u => u.id === TUT.dummy); return d ? { x:d.x, z:d.z } : null; }, done:() => T().rush !== TUT.r0 },
-    { t:`Und jetzt das „${nm('siege')}“: Der rote Kreis zeigt, wo es einschlägt. ${atk} schießt, ${spc} = Dreifach-Salve.`, start:() => { prep(kOf('siege'), [[-2.2, 15], [0, 16.5], [2.2, 15], [0, 13.5]], 0.22); }, after:egoKeep, done:dead },
+    { t:`Und jetzt das „${nm('siege')}“: Der rote Kreis zeigt, wo es einschlägt. ${atk} schießt, ${spc} = Dreifach-Salve. ${myFac === 'viking' ? 'Der Fels rollt danach weiter und walzt alles um.' : 'Die Torte hinterlässt eine Sahnepfütze, in der jeder klebt.'}`, start:() => { prep(kOf('siege'), [[-2.2, 15], [0, 16.5], [2.2, 15], [0, 13.5]], 0.22); }, after:egoKeep, done:dead },
     { t:pc ? `Klasse! Mit ${kl('exit')} oder „Verlassen“ geht's zurück in die Feldherren-Ansicht.` : 'Klasse! Tippe auf „Verlassen“, um zurückzukehren.', allow:['exit'], hl:'#egoExit', start:() => { TUT.egoId = null; }, done:() => !V.poss },
     { t:`Finale! Ich hab dir eine Armee geschickt. „Alle“ wählen und ${E.base} angreifen!`, free:true, world:() => BASES[1],
       start:() => { clearTut(); G.towerOff[0] = false; army(['melee', 'melee', 'melee', 'ranged', 'ranged', 'cav']); tutFinale(); homeCam(); applyCam(); }, done:() => false },
@@ -5426,11 +5531,6 @@ function tutCommand(c) {
   if (!TUT.on || TUT.sys || c.t !== 'order') return true;
   const st = TUT.steps[TUT.i]; if (!st || TUT.wait || !st.command) return true;
   return st.command(c) !== false;
-}
-function tutEnemySelected(id, method) {
-  if (!TUT.on || TUT.wait) return;
-  const st = TUT.steps[TUT.i];
-  if (st && st.id === 'enemySelect' && method === (COARSE ? 'longpress' : 'click') && TUT.enemyIds.includes(id)) TUT.flags.enemySelected = id;
 }
 function tutMovementOrder(c, goal, minUnits = 1) {
   if (c.target !== undefined && c.target !== null && c.target !== -1) return false;
@@ -5552,6 +5652,7 @@ function bearMesh() {
   const hp = new THREE.Group(); mesh(UG.hpbg, hpBgMat, 0, 0, -0.01, hp); const hpf = mesh(UG.hpfg, hpMats[1], -0.5, 0, 0, hp); hp.scale.setScalar(1.4); hp.visible = false; hpGroup.add(hp);
   const furMeshes = []; body.traverse(o => { if (o.isMesh && o.material === fur) furMeshes.push(o); });
   const aura = new THREE.Sprite(spriteMat('bearTameV', () => tameHeartCanvas(FAC.viking.css)).mat); aura.visible = false; aura.position.y = 2.1; g.add(aura);
+  inkify(body);
   return { g, body, head, legs, furMeshes, fur, aura, atk:0, swipe:0, walk:0, hp, hpf };
 }
 function tameHeartCanvas(color) {
@@ -5931,7 +6032,7 @@ function applyQuality() {
   // per-vertex lit water instead of per-pixel, no clouds, low-poly heads, no reverb, fewer simultaneous sounds
   const lt = L.t; document.body.classList.toggle('gfx-lite', lt >= 1);
   water.material = lt >= 2 ? WATER_LO : WATER_HI; clouds.forEach(c => { c.visible = lt < 3; });
-  QS.lowPoly = lt >= 2; AUDIO.lite = lt >= 2;
+  QS.lowPoly = lt >= 2; AUDIO.lite = lt >= 2; QS.ink = lt <= 1; INK.visible = QS.ink; // ink outlines on Hoch and Mittel
   applyMapQuality();
 }
 function applyMapQuality() {
@@ -6000,7 +6101,7 @@ function frame() {
     }
     if (pf) pm('ctl');
     SFX.music(!!(V.playing && V.poss && (V.poss.dance || now() < (V.discoUntil || 0))));
-    renderUnits(t, dt); if (pf) pm('units'); updateWorld(dt); padAnim(dt); clawTick(dt); swingTick(dt); updateFreeArrows(dt); updateFireballs(dt); updateGrenades(dt); debrisTick(dt); siegeWarnTick(); hlTick(dt);
+    renderUnits(t, dt); if (pf) pm('units'); updateWorld(dt); padAnim(dt); clawTick(dt); swingTick(dt); updateFreeArrows(dt); updateFireballs(dt); updateGrenades(dt); updateRolls(dt); updateGoo(dt); debrisTick(dt); siegeWarnTick(); hlTick(dt);
     if (V.homeRings) { const vis = !!(V.latest && V.latest.ph && V.latest.ph[0] === 0); V.homeRings.forEach(m => m.visible = vis); }
     if (pf) pm('world');
   }
@@ -6123,7 +6224,7 @@ function renderUnits(t, dt) {
       if (skip === 1 || (QS.fr + u.id) % skip === 0) { animateRig(u, Math.min(u.animAcc, 0.1), moving && !u.rag && !airborne, u.atkT < 1.5); u.animAcc = 0; }
     }
     if (flight) { const kind = mine ? flight.kind : af[7] === 1 ? 'dash' : af[7] === 2 ? 'impact' : 'fall';
-      if (kind === 'impact' && !u.wasImpact) { u.wasImpact = true; emitFX('hit', x, y + 1.1, z, { n:6, size:0.7 }); SFX.play('impact', { x, z, vol:0.9 }); if (now() - (V.rummsT || 0) > 250) { V.rummsT = now(); word(pick(['RUMMS!', 'WUMMS!', 'BAMM!']), x, y + 2.6, z, { color:'#ffcf6a', scale:1.05 }); } }
+      if (kind === 'impact' && !u.wasImpact) { u.wasImpact = true; emitFX('hit', x, y + 1.1, z, { n:6, size:0.7 }); SFX.play('impact', { x, z, vol:0.9 }); { const cd = Math.hypot(x - camera.position.x, z - camera.position.z); if (cd < 40) shake(0.22 * (1 - cd / 40) + 0.06); } if (now() - (V.rummsT || 0) > 250) { V.rummsT = now(); word(pick(['RUMMS!', 'WUMMS!', 'BAMM!']), x, y + 2.6, z, { color:'#ffcf6a', scale:1.05 }); } }
       u.airPoseT = (u.airPoseT || 0) + dt; u.rig.rotation.x = kind === 'dash' ? 0.2 : -u.airPoseT * 5; u.rig.rotation.z = kind === 'dash' ? 0 : Math.sin(u.id) * u.airPoseT * 2.5;
       if (u.armL) { u.armL.rotation.x = -2.7 + Math.sin(clock * 16) * 0.2; u.armR.rotation.x = -2.5; }
     } else if (u.airPoseT) { u.airPoseT = 0; u.rig.rotation.set(0, 0, 0); }
@@ -6143,8 +6244,8 @@ function renderUnits(t, dt) {
     if (!mine && V.poss && EG.intro > 0) { const c = camera.position, P = V.poss; u.g.visible = segDist(x, z, { x:c.x, z:c.z }, { x:P.x, z:P.z }) > 1.3 || Math.hypot(x - P.x, z - P.z) < 0.3; } else u.g.visible = true;
     if (mine && V.poss.rageT > 0 && Math.random() < dt * 8) puff(x, y + 1.5, z, 0xff5a3c, 1, 0.5);
     if (u.dashFx > 0) { u.dashFx -= dt; if (Math.random() < dt * 30) emitFX('dash', x, y + 0.4, z, { n:1, size:0.7, dx:-Math.sin(u.g.rotation.y), dz:-Math.cos(u.g.rotation.y) }); }
-    const sel = V.selected.has(u.id) || V.enemySelected === u.id; u.ring.visible = sel || (u.isPoss && !mine); if (u.ring.visible) u.ring.rotation.y += dt;
-    u.hp.visible = (u.hpPct < 100 || V.enemySelected === u.id) && !mine && !(V.poss && EG.intro > 0);
+    const sel = V.selected.has(u.id); u.ring.visible = sel || (u.isPoss && !mine); if (u.ring.visible) u.ring.rotation.y += dt;
+    u.hp.visible = u.hpPct < 100 && !mine && !(V.poss && EG.intro > 0);
     if (u.hp.visible) { u.hp.position.set(x, y + (KINDS[u.k].bear ? 3.9 : KINDS[u.k].role === 'cav' ? 3.6 : 3.1) + (u.isPoss ? 1.3 : 0), z); u.hp.quaternion.copy(camQ); u.hpf.scale.x = Math.max(0.01, u.hpPct / 100); u.hpf.material = hpMats[u.team === V.myTeam ? 0 : 1]; }
     if (u.flash > 0) { u.flash -= dt; u.head.scale.setScalar(1 + u.flash * 1.5); } else u.head.scale.setScalar(1);
     if (u.k === 5 && moving && Math.random() < dt * 6) puff(x - Math.sin(u.g.rotation.y) * 0.9, y + 0.5, z - Math.cos(u.g.rotation.y) * 0.9, 0x999999, 1, 0.5);
@@ -6170,6 +6271,6 @@ function renderUnits(t, dt) {
 document.fonts && document.fonts.load('40px "Lilita One"').then(() => { spriteCache.clear(); if (V.mode === 'menu') buildBases(V.facs); }).catch(() => {});
 menuScene(); applyCam(); initQuality();
 requestAnimationFrame(frame);
-window.__wvr = { UB, unitBatch, QS, GTIERS, LADDER, applyQuality, qualityStep, setGfx, guessQuality, PROF, ML, PL, LOOK, applyLook, mlReset, get SET() { return SET; }, startAir, airStep, ramImpulse, startFall, iceVelocity, iceStep, hitBear, tameBearStep, baseGap, baseApproach, baseAttackSlots, tutCommand, tutEnemySelected, tutTick, tutSteps, sendCmd, setOrderMode, endTutorial, toMenu, processSnap, holeAt, genCode, leaveNet, worldStep, puffTick, emitFX, waterRipple, waterMotionFX, camera, get water() { return water; }, dropPart, debrisTick, disposeUnit, egoUpdate, inWater, wadeAt, unitY, contactMesh, puffMesh, renderer, perfTick, puff, fx, padStep, padHeight, padFlight, onPad, spawnUnit, pushSnap, renderUnits, updateWorld, beginMatch, startSim, stopSim, playAi, hostBroadcast, hostReadGuest, joinOnline, localRoom, peerTransport, get protocol() { return NET_VER; }, get NETS() { return NET; }, PADV:()=>PADV, clawLife:v=>{ CLAW_LIFE = v; }, clawStreak:(...a)=>clawStreak(...a), holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, iceImpact:(G,x,z,r,t)=>iceImpact(G,x,z,r,t), los:(a,b,c,d)=>los(a,b,c,d), knockFly, advanceGround, CFG, highlight, phaseOf, onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, set G(value) { G = value; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
+window.__wvr = { UB, unitBatch, QS, GTIERS, LADDER, applyQuality, qualityStep, setGfx, guessQuality, PROF, ML, PL, LOOK, applyLook, mlReset, get SET() { return SET; }, startAir, airStep, ramImpulse, startFall, iceVelocity, iceStep, hitBear, tameBearStep, baseGap, baseApproach, baseAttackSlots, tutCommand, tutTick, tutSteps, sendCmd, setOrderMode, endTutorial, toMenu, processSnap, holeAt, genCode, leaveNet, worldStep, puffTick, emitFX, waterRipple, waterMotionFX, camera, get water() { return water; }, dropPart, debrisTick, disposeUnit, egoUpdate, inWater, wadeAt, unitY, contactMesh, puffMesh, renderer, perfTick, puff, fx, padStep, padHeight, padFlight, onPad, spawnUnit, pushSnap, renderUnits, updateWorld, beginMatch, startSim, stopSim, playAi, hostBroadcast, hostReadGuest, joinOnline, localRoom, peerTransport, get protocol() { return NET_VER; }, get NETS() { return NET; }, PADV:()=>PADV, clawLife:v=>{ CLAW_LIFE = v; }, clawStreak:(...a)=>clawStreak(...a), holeMesh:(x,z)=>holeMesh(x,z), WV:()=>WV, iceImpact:(G,x,z,r,t)=>iceImpact(G,x,z,r,t), los:(a,b,c,d)=>los(a,b,c,d), knockFly, advanceGround, CFG, highlight, phaseOf, onIce:(x,z)=>onIce(x,z), edgeSlide:(x,z)=>edgeSlide(x,z), sampleH:(x,z)=>sampleH(MAP,x,z), knockFalls:(e,x,z,d)=>knockFalls(e,x,z,d), fallZone:(x,z)=>fallZone(x,z), V, SFX, scene, loadMap, buildBases, applyCam, THEMES, get G() { return G; }, set G(value) { G = value; }, get MAP() { return MAP; }, step, snapOf, applyCmd, newGame, camS, aiThink, genMap, setMap, buildUnit, groundY, animateRig, enterEgo, exitEgo, setMyFace, FACE, KINDS, findPath, AI_LVL, aiNew, TUT, tutGo, startTutorial, toScreen, ff:n => { for (let i = 0; i < n; i++) { step(G); } pushSnap(snapOf(G)); }, get FLAGS() { return FLAGS; }, get BASES() { return BASES; }, nw:(x, z) => nearestWalkable(MAP, x, z), walkable, unitIcon, EG, faceTexFromCrop, headBox, NET, projGeo, THREE_:THREE };
 })();
 </script>

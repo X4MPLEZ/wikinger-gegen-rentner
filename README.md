@@ -8,7 +8,10 @@
 - **Konter:** Nahkampf schlägt Reiter, Reiter schlagen Fernkampf, Fernkampf schlägt Nahkampf. Mit Überzahl, Gelände oder direkter Steuerung lässt sich ein schlechtes Duell trotzdem gewinnen.
 - **Heimvorteil:** Im gestrichelten Kreis um die eigene Basis nehmen deine Krieger weniger Schaden. Basen halten viel aus, nur Katapulte treffen sie mit voller Wucht.
 - **Sturm:** Ab Minute 9 nehmen Basen mehr Schaden, ab Minute 12 beginnt der Endkampf.
-- **Übernehmen:** Jeder Krieger kann direkt gesteuert werden, mit Spezialfähigkeit (Reiter-Rammstoß, Pfeilfächer, Stockwirbel …).
+- **Übernehmen:** Jeder Krieger kann direkt gesteuert werden, mit Spezialfähigkeit (Reiter-Rammstoß, Pfeilfächer, Stockwirbel, Wikingerwurf …).
+- **Kegeln:** Wer umgerammt oder geworfen wird, fliegt – und kegelt alle um, die im Weg stehen. Drei auf einen Streich sind ein „Strike“.
+- **Katapulte:** Der Wikinger-Fels rollt nach dem Einschlag weiter und walzt um, was im Weg steht. Die Rentner-Torte hinterlässt eine Sahnepfütze, in der jeder kleben bleibt.
+- **Noch eine Runde:** Online könnt ihr nach dem Spiel sofort eine Revanche auf neuer Karte starten, ohne neuen Code.
 
 ## Karten
 
@@ -30,3 +33,5 @@ Unter „Grafik“ im Menü oder im Pausenmenü: **Automatisch**, Hoch, Mittel, 
 ## Online-Spiel
 
 Einer tippt auf „Erstellen“, der andere öffnet dieselbe Seite und gibt den Code bei „Beitreten“ ein. Die Geräte verbinden sich direkt miteinander, eine Anmeldung ist nicht nötig.
+
+**Steuerung am Handy:** Krieger antippen oder „Alle“ wählen, dann aufs Ziel tippen. Mit Auswahl ist jeder Tipp ein Befehl, auch auf eigene Krieger. „Abwählen“ hebt die Auswahl auf, danach lässt sich wieder ein einzelner Krieger antippen. Gegner werden nicht ausgewählt, sondern direkt angegriffen.
