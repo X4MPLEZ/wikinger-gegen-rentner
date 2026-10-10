@@ -290,8 +290,10 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
 #tutNo{background:linear-gradient(180deg,#f6cc63,#e7ad33);color:#2a1c04;border-color:transparent}
 .tut-acts:empty,.tut-acts:not(:has(button:not([hidden]))){display:none}
 .tut-acts .btn{pointer-events:auto;padding:.45em .8em;font-size:.82rem}
-#tutRing{position:absolute;z-index:13;border:3px solid var(--gold);border-radius:14px;pointer-events:none;animation:ringPulse 1.1s ease-in-out infinite}
-.tutGlow{outline:3px solid var(--gold);outline-offset:3px;animation:ringPulse 1.1s ease-in-out infinite}
+#tutRing{position:absolute;z-index:13;border:4px solid var(--gold);border-radius:14px;pointer-events:none;animation:tutPulse .9s ease-in-out infinite;box-shadow:0 0 0 4px rgba(0,0,0,.45),0 0 26px 6px rgba(240,191,76,.75)}
+.tutGlow{outline:4px solid var(--gold);outline-offset:3px;animation:tutPulse .9s ease-in-out infinite;position:relative;z-index:12;filter:brightness(1.35) saturate(1.2)}
+@keyframes tutPulse{0%,100%{box-shadow:0 0 0 4px rgba(0,0,0,.45),0 0 18px 3px rgba(240,191,76,.55);outline-offset:3px}50%{box-shadow:0 0 0 4px rgba(0,0,0,.45),0 0 36px 14px rgba(240,191,76,1);outline-offset:6px}}
+.tutOn .tutDim{opacity:.55}
 .btn.pulse{animation:ringPulse 1.1s ease-in-out infinite}
 @keyframes ringPulse{0%,100%{box-shadow:0 0 0 0 rgba(240,191,76,.6)}50%{box-shadow:0 0 0 10px rgba(240,191,76,0)}}
 .tutOn #toast{top:calc(env(safe-area-inset-top,0px) + 240px)}
@@ -422,7 +424,7 @@ kbd.kb{position:absolute;left:5px;bottom:4px;font:700 .56rem/1 system-ui,sans-se
         <button class="chip panel" data-sel="ranged">Fern</button>
         <button class="chip panel" data-sel="cav">Reiter</button>
         <button class="chip panel" data-sel="none" aria-label="Auswahl aufheben"><svg class="si" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Abwählen</button>
-        <button class="chip panel" id="rallyBtn" aria-pressed="false" aria-label="Sammelfahne versetzen"><span id="rallyIco"></span>Fahne</button>
+        <button class="chip panel" id="rallyBtn" aria-pressed="false" aria-label="Sammelfahne versetzen" title="Sammelfahne versetzen"><span id="rallyIco"></span><span class="pcOnly">Fahne</span></button>
         <span id="selCount">0</span>
       </div>
     </div>
@@ -716,7 +718,7 @@ const KINDS = [
   { key:'opa',       fac:'rentner', role:'melee',  name:'Krückstock-Opa', hp:175, dmg:15, cd:1.0,  range:1.5, aggro:8,  speed:4.4, cost:55, build:1.3, r:0.5,  sp:'Stockwirbel', trait:'Standfest: lässt sich kaum wegstoßen' },
   { key:'oma',       fac:'rentner', role:'ranged', name:'Gebiss-Oma',     hp:90,  dmg:12, cd:1.2,  range:12,  aggro:14, speed:3.9, cost:60, build:1.45, r:0.5,  sp:'Gebiss-Salve', proj:'teeth', pspeed:17, trait:'Klebegebiss: Treffer bremsen Gegner' },
   { key:'ziege',     fac:'viking',  role:'cav',    name:'Ziegenreiter',   hp:135, dmg:16, cd:1.0,  range:1.8, aggro:10, speed:7.0, cost:75, build:1.8, r:0.75, sp:'Ramm-Anlauf', trait:'Hörnerstoß: Anlauf-Treffer schleudern Gegner weg. Fliegende Körper kegeln alle um, die im Weg stehen' },
-  { key:'rollator',  fac:'rentner', role:'cav',    name:'Rollator-Raser', hp:134, dmg:16, cd:1.0,  range:1.8, aggro:10, speed:7.8, cost:75, build:1.8, r:0.75, sp:'Turbo', trait:'Vollgas: schnellste Einheit, Anlauf trifft besonders hart' },
+  { key:'rollator',  fac:'rentner', role:'cav',    name:'E-Mobil-Raser', hp:134, dmg:16, cd:1.0,  range:1.8, aggro:10, speed:7.8, cost:75, build:1.8, r:0.75, sp:'Turbo', trait:'Vollgas: schnellstes Gefährt im Spiel, Anlauf trifft besonders hart' },
   { key:'katapult',  fac:'viking',  role:'siege',  name:'Wikinger-Katapult', hp:700, dmg:70, cd:4.2, range:21, aggro:23, speed:1.8, cost:220, build:5, r:1.4, sp:'', proj:'boulder', pspeed:14, aoe:4.2, trait:'Der Fels rollt nach dem Einschlag weiter und walzt alles um' },
   { key:'torte',     fac:'rentner', role:'siege',  name:'Torten-Katapult',   hp:700, dmg:70, cd:4.2, range:21, aggro:23, speed:1.8, cost:220, build:5, r:1.4, sp:'', proj:'cake', pspeed:14, aoe:4.2, trait:'Hinterlässt eine Sahnepfütze: Wer drin steht, kommt kaum voran' },
   { key:'baerv', fac:'viking', role:'melee', bear:true, name:'Eisbär', hp:460, dmg:26, cd:1.15, range:2.0, aggro:10, speed:4.8, cost:0, build:0, r:0.95, sp:'Bärenklauen' },
@@ -733,6 +735,7 @@ const CFG = { startGold:160, baseInc:4.5, flagInc:1.2, incGrow:0.12, incGrowMax:
   homeR:24, homeArmor:0.75, homeDmg:1.2, phaseT:[540, 720], crumbleT:900, crumble:4, phaseBase:[1, 1.5, 2.2], phaseTower:[1, 1, 0.6],
   towerRange:15, towerPossRange:31, towerDmg:18, towerCd:0.8, towerPoss:4, baseArmor:0.45, flagIncDeep:0.8, towerSpeed:24, flagR:6, capTime:5, leash:11, hillBonus:3, spCd:8, possDmg:{ melee:1.5, cav:1.4, ranged:1.25 }, possArmor:0.8, possHp:1.6, possRegen:2.5, possCd:0.85, headMul:3.6, downT:1.75, arrowSpeed:46, rush:150, healR:16, heal:6 };
 const maxHp = u => u.mhp || KINDS[u.k].hp;
+const SIEGE_EGO_REACH = 6; // the aiming ring and the simulation clamp an ego catapult shot to the same distance
 const PERKS = {
   gold:    { t:0, ic:si('coins'), n:'Geldregen',       d:'+20 % Einkommen' },
   flagger: { t:0, ic:si('flag'), n:'Fahnenträger',    d:'Fahnen 2,5× schneller erobern' },
@@ -993,6 +996,9 @@ function bridgeAt(m, x, z) { if (!m.br) return null; const hw = m.lift ? 1.45 : 
 function deckY(b, z) { const t = clamp((z - b.z0) / (b.z1 - b.z0), 0, 1); return lerp(b.y0, b.y1, t) - 0.7 * Math.sin(t * Math.PI) + 0.15; }
 function groundY(x, z) { const h = sampleH(MAP, x, z); if (MAP.lift) { const b = bridgeAt(MAP, x, z); return b ? deckY(b, z) : h; } return onBridge(MAP, x, z) ? Math.max(h, 0.6) : h; }
 const onIce = (x, z) => { if (!MAP.ice || holeAt(x, z)) return false; const c = cellOf(x, z); return c >= 0 && MAP.ice[c] === 1; };
+// Slide along the edge instead of stepping over it: try the move with one axis at a time, else stay.
+function railing(x, z, nx, nz) { if (!fallZone(nx, z)) return { x:nx, z }; if (!fallZone(x, nz)) return { x, z:nz }; return { x, z }; }
+const fallZoneIn = (m, x, z) => !!m.cliff && !onBridge(m, x, z) && (m.lift ? sampleH(m, x, z) < m.lift - 1.2 : false);
 const fallZone = (x, z) => !!MAP.cliff && !onBridge(MAP, x, z) && (MAP.lift ? sampleH(MAP, x, z) < MAP.lift - 1.2 : riverDist(MAP, x, z) < MAP.RW + 1 && sampleH(MAP, x, z) < -1.4);
 const edgeSlide = (x, z) => Math.abs(x) < HALF_W - 1 && Math.abs(z) < HALF_H - 1 && !onBridge(MAP, x, z) && (MAP.cliff || sampleH(MAP, x, z) > WL + 0.3) && !(MAP.blockers || []).some(b => (x - b.x) ** 2 + (z - b.z) ** 2 < b.r * b.r) && !MAP.bases.some(b => baseGap(b, x, z) < 0.9);
 const AIR_GRAVITY = 30;
@@ -1014,9 +1020,9 @@ function airStep(u, dt) {
     let nx = clampX(u.x + a.vx * h), nz = clampZ(u.z + a.vz * h);
     const prevY = a.y, ny = prevY + a.vy * h - 0.5 * AIR_GRAVITY * h * h;
     a.vy -= AIR_GRAVITY * h;
-    let floor = unitY(nx, nz);
+    let floor = MAP.lift && fallZone(nx, nz) ? -60 : unitY(nx, nz); // the gorge is bottomless: a body keeps falling until it vanishes in the mist
     // A vertical rock face blocks horizontal motion; it never lifts the body.
-    if (floor > Math.max(prevY, ny) + 0.4) { nx = u.x; nz = u.z; a.vx = 0; a.vz = 0; floor = unitY(nx, nz); }
+    if (floor > Math.max(prevY, ny) + 0.4) { nx = u.x; nz = u.z; a.vx = 0; a.vz = 0; floor = MAP.lift && fallZone(nx, nz) ? -60 : unitY(nx, nz); }
     u.x = nx; u.z = nz; a.y = ny; u.y = u.fy = ny; u.vy = a.vy;
     if (u.kb) u.kb.left = Math.max(0, u.kb.left - Math.hypot(a.vx, a.vz) * h);
     if ((a.vy <= 0 && ny <= floor && floor <= prevY + 0.45) || ny < -32) {
@@ -1439,7 +1445,7 @@ function possAttack(G, u, byId) {
   if (K.role === 'siege') {
     const In = G.teams[u.team].posIn; let tx = u.x + Math.sin(u.yaw) * 12, tz = u.z + Math.cos(u.yaw) * 12;
     if (In && Array.isArray(In.gp) && In.gp.every(Number.isFinite)) { tx = In.gp[0]; tz = In.gp[1]; }
-    const dx = tx - u.x, dz = tz - u.z, dd = Math.hypot(dx, dz) || 1, R = K.range + 9; if (dd > R) { tx = u.x + dx / dd * R; tz = u.z + dz / dd * R; }
+    const dx = tx - u.x, dz = tz - u.z, dd = Math.hypot(dx, dz) || 1, R = K.range + SIEGE_EGO_REACH; if (dd > R) { tx = u.x + dx / dd * R; tz = u.z + dz / dd * R; }
     const dist = Math.min(dd, R), hp0 = siegeImpact(u.team, u.x, u.z, tx, tz); tx = hp0.tx; tz = hp0.tz; G.proj.push({ sx:u.x, sz:u.z, t:Math.max(0.5, dist / K.pspeed) * Math.max(0.35, hp0.k), dmg:K.dmg * 1.6, tgt:-1, team:u.team, k:u.k, aoe:K.aoe * 1.15, tx, tz, bp:true });
     u.at = -4; u.shot = [Math.round(tx * 10), Math.round(tz * 10)]; u.run = 0; return;
   }
@@ -1565,7 +1571,7 @@ function possStep(G, u, byId) {
   u.ord = { x:u.x, z:u.z, mv:false }; u.tgt = -1;
 }
 function hitBear(G, b, dmg, team, attK, bp, head) {
-  if (!b || b.hp <= 0) return; let d = dmg; if (attK >= 0 && KINDS[attK].role === 'ranged') d *= 2.4; else if (attK >= 0 && KINDS[attK].role !== 'siege') d *= 0.7; if (head) d *= 3;
+  if (!b || b.hp <= 0) return; if (G.tut && b.tut && !bp) return; /* tutorial bear: only the player's own shots count */ let d = dmg; if (attK >= 0 && KINDS[attK].role === 'ranged') d *= 2.4; else if (attK >= 0 && KINDS[attK].role !== 'siege') d *= 0.7; if (head) d *= 3;
   b.hp -= d; b.aggro = team; b.at = 3;
   if (bp) { const T = G.teams[team]; T.hqS = (T.hqS + 1) % 1000; T.hq.push([T.hqS, Math.round(b.x * 10), Math.round(b.z * 10), Math.round(d), head ? 1 : 0, Math.round((groundY(b.x, b.z) + 1.4) * 10)]); if (T.hq.length > 4) T.hq.shift(); }
   if (b.hp <= 0) {
@@ -1677,7 +1683,7 @@ function bowlStep(G) {
     const ru = KINDS[u.k].r;
     for (const e of G.units) {
       if (e === u || e.hp <= 0 || e.air || e.pj || e.down > 0 || e.tutDummy && !e.tutPush) continue;
-      if (KINDS[e.k].role === 'siege') continue;
+      if (KINDS[e.k].role === 'siege' || e.dashUntil > G.t) continue; // a ramming rider ploughs through flying bodies (only another rider's ram can stop him)
       const dx = e.x - u.x, dz = e.z - u.z, rr = ru + KINDS[e.k].r + 0.35; if (dx * dx + dz * dz > rr * rr || Math.abs((e.y || 0) - a.y) > 1.6) continue;
       const d = Math.hypot(dx, dz) || 1, push = Math.min(7, 2.5 + sp * 0.45);
       e.bowledBy = u.id; e.kbT = G.t; e.kbTeam = u.kbTeam;
@@ -1718,7 +1724,7 @@ function worldStep(G, byId) {
   if (G.gr) { for (const g of G.gr) { g.t -= DT; if (g.t <= 0) { let n = 0; for (const e of G.units) if (e.team !== g.team && e.hp > 0 && (e.x - g.x) ** 2 + (e.z - g.z) ** 2 < 25) { e.dance = 7.5; e.tgt = -1; n++; } G.geS = ((G.geS || 0) + 1) % 10000; (G.ge || (G.ge = [])).push([G.geS, g.team, n]); if (G.ge.length > 6) G.ge.shift(); } } G.gr = G.gr.filter(g => g.t > 0); }
   bowlStep(G); rollStep(G); gooStep(G);
   // One authoritative trajectory owns airborne x/y/z until actual impact.
-  for (const u of G.units) if (u.air && u.hp > 0) { const landed = airStep(u, DT), input = G.teams[u.team].posIn; if (landed && u.poss && input && input.id === u.id) G.teams[u.team].posIn = { ...input, x:u.x, z:u.z, flying:false, air:u.airAck, av:undefined }; }
+  for (const u of G.units) if (u.air && u.hp > 0) { const landed = airStep(u, DT), input = G.teams[u.team].posIn; if (landed && u.airRam) { u.airRam = 0; if (u.hp > 0 && u.poss) { u.down = 0; u.tumT = 0; u.spcd = 0; u.ls = input && input.id === u.id ? input.s : u.ls; possSpecial(G, u, byId); } } if (landed && u.poss && input && input.id === u.id) G.teams[u.team].posIn = { ...input, x:u.x, z:u.z, flying:false, air:u.airAck, av:undefined }; }
   // cacti prick
   if (MAP.cacti && MAP.cacti.length) { G.ct = []; for (const u of G.units) { if (u.hp <= 0) continue; const r0 = KINDS[u.k].r; for (const c of MAP.cacti) { const d = Math.hypot(u.x - c.x, u.z - c.z); if (d < 0.62 * c.s + r0 + 0.25) { u.hp -= 16 * DT * (u.poss ? CFG.possArmor : 1); u.hurt = 2.5; G.ct.push(u.id); break; } } } }
   // polar bears: roam the land, maul whoever comes close; beaten bears join the winner
@@ -1774,6 +1780,8 @@ function step(G) {
   for (const u of G.units) { u.a0 = u.hp > 0; if (u.frenzy > 0) u.frenzy -= DT; if (u.slowT > 0) u.slowT -= DT; }
   for (const u of G.units) {
     if (u.ramQ && u.a0) ramTick(G, u, byId);
+    if (u.pj && u.poss && u.a0 && KINDS[u.k].role === 'cav') { const In = G.teams[u.team].posIn; // air dash: the rider leaves the pad arc and rams on landing
+      if (In && In.id === u.id && In.s !== u.ls && u.spcd <= 0.3) { u.ls = In.s; const fx = Math.sin(In.y ?? u.yaw), fz = Math.cos(In.y ?? u.yaw); u.yaw = In.y ?? u.yaw; u.pj = null; u.jumpT = 0; u.padCd = 0.8; delete u.navPad; delete u.consumePad; startAir(u, fx * 20, fz * 20, 1.5, 'dash'); u.airRam = 1; u.dashUntil = G.t + 2; u.spcd = 0.1; } }
     if (!u.a0 || u.air || u.fall > 0 || u.pj) continue;
     if (u.poss) { possStep(G, u, byId); continue; }
     const K = KINDS[u.k], o = u.ord;
@@ -1829,7 +1837,9 @@ function step(G) {
         steer(G, u, approach ? approach.x : tx, approach ? approach.z : tz, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1)); }
     } else if (u.navPad !== undefined || Math.hypot(o.x - u.x, o.z - u.z) > 0.3) steer(G, u, o.x, o.z, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1));
     const ox = u.x, oz = u.z;
-    { const icy = onIce(u.x, u.z), sw = (icy ? 1 : inWater(u.x, u.z) ? 0.33 : wadeAt(u.x, u.z) ? 0.65 : 1) * (u.cold > 0 ? 0.88 : 1); iceVelocity(u, u.vx, u.vz, DT); u.vx = u.ivx; u.vz = u.ivz; const nx = u.x + u.vx * DT * sw, nz = u.z + u.vz * DT * sw; if ((Math.abs(u.vx) + Math.abs(u.vz) > 0.001) && (fallZone(nx, nz) || (unitY(u.x, u.z) - unitY(nx, nz) > 1.2 && edgeSlide(nx, nz)))) { advanceGround(u, nx, nz, u.vx * sw, u.vz * sw, DT); if (u.air || u.hp <= 0) continue; } else { u.x = nx; u.z = nz; } }
+    { const icy = onIce(u.x, u.z), sw = (icy ? 1 : inWater(u.x, u.z) ? 0.33 : wadeAt(u.x, u.z) ? 0.65 : 1) * (u.cold > 0 ? 0.88 : 1); iceVelocity(u, u.vx, u.vz, DT); u.vx = u.ivx; u.vz = u.ivz; let nx = u.x + u.vx * DT * sw, nz = u.z + u.vz * DT * sw;
+      if (MAP.cliff && !(u.kb && u.kb.left > 0) && !(u.dashUntil > G.t) && fallZone(nx, nz) && !fallZone(u.x, u.z)) { const r = railing(u.x, u.z, nx, nz); nx = r.x; nz = r.z; } // walking units stop at the edge (bridge rail / cliff rim)
+      if ((Math.abs(u.vx) + Math.abs(u.vz) > 0.001) && (fallZone(nx, nz) || (unitY(u.x, u.z) - unitY(nx, nz) > 1.2 && edgeSlide(nx, nz)))) { advanceGround(u, nx, nz, u.vx * sw, u.vz * sw, DT); if (u.air || u.hp <= 0) continue; } else { u.x = nx; u.z = nz; } }
     if (!walkable(u.x, u.z)) {
       if (walkable(u.x, oz)) u.z = oz; else if (walkable(ox, u.z)) u.x = ox;
       else {
@@ -1860,8 +1870,8 @@ function step(G) {
         let wa = a.poss ? 0 : b.poss ? 1 : sa !== sb ? (sa ? 0 : 1) : mb / (ma + mb), wb = b.poss ? 0 : a.poss ? 1 : sa !== sb ? (sb ? 0 : 1) : ma / (ma + mb);
         if (a.eng > 0 && !(b.eng > 0) && !b.poss) { wa *= 0.3; wb = 1 - wa; } else if (b.eng > 0 && !(a.eng > 0) && !a.poss) { wb *= 0.3; wa = 1 - wb; }
         const soft = a.team === b.team ? 0.45 : 0.6, pa = ov * wa * soft, pb = ov * wb * soft;
-        if (pa > 0.002) { const ax = a.x - nx * pa, az = a.z - nz * pa; if (walkable(ax, az)) { a.x = ax; a.z = az; } }
-        if (pb > 0.002) { const bx = b.x + nx * pb, bz = b.z + nz * pb; if (walkable(bx, bz)) { b.x = bx; b.z = bz; } }
+        if (pa > 0.002) { const ax = a.x - nx * pa, az = a.z - nz * pa; if (walkable(ax, az) && !(MAP.cliff && fallZone(ax, az) && !fallZone(a.x, a.z))) { a.x = ax; a.z = az; } }
+        if (pb > 0.002) { const bx = b.x + nx * pb, bz = b.z + nz * pb; if (walkable(bx, bz) && !(MAP.cliff && fallZone(bx, bz) && !fallZone(b.x, b.z))) { b.x = bx; b.z = bz; } }
       }
     }
     a.x = clampX(a.x); a.z = clampZ(a.z);
@@ -1875,11 +1885,12 @@ function step(G) {
       for (const e of us) { if (e.team === p.team || e.hp <= 0) continue; const dd = Math.hypot(e.x - p.tx, e.z - p.tz); if (dd >= p.aoe) continue;
         if (!sg) { hit(G, e.id, p.dmg, p.team, byId, p.k, p.bp); continue; }
         if (KINDS[e.k].bear) { e.squash = 1; hit(G, e.id, e.hp * 10 + 9999, p.team, byId, -1, p.bp); continue; }
+        if (p.bp && dd < 0.45 && KINDS[e.k].role !== 'siege' && !(e.down > 0)) { hit(G, e.id, p.dmg * 2.2, p.team, byId, p.k, p.bp, true); e.squash = 0; continue; } // ego catapult: a direct hit on the head
         const core = 0.6 + KINDS[e.k].r; if (dd < core && KINDS[e.k].role === 'siege') { e.squash = 0; hit(G, e.id, maxHp(e) * 0.5 / (e.poss ? CFG.possArmor : 1), p.team, byId, -1, p.bp); continue; }
         if (dd < core) { e.squash = 1; hit(G, e.id, e.hp * 10 + 9999, p.team, byId, -1, p.bp); continue; }
         const f = 1 - (dd - core) / Math.max(0.5, p.aoe - core); hit(G, e.id, p.dmg * (0.2 + 1.3 * f * f), p.team, byId, p.k, p.bp); } const eb = BASES[1 - p.team]; if (baseGap(eb, p.tx, p.tz) < p.aoe) hit(G, -2, p.dmg, p.team, byId, p.k);
       if (sg && MAP.ice) iceImpact(G, p.tx, p.tz, clamp(p.aoe * 0.48, 1.4, 2.4), p.team);
-      if (sg && !p.bp) { const K = KINDS[p.k], sx = p.sx ?? BASES[p.team].x, sz = p.sz ?? BASES[p.team].z, ddx = p.tx - sx, ddz = p.tz - sz, dl = Math.hypot(ddx, ddz) || 1; // the shot's direction decides where the rock rolls on
+      if (sg) { const K = KINDS[p.k], sx = p.sx ?? BASES[p.team].x, sz = p.sz ?? BASES[p.team].z, ddx = p.tx - sx, ddz = p.tz - sz, dl = Math.hypot(ddx, ddz) || 1; // the shot's direction decides where the rock rolls on
         if (K.proj === 'boulder' && walkable(p.tx, p.tz) && !(MAP.ice && onIce(p.tx, p.tz))) G.rolls.push({ id:(G.rollId = (G.rollId + 1) % 1000), x:p.tx, z:p.tz, dx:ddx / dl, dz:ddz / dl, v:11, t:0, ang:0, team:p.team, hits:0 });
         else if (K.proj === 'cake') G.goo.push({ id:(G.gooId = (G.gooId + 1) % 1000), x:p.tx, z:p.tz, r:3.6, t:9, t0:9, team:p.team }); } }
     else hit(G, p.tgt, p.dmg, p.team, byId, p.k, p.bp); }
@@ -2368,7 +2379,7 @@ const COARSE = matchMedia('(pointer:coarse)').matches;
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, COARSE ? 1.6 : 1.75));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap; // PCF + per-tier blur radius: tier changes never recompile shaders
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; // soft edges; tier changes only resize the map, never recompile shaders
 const scene = new THREE.Scene(); scene.autoUpdate = false; // frame() updates matrices once, right before the unit batching reads them
 const SKY = (() => { const c = cnv(4, 256), x = c.getContext('2d'), g = x.createLinearGradient(0, 0, 0, 256); g.addColorStop(0, '#6fa9d8'); g.addColorStop(0.55, '#b7d9ee'); g.addColorStop(1, '#e8f1f2'); x.fillStyle = g; x.fillRect(0, 0, 4, 256); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t; })();
 scene.background = SKY;
@@ -2378,7 +2389,7 @@ const camera = new THREE.PerspectiveCamera(46, 1, 0.3, 600);
 scene.add(new THREE.HemisphereLight(lin(0xbfd8ff), lin(0x6e7a62), 0.72));
 const sun = new THREE.DirectionalLight(lin(0xffe2b8), 1.3);
 sun.castShadow = true; sun.shadow.mapSize.set(COARSE ? 1024 : 2048, COARSE ? 1024 : 2048);
-Object.assign(sun.shadow.camera, { left:-38, right:38, top:38, bottom:-38, near:1, far:160 }); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.045; sun.shadow.radius = 2;
+Object.assign(sun.shadow.camera, { left:-38, right:38, top:38, bottom:-38, near:1, far:160 }); sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.16; sun.shadow.radius = 3; // high normal bias: no shadow acne on the flat-shaded faces
 scene.add(sun, sun.target);
 const SUN_OFF = new THREE.Vector3(32, 60, 22);
 const clouds = (() => {
@@ -2453,6 +2464,13 @@ function buildMapView(m) {
   geo.computeVertexNormals();
   groundMesh = mesh(geo, mapMaterial(new THREE.MeshLambertMaterial({ vertexColors:true })), 0, 0, 0, mapGroup); groundMesh.receiveShadow = true;
   mesh(new THREE.BoxGeometry(ISLAND.w - 6, 6, ISLAND.h - 6), lam(0x7d6a4f), 0, -6.4, 0, mapGroup);
+  if (m.lift) { // the abyss: a dark haze fills the gorge a few metres below the rim, with a soft brighter mist layer drifting on top
+    const haze = mesh(new THREE.PlaneGeometry(ISLAND.w + 40, ISLAND.h + 40).rotateX(-Math.PI / 2), mapMaterial(new THREE.MeshBasicMaterial({ color:ABYSS_COL, transparent:true, opacity:0.88, depthWrite:false })), 0, m.lift - 7.2, 0, mapGroup); haze.renderOrder = 1;
+    const mistTex = (() => { const c = cnv(128, 128), x = c.getContext('2d'); for (let i = 0; i < 12; i++) { const g2 = x.createRadialGradient(64 + (Math.random() - .5) * 40, 64 + (Math.random() - .5) * 40, 0, 64, 64, 44 + Math.random() * 18); g2.addColorStop(0, 'rgba(190,205,235,.35)'); g2.addColorStop(1, 'rgba(190,205,235,0)'); x.fillStyle = g2; x.fillRect(0, 0, 128, 128); } return new THREE.CanvasTexture(c); })();
+    const mistMat = mapMaterial(new THREE.SpriteMaterial({ map:mistTex, transparent:true, depthWrite:false, opacity:0.8 }));
+    for (let i = 0; i < 70; i++) { let x, z, tries = 0; do { x = (Math.random() - .5) * 2 * HALF_W; z = (Math.random() - .5) * 2 * HALF_H; } while (!fallZoneIn(m, x, z) && ++tries < 40); if (tries >= 40) continue;
+      const sp = new THREE.Sprite(mistMat.clone()); const sc = 7 + Math.random() * 9; sp.scale.set(sc, sc * 0.45, 1); sp.position.set(x, m.lift - 5.6 + Math.random() * 1.6, z); sp.userData.mist = { x, z, ph:Math.random() * TAU }; sp.renderOrder = 2; mapGroup.add(sp); }
+  }
   const all = [...m.trees, ...m.decor];
   const pines = all.filter(t => t.ty === 0), rounds = all.filter(t => t.ty === 1), palms = all.filter(t => t.ty === 2), cdeco = all.filter(t => t.ty === 3), idec = all.filter(t => t.ty === 4);
   const mt = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
@@ -2603,13 +2621,14 @@ function conformRing(F, by, r1, r2, a0, len) {
   for (let i = 0; i < p.count; i++) p.setY(i, sampleH(MAP, F.x + p.getX(i), F.z + p.getZ(i)) - by + 0.09);
   return g;
 }
+const ABYSS_COL = lin(0x0b1020);
 const TC = { sand:lin(0xcdb680), bed:lin(0x9a8158), road:lin(0xb08e5c), roadEdge:lin(0x8f8a55), plaza:lin(0xa39b84), base:lin(0x978e78), rock:lin(0x85837a), lo:lin(0x4d8236), hi:lin(0x7da44a) };
 const THC = {};
 function themeCols(m) { const k = m.theme || 'summer'; if (!THC[k]) { const T = THEMES[k]; THC[k] = { lo:lin(T.lo), hi:lin(T.hi), sand:T.sand ? lin(T.sand) : TC.sand, rock:T.rock ? lin(T.rock) : TC.rock }; } return THC[k]; }
 function terrainColor(m, x, z, h, rd, col, r, slope) {
   const inPlay = Math.abs(x) < HALF_W + 1 && Math.abs(z) < HALF_H + 1, TH = themeCols(m);
   if (h < WL + 0.05) return col.copy(TC.bed);
-  if (m.lift) { if (h < m.lift - 1.5 && inPlay) { const strata = Math.sin(h * 1.9 + x * 0.055 + z * 0.035) * 0.045; col.copy(TH.rock).multiplyScalar(0.38 + 0.48 * clamp((h + 9) / (m.lift + 7.5), 0, 1) + strata); return col; } h -= m.lift; }
+  if (m.lift) { if (h < m.lift - 1.5 && inPlay) { const strata = Math.sin(h * 1.9 + x * 0.055 + z * 0.035) * 0.045, depth = clamp((h + 9) / (m.lift + 7.5), 0, 1); col.copy(TH.rock).multiplyScalar(0.12 + 0.62 * depth * depth + strata); col.lerp(ABYSS_COL, (1 - depth) * 0.75); return col; } h -= m.lift; }
   const v = clamp((h - 0.4) / 4.5, 0, 1);
   col.copy(TH.lo).lerp(TH.hi, v);
   const j = (r() - .5) * 0.035; col.r += j; col.g += j * 1.2; col.b += j * 0.6;
@@ -3006,26 +3025,26 @@ function buildUnit(k) {
     const seat = new THREE.Group(); seat.position.set(0, 0.6, -0.05); goat.add(seat);
     Object.assign(U, buildRider(k, seat, P, true));
   } else if (k === 5) {
-    const rol = new THREE.Group(); rig.add(rol); U.mount = rol;
-    const chrome = lam(0xc9ced6), red = lam(0xd23a2e), tube = (a, b, r = 0.028, mat = chrome) => { const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), m2 = mesh(new THREE.CylinderGeometry(r, r, A.distanceTo(B), 8), mat, (A.x + B.x) / 2, (A.y + B.y) / 2, (A.z + B.z) / 2, rol); m2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()); return m2; };
-    [-1, 1].forEach(sx => {
-      const x = sx * 0.27;
-      tube([x, 0.2, 0.36], [x, 1.02, -0.18], 0.03, red); tube([x, 0.2, -0.32], [x, 1.02, -0.2], 0.03, red);
-      tube([x, 1.02, -0.18], [x, 1.02, -0.4], 0.026); mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.16, 10).rotateX(Math.PI / 2), lam(0x1d1d22), x, 1.02, -0.36, rol);
-      tube([x, 0.97, -0.3], [x, 0.92, -0.4], 0.012);
-      tube([x, 0.2, 0.36], [x, 0.11, 0.38], 0.025); tube([x, 0.2, -0.32], [x, 0.11, -0.32], 0.025);
-      U.wheels.push(mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.06, 14).rotateZ(Math.PI / 2), lam(0x222226), x, 0.11, 0.38, rol));
-      U.wheels.push(mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.06, 14).rotateZ(Math.PI / 2), lam(0x222226), x, 0.11, -0.32, rol));
-    });
-    tube([-0.27, 0.62, 0.05], [0.27, 0.62, 0.05], 0.022); tube([-0.27, 0.42, -0.27], [0.27, 0.42, -0.27], 0.022);
-    mesh(new THREE.BoxGeometry(0.56, 0.07, 0.3), lam(0x3f6fb5), 0, 0.67, 0.0, rol);
-    const bk = new THREE.MeshLambertMaterial({ color:lin(0x40444d), transparent:true, opacity:0.75 }); mesh(new THREE.BoxGeometry(0.46, 0.2, 0.24), bk, 0, 0.44, 0.08, rol);
-    mesh(new THREE.BoxGeometry(0.2, 0.08, 0.12), lam(0xf6d7a7), 0.08, 0.57, 0.08, rol);
-    mesh(new THREE.SphereGeometry(0.05, 10, 8), lam(0xf2c14e), -0.18, 1.06, -0.3, rol);
-    const fl = mesh(new THREE.PlaneGeometry(0.22, 0.14), new THREE.MeshLambertMaterial({ color:lin(0xffffff), side:THREE.DoubleSide }), 0.37, 1.32, -0.22, rol); tube([0.27, 1.02, -0.22], [0.27, 1.42, -0.22], 0.01); fl.position.x = 0.38; fl.position.y = 1.35;
-    const ex = mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.36, 8), lam(0x8e8f96), 0.2, 0.32, -0.42, rol); ex.rotation.x = 1.2;
-    const stand = new THREE.Group(); stand.position.set(0, 0.25, -0.62); rol.add(stand); U.rol = rol; U.stand = stand;
-    Object.assign(U, buildRider(k, stand, P, false));
+    const rol = new THREE.Group(); rol.scale.set(1.3, 1.15, 1.3); rig.add(rol); U.mount = rol; // Seniorenmobil: four wheels, chassis, swivel seat, tiller with basket and a tall safety flag
+    const chrome = lam(0xc9ced6), body = lam(0xd94a3d), dark = lam(0x2a2a30), cream = lam(0xf3ead2);
+    const tube = (a, b, r = 0.028, mat = chrome) => { const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), m2 = mesh(new THREE.CylinderGeometry(r, r, A.distanceTo(B), 8), mat, (A.x + B.x) / 2, (A.y + B.y) / 2, (A.z + B.z) / 2, rol); m2.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize()); return m2; };
+    mesh(new THREE.BoxGeometry(0.62, 0.16, 1.1), body, 0, 0.26, 0.02, rol); // chassis
+    mesh(new THREE.BoxGeometry(0.66, 0.08, 0.5), body, 0, 0.36, 0.42, rol); // front hood
+    mesh(new THREE.BoxGeometry(0.5, 0.06, 0.34), dark, 0, 0.35, -0.08, rol); // floor
+    [[-1, 0.46], [1, 0.46], [-1, -0.4], [1, -0.4]].forEach(([sx, z]) => { U.wheels.push(mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.09, 14).rotateZ(Math.PI / 2), dark, sx * 0.3, 0.13, z, rol)); mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.1, 10).rotateZ(Math.PI / 2), chrome, sx * 0.3, 0.13, z, rol); });
+    mesh(new THREE.BoxGeometry(0.46, 0.1, 0.42), lam(0x5a3d2a), 0, 0.5, -0.2, rol); // seat
+    mesh(new THREE.BoxGeometry(0.46, 0.4, 0.09), lam(0x5a3d2a), 0, 0.73, -0.42, rol); // backrest
+    [-1, 1].forEach(sx => mesh(new THREE.BoxGeometry(0.06, 0.05, 0.3), chrome, sx * 0.27, 0.58, -0.16, rol)); // armrests
+    tube([0, 0.4, 0.5], [0, 1.0, 0.36], 0.035, chrome); tube([-0.22, 1.0, 0.36], [0.22, 1.0, 0.36], 0.026, chrome); // tiller + handlebar
+    [-1, 1].forEach(sx => mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.12, 8).rotateZ(Math.PI / 2), dark, sx * 0.24, 1.0, 0.36, rol));
+    mesh(new THREE.BoxGeometry(0.34, 0.22, 0.24), cream, 0, 1.0, 0.56, rol); // basket
+    mesh(new THREE.SphereGeometry(0.045, 8, 6), lam(0xf2c14e), -0.12, 1.14, 0.5, rol); mesh(new THREE.SphereGeometry(0.04, 8, 6), lam(0x7fb84a), 0.08, 1.14, 0.52, rol); // groceries
+    mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 10).rotateX(Math.PI / 2), lam(0xfff1a8), 0, 0.5, 0.68, rol); // headlight
+    tube([0.28, 0.4, -0.5], [0.28, 1.5, -0.5], 0.012, chrome); const fl = mesh(new THREE.PlaneGeometry(0.24, 0.15), new THREE.MeshLambertMaterial({ color:lin(0xff7a1a), side:THREE.DoubleSide }), 0.4, 1.42, -0.5, rol); // safety flag
+    const ex = mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.22, 8), chrome, -0.22, 0.2, -0.6, rol); ex.rotation.x = 1.3;
+    const stand = new THREE.Group(); stand.position.set(0, 0.5, -0.24); stand.scale.set(1 / 1.3, 1 / 1.15, 1 / 1.3); rol.add(stand); U.rol = rol; U.stand = stand;
+    Object.assign(U, buildRider(k, stand, P, true));
+
   } else Object.assign(U, buildRider(k, rig, P, false));
   const { H, torso, armL, armR } = U; const hatFrom = H.children.length;
   if (k === 0 || k === 4) {
@@ -3752,13 +3771,16 @@ function siegeWarnTick() {
   for (; i < SW.pool.length; i++) SW.pool[i].visible = false;
 }
 function homeRings(facs) {
-  if (V.homeRings) V.homeRings.forEach(m => { scene.remove(m); m.geometry.dispose(); m.material.dispose(); }); V.homeRings = null;
+  for (const l of [V.homeRings, V.towerRings]) if (l) l.forEach(m => { scene.remove(m); m.geometry.dispose(); m.material.dispose(); }); V.homeRings = V.towerRings = null;
   if (V.tut) return;
-  V.homeRings = BASES.map((B, i) => { const N = 120, W = 0.5, pos = [], idx = [];
-    for (let k = 0; k <= N; k++) { const a = k / N * TAU, ca = Math.cos(a), sa = Math.sin(a); for (const rr of [CFG.homeR - W, CFG.homeR]) { const x = B.x + ca * rr, z = B.z + sa * rr; pos.push(x, Math.max(groundY(x, z), WL) + 0.14, z); } }
-    for (let k = 0; k < N; k++) if ((k >> 1) % 2 === 0) { const a = k * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+  // three rings per base: home advantage (dashed, faction colour), tower range (solid red) and the wider tower range against ego warriors (dotted red)
+  const ring = (B, r, W, col, op, dash) => { const N = 160, pos = [], idx = [];
+    for (let k = 0; k <= N; k++) { const a = k / N * TAU, ca = Math.cos(a), sa = Math.sin(a); for (const rr of [r - W, r]) { const x = B.x + ca * rr, z = B.z + sa * rr; pos.push(x, Math.max(groundY(x, z), WL) + 0.14, z); } }
+    for (let k = 0; k < N; k++) if (dash === 0 || (dash === 1 ? (k >> 1) % 2 === 0 : k % 4 === 0)) { const a = k * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
-    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color:lin(FAC[facs[i]].col), transparent:true, opacity:0.55, depthWrite:false, side:THREE.DoubleSide })); m.renderOrder = 2; scene.add(m); return m; });
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:op, depthWrite:false, side:THREE.DoubleSide })); m.renderOrder = 2; scene.add(m); return m; };
+  V.homeRings = BASES.map((B, i) => ring(B, CFG.homeR, 0.5, lin(FAC[facs[i]].col), 0.55, 1));
+  V.towerRings = BASES.flatMap(B => [ring(B, CFG.towerRange, 0.28, lin(0xff4a3a), 0.5, 0), ring(B, CFG.towerPossRange, 0.22, lin(0xff4a3a), 0.35, 2)]);
 }
 /* ---------- hit feedback, ragdoll, free arrows ---------- */
 function hitFx(team, h) {
@@ -3872,8 +3894,15 @@ function updateGoo(dt) {
   if (s && s.go) for (const g of s.go) {
     seen.add(g[0]); let v = goView.get(g[0]);
     if (!v) { const x = g[1] / 10, z = g[2] / 10, grp = new THREE.Group(); grp.position.set(x, groundY(x, z) + 0.07, z);
-      for (let i = 0; i < 6; i++) { const b = new THREE.Mesh(gooGeo, gooMat), a = i / 6 * TAU, rr = i ? 0.55 : 1; b.position.set(i ? Math.cos(a) * 0.5 : 0, 0.002 * i, i ? Math.sin(a) * 0.5 : 0); b.scale.setScalar(rr * (0.8 + ((i * 7) % 5) * 0.08)); grp.add(b); }
-      for (let i = 0; i < 5; i++) { const c = mesh(new THREE.SphereGeometry(0.22 + (i % 3) * 0.06, 8, 6), lam(i % 2 ? 0xff6b9a : 0xd0213a), (Math.random() - .5) * 1.6, 0.15, (Math.random() - .5) * 1.6, grp); c.scale.y = 0.6; } // cherries
+      const R = (n => () => (n = (n * 16807) % 2147483647) / 2147483647)(g[0] * 977 + 13); // deterministic per puddle: both players see the same mess
+      for (let i = 0; i < 9; i++) { const b = new THREE.Mesh(gooGeo, gooMat), a = i / 9 * TAU, rr = i ? 0.42 + R() * 0.3 : 1; b.position.set(i ? Math.cos(a) * (0.45 + R() * 0.25) : 0, 0.002 * i, i ? Math.sin(a) * (0.45 + R() * 0.25) : 0); b.scale.setScalar(rr); grp.add(b); } // cream splat
+      const sponge = lam(0xf0c36a), filling = lam(0xe25a7a), creamMat = lam(0xfff6f1);
+      for (let i = 0; i < 4; i++) { const w = new THREE.Group(), a = R() * TAU, d = 0.2 + R() * 0.45; w.position.set(Math.cos(a) * d, 0.02, Math.sin(a) * d); w.rotation.set((R() - .5) * 0.9, R() * TAU, (R() - .5) * 0.9); w.scale.setScalar(0.17 + R() * 0.1);
+        mesh(new THREE.CylinderGeometry(1, 1, 0.45, 12, 1, false, 0, 1.1), sponge, 0, 0.22, 0, w); mesh(new THREE.CylinderGeometry(1, 1, 0.12, 12, 1, false, 0, 1.1), filling, 0, 0.5, 0, w); mesh(new THREE.CylinderGeometry(1.02, 1.02, 0.4, 12, 1, false, 0, 1.1), sponge, 0, 0.75, 0, w); mesh(new THREE.CylinderGeometry(1.03, 1.03, 0.18, 12, 1, false, 0, 1.1), creamMat, 0, 1.03, 0, w); grp.add(w); } // cake wedges
+      for (let i = 0; i < 7; i++) { const d = mesh(new THREE.SphereGeometry(0.1 + R() * 0.07, 9, 7), creamMat, (R() - .5) * 1.5, 0.05, (R() - .5) * 1.5, grp); d.scale.y = 0.75; } // cream dollops
+      for (let i = 0; i < 6; i++) { const c = mesh(new THREE.SphereGeometry(0.07 + R() * 0.03, 8, 6), lam(i % 3 ? 0xd0213a : 0xff6b9a), (R() - .5) * 1.6, 0.08, (R() - .5) * 1.6, grp); mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 4), lam(0x4a7a2a), 0, 0.1, 0, c).rotation.z = 0.5; } // cherries with stems
+      mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.3, 6), lam(0xfff1a8), 0.3, 0.17, -0.2, grp); mesh(new THREE.SphereGeometry(0.04, 6, 5), lam(0xffa030), 0.3, 0.35, -0.2, grp); // a bent birthday candle
+      inkify(grp);
       grp.renderOrder = 2; scene.add(grp); v = { g:grp, x, z, r:g[3] / 10, t0:g[5] / 10 }; goView.set(g[0], v); word('SAHNE!', x, grp.position.y + 1.5, z, { color:'#ffd6e6', scale:1.1 }); }
     v.t = g[4] / 10;
   }
@@ -4643,7 +4672,7 @@ function egoUpdate(dt) {
   if ((EG.fire && PL.on) || EG.fireK) egoAttack();
   { const P0 = V.poss, sgA = P0 && KINDS[P0.k].role === 'siege' && !P0.nadeAim && !(EG.intro > 0.3);
     if (sgA) { if (!EG.sgRing) { EG.sgRing = new THREE.Group(); const m1 = new THREE.MeshBasicMaterial({ color:0xffa040, transparent:true, opacity:0.8, depthWrite:false }), m2 = new THREE.MeshBasicMaterial({ color:0xff3b2f, transparent:true, opacity:0.4, depthWrite:false }); const r1 = new THREE.Mesh(ringGeo, m1); r1.scale.setScalar(KINDS[P0.k].aoe * 1.15); EG.sgRing.add(r1); const c1 = new THREE.Mesh(discGeo, m2); c1.scale.setScalar(1.3); EG.sgRing.add(c1); scene.add(EG.sgRing); }
-      const { pt } = egoAim(P0), dx = pt.x - P0.x, dz = pt.z - P0.z, dd = Math.hypot(dx, dz) || 1, R = KINDS[P0.k].range + 3, tx = dd > R ? P0.x + dx / dd * R : pt.x, tz = dd > R ? P0.z + dz / dd * R : pt.z;
+      const { pt } = egoAim(P0), dx = pt.x - P0.x, dz = pt.z - P0.z, dd = Math.hypot(dx, dz) || 1, R = KINDS[P0.k].range + SIEGE_EGO_REACH, tx = dd > R ? P0.x + dx / dd * R : pt.x, tz = dd > R ? P0.z + dz / dd * R : pt.z;
       EG.sgRing.visible = true; EG.sgRing.position.set(tx, groundY(tx, tz) + 0.15, tz); EG.sgRing.children[0].rotation.y += dt * 0.6; }
     else if (EG.sgRing) EG.sgRing.visible = false; }
   const P = V.poss; if (!P) return;
@@ -4815,7 +4844,7 @@ function spawnSlot(i) {
     if (s.g[me] < KINDS[k].cost) { SFX.play('error'); toast('Zu wenig ' + FAC[V.facs[me]].res + '. Fahnen bringen mehr!', 1600); return; }
     if (pop >= CFG.pop) { SFX.play('error'); toast('Deine Armee ist voll (' + CFG.pop + ').', 1600); return; }
     if (s.q[me].length >= CFG.queueMax) { SFX.play('error'); toast('Warteschlange ist voll.', 1400); return; }
-    if (KINDS[k].role === 'siege' && s.u.filter(e => teamOfKind(e[1], s.fa) === me && KINDS[e[1]].role === 'siege').length + s.q[me].filter(q => KINDS[q].role === 'siege').length >= 5) { SFX.play('error'); toast('Höchstens 5 Katapulte gleichzeitig.', 1600); return; }
+    if (KINDS[k].role === 'siege' && s.u.filter(e => teamOfKind(e[1], s.fa) === me && KINDS[e[1]].role === 'siege').length + [...s.q[me]].filter(q => KINDS[+q].role === 'siege').length >= 5) { SFX.play('error'); toast('Höchstens 5 Katapulte gleichzeitig.', 1600); return; }
   }
   sendCmd({ t:'spawn', k }); hintDone('spawn');
 }
@@ -5447,7 +5476,7 @@ function tutSteps(nar, adv) {
     { id:'moveMode', t:pc ? `Praktisch üben: Wähle deine Truppen, wechsle mit „Laufen“ (${kl('mode')}) in den Laufmodus und gib dann ${kl('order')} auf die Fahne beim Pfeil. Im Laufmodus gehen sie direkt dorthin.` : 'Praktisch üben: Wähle deine Truppen, tippe auf „Laufen“ und anschließend auf die Fahne beim Pfeil. Im Laufmodus gehen sie direkt dorthin.', hlFn:() => !V.selected.size ? '[data-sel="all"]' : V.orderMode !== 'move' ? '#modeMv' : null, world:() => FLAGS[nf],
       start:() => { const f = frontOf(me, 6), units = G.units.filter(u => u.team === me && u.hp > 0); units.forEach((u, i) => { const p = nearestWalkable(MAP, f.x + (i % 4 - 1.5) * 1.6, f.z + Math.floor(i / 4) * 1.6); Object.assign(u, { x:p.x, z:p.z, y:unitY(p.x, p.z), vx:0, vz:0, ord:{ x:p.x, z:p.z, mv:false }, path:null, tgt:-1 }); delete u.pj; delete u.navPad; }); TUT.moveSetup = { units:units.map(u => ({ id:u.id, x:u.x, z:u.z, y:u.y, yaw:u.yaw })), rally:{ ...T().rally }, flag:{ ...G.flags[nf] }, flagIndex:nf }; tutResetMove(); flagZoom(FLAGS[nf]); },
       command:c => { if (c.m === 1 && V.orderMode === 'move' && tutMovementOrder(c, FLAGS[nf])) return true; tutResetMove(); flagZoom(FLAGS[nf]); $('#tutText').textContent = c.m !== 1 || V.orderMode !== 'move' ? 'Das war der Angriffsmodus. Wir starten diesen Versuch neu: erst Truppen wählen, dann „Laufen“, dann die Fahne beim Pfeil als Ziel.' : 'Das war nicht die Fahne beim Pfeil. Versuch neu: Truppen wählen, „Laufen“, dann genau diese Fahne als Ziel.'; SFX.play('error'); return false; }, done:() => tutMovementDone(FLAGS[nf]) },
-    { t:'Die Sammelfahne bestimmt, wo neue Krieger warten. Setz sie nah an die Front, dann sind Verstärkungen schneller da. Knopf „Fahne“, dann Boden.', hlFn:() => V.rallyMode ? null : '#rallyBtn', start:() => setOrderMode('attack'), done:() => TUT.flags.rally },
+    { t:'Die Sammelfahne bestimmt, wo neue Krieger warten. Setz sie nah an die Front, dann sind Verstärkungen schneller da. Fahnen-Knopf, dann Boden.', hlFn:() => V.rallyMode ? null : '#rallyBtn', start:() => setOrderMode('attack'), done:() => TUT.flags.rally },
     { id:'twoAuto', t:`Schalte AUTO bei „${nm('melee')}“ und „${nm('ranged')}“ ein. Beide leuchtenden AUTO-Knöpfe müssen aktiv sein – dann werden diese zwei Sorten abwechselnd nachgebildet.`, hlMany:['.spawn[data-slot="0"] .auto', '.spawn[data-slot="1"] .auto'], start:() => { T().auto[ks[0]] = false; T().auto[ks[1]] = false; gold(300); }, done:() => !!T().auto[ks[0]] && !!T().auto[ks[1]] },
     { id:'counterRule', t:`Unten bei der Einheit steht, gegen welche sie stark ist. Schau auf die Anzeige unter den Einheitenkarten: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Reiter zerlegen auch Katapulte. Gesteuert macht ein Konter riesigen Schaden: zwei saubere Treffer reichen.`, next:true },
     { t:`Gegnerisches Katapult! Übernimm den „${nm('cav')}“ und ramm es mit der Spezialfähigkeit (${spc}) – der Dash zerbricht Katapulte sofort.`, start:() => { prep(kOf('cav'), [[0, 12, E.kinds[3]]], 1); TUT.enterAt = now() + 400; }, after:egoKeep, done:dead },
@@ -5458,7 +5487,7 @@ function tutSteps(nar, adv) {
       world:() => TUT.edge && !V.poss ? TUT.edge.cav : TUT.edge ? TUT.edge : null, done:dead },
     { t:'Merke: Gesteuerte Reiter und Stock-Opas können Gegner von Klippen stoßen – der Computer weiß das auch! Halte dich von Kanten fern.', start:() => { clearTut(); }, next:true },
     { t:`Ein wilder Eisbär! Er greift alles in der Nähe an und ist stark gegen Nahkämpfer und Reiter – aber Pfeile tun ihm richtig weh. Übernimm die Bogenschützin und erleg ihn!`,
-      start:() => { prep(kOf('ranged'), [], 0); const u = G.units.find(x => x.id === TUT.egoId); u.hp = KINDS[u.k].hp * 2; const a = arena(); TUT.bear = tutBear({ x:a.x, z:a.z + 14 * dir }, 220).id; TUT.bev0 = G.bevS || 0; TUT.enterAt = now() + 400; },
+      start:() => { prep(kOf('ranged'), [], 0); const u = G.units.find(x => x.id === TUT.egoId); u.hp = KINDS[u.k].hp * 2; const a = arena(); TUT.bear = tutBear({ x:a.x, z:a.z + 14 * dir }, 170).id; TUT.bev0 = G.bevS || 0; TUT.enterAt = now() + 400; },
       after:() => { egoKeep(); if (!G.units.some(u => u.id === TUT.egoId) && (G.bevS || 0) === TUT.bev0) { const a = arena(), u = tutUnit(0, kOf('ranged'), a.x, a.z); u.tutPrep = true; u.hp *= 2; TUT.egoId = u.id; TUT.enterAt = now() + 600; } },
       world:() => { const b = G.bears.find(b => b.id === TUT.bear); return b ? { x:b.x, z:b.z } : null; }, done:() => (G.bevS || 0) !== TUT.bev0 && G.units.some(u => u.team === me && KINDS[u.k].bear && !(u.taming > 0)) },
     { t:`Besiegte Eisbären laufen zu dir über! Übernimm deinen Bären und zerfetz die Puppen mit Bärenklauen (${spc}).`,
@@ -5470,9 +5499,10 @@ function tutSteps(nar, adv) {
     { t:`Neu im Spiel: Am Kartenrand tauchen Geldsäcke und Discogranaten auf – öfter bei dem, der weniger Einkommen hat. Nur Ego-Krieger können sie einsammeln. Hol dir beide!`,
       start:() => { const P = G.units.find(u => u.id === TUT.egoId) || { x:arena().x, z:arena().z }; [[-4, 7, 0], [4, 7, 1]].forEach(([ox, oz, ty]) => { const q = nearestWalkable(MAP, P.x + ox, P.z + oz * dir); G.itemId = (G.itemId + 1) % 10000; G.items.push({ id:G.itemId, ty, v:80, x:q.x, z:q.z, tut:1 }); }); TUT.enterAt = now() + 400; },
       after:egoKeep, world:() => { const it = G.items.find(i => i.tut); return it ? { x:it.x, z:it.z } : null; }, done:() => !G.items.some(i => i.tut) },
-    { t:pc ? `Jetzt die Granate: ${kl('nade')} gedrückt halten – mit der Maus hoch/runter stellst du die Weite ein – loslassen. Alle im Kreis müssen tanzen!` : 'Jetzt die Granate: Granaten-Knopf gedrückt halten, mit dem Finger hoch/runter die Weite einstellen, loslassen – alle im Kreis müssen tanzen!',
-      start:() => { const P = G.units.find(u => u.id === TUT.egoId) || { x:arena().x, z:arena().z }; TUT.dIds = [-1.5, 0, 1.5].map(o => { const d = tutUnit(1, E.kinds[0], P.x + o, P.z + 11 * dir); d.tutStill = true; d.tutDummy = true; return d.id; }); TUT.ge0 = G.geS || 0; TUT.enterAt = now() + 400; },
+    { t:pc ? `Jetzt die Granate: ${kl('nade')} gedrückt halten – mit der Maus hoch/runter stellst du die Weite ein – loslassen. Da vorne steht ein ganzer Haufen – alle im Kreis müssen tanzen!` : 'Jetzt die Granate: Granaten-Knopf gedrückt halten, mit dem Finger hoch/runter die Weite einstellen, loslassen. Da vorne steht ein ganzer Haufen – alle im Kreis müssen tanzen!',
+      start:() => { const P = G.units.find(u => u.id === TUT.egoId) || { x:arena().x, z:arena().z }; TUT.dIds = [[-2, 0], [0, 0], [2, 0], [-1, 1.8], [1, 1.8], [0, -1.6], [2.2, 1.6]].map(([ox, oz]) => { const d = tutUnit(1, E.kinds[(ox + oz) > 1 ? 1 : 0], P.x + ox, P.z + (11 + oz) * dir); d.tutStill = true; d.tutDummy = true; d.hp = KINDS[d.k].hp * 0.55; return d.id; }); TUT.ge0 = G.geS || 0; TUT.enterAt = now() + 400; },
       after:() => { egoKeep(); if (!(T().nades > 0) && !(G.gr && G.gr.length) && !((G.geS || 0) !== TUT.ge0 && G.ge && G.ge[G.ge.length - 1][2] > 0)) { T().nades = 1; if ((G.geS || 0) !== TUT.ge0) $('#tutText').textContent = 'Daneben! Hier ist noch eine. Schau etwas höher, um weiter zu werfen, tiefer für kürzer.'; } }, world:() => { const d = G.units.find(u => u.id === TUT.dIds[0]); return d ? { x:d.x, z:d.z } : null; }, done:() => (G.geS || 0) !== TUT.ge0 && G.ge && G.ge[G.ge.length - 1][2] > 0 },
+    { t:`Sie tanzen und wehren sich nicht! Hau jetzt alle um, bevor die Musik aufhört (${atk}, ${spc} für die Spezialfähigkeit).`, start:() => { TUT.enterAt = now() + 200; for (const id of TUT.dIds) { const d = G.units.find(u => u.id === id); if (d) { d.dance = Math.max(d.dance || 0, 20); d.hp = Math.min(d.hp, KINDS[d.k].hp * 0.4); } } }, after:egoKeep, done:() => dead() || TUT.dIds.filter(id => !G.units.some(u => u.id === id)).length >= 4 && G.units.filter(u => TUT.dIds.includes(u.id)).every(u => !(u.dance > 0)) },
     { t:pc ? `Merke: Die Basis schießt auf gesteuerte Krieger doppelt so weit. Allein stürmen ist Selbstmord – geh mit Armee! Zurück mit ${kl('exit')}.` : 'Merke: Die Basis schießt auf gesteuerte Krieger doppelt so weit. Allein stürmen ist Selbstmord – geh mit Armee! Tippe „Verlassen“.', hl:'#egoExit', start:() => { TUT.egoId = null; }, done:() => !V.poss },
     { t:'Heimvorteil und Sturm: Im gestrichelten Kreis um deine Basis nehmen deine Krieger weniger Schaden. Ab Minute 9 kommt der Sturm, dann nehmen Basen mehr Schaden, ab Minute 12 der Endkampf. Spätestens dann wird entschieden!', next:true },
     { t:'Karten-Wissen: Auf Arktis brechen Katapult-Treffer das Eis auf, wer dort steht, kracht ein. In der Wüste schießen Fernkämpfer weiter. Auf Klippen stößt dein Reiter Gegner in die Tiefe.', next:true },
@@ -5991,6 +6021,8 @@ function guessQuality() { // first-start estimate only; measured frame times tak
   let gpu = ''; try { const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'); if (ext) gpu = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || ''); } catch (_) {}
   const cores = navigator.hardwareConcurrency || 4, mem = navigator.deviceMemory || 4, dpr = devicePixelRatio || 1;
   if (/swiftshader|llvmpipe|software|basic render/i.test(gpu)) return 6;
+  const apple = /apple/i.test(gpu) || (/iphone|ipad|macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1), strongMobile = apple || /adreno \(tm\) [6-8]\d\d|mali-g[7-9]\d|immortalis|xclipse/i.test(gpu);
+  if (strongMobile) return cores <= 2 ? 2 : 0; // modern iPhones, iPads and flagship Androids start on Hoch; measurement still takes over
   let l = COARSE ? 2 : 0;
   if (cores <= 2 || mem <= 2) l = Math.max(l, 4); else if (cores <= 4 || mem < 4) l = Math.max(l, 2);
   if (/intel|mali|adreno|powervr|videocore/i.test(gpu) && !/iris xe|arc/i.test(gpu)) l = Math.max(l, 2);
@@ -6008,7 +6040,7 @@ const QS = {
 function initQuality() {
   const m = QS.mode();
   if (m !== 'auto') QS.lvl = MANUAL_LVL[m] ?? 2;
-  else { const saved = parseInt(store.get('wvr-qauto'), 10); QS.learned = Number.isFinite(saved); QS.lvl = QS.learned ? clamp(saved, 0, LMAX) : guessQuality(); }
+  else { const g = guessQuality(), saved = parseInt(store.get('wvr-qauto'), 10), sameGuess = String(store.get('wvr-qguess')) === String(g); QS.learned = Number.isFinite(saved) && sameGuess; QS.lvl = QS.learned ? clamp(saved, 0, LMAX) : g; store.set('wvr-qguess', String(g)); }
   applyQuality();
 }
 function setGfx(mode) { SET.gfx = mode; saveBinds(); if (mode !== 'auto') QS.lvl = MANUAL_LVL[mode]; else { const saved = parseInt(store.get('wvr-qauto'), 10); QS.lvl = Number.isFinite(saved) ? clamp(saved, 0, LMAX) : guessQuality(); } QS.bad = QS.good = 0; QS.hold = 3; QS.upFails = 0; QS.autoCap = 0; QS.capT = 0; applyQuality(); gfxUi(); }
@@ -6023,7 +6055,7 @@ function applyQuality() {
   const shOn = shT.sh > 0;
   if (sun.castShadow !== shOn) sun.castShadow = shOn;
   if (shOn && sun.shadow.mapSize.x !== shT.sh) { sun.shadow.mapSize.set(shT.sh, shT.sh); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
-  sun.shadow.radius = shT.shR; QS.shEvery = shT.shEvery; renderer.shadowMap.autoUpdate = shT.shEvery === 1; renderer.shadowMap.needsUpdate = true;
+  sun.shadow.radius = shT.shR + 1; QS.shEvery = shT.shEvery; renderer.shadowMap.autoUpdate = shT.shEvery === 1; renderer.shadowMap.needsUpdate = true;
   QS.unitSh = shT.unitSh; QS.shDist = shT.shDist; QS.vegSh = shT.veg; QS.ver++;
   contactMat.opacity = shOn && shT.unitSh < 1 ? 0.4 : 0.6; // without real unit shadows the soft contact shadow carries the grounding
   QS.fx = fxT.fx; QS.fxCap = fxT.fxCap; QS.ripples = fxT.ripples; QS.waterFx = fxT === GTIERS[0] || fxT === GTIERS[1] ? 1 : 1.8;
@@ -6076,7 +6108,7 @@ function perfTick(rawDt, force) {
     QS.downLoad = Math.max(units, 8); const ft0 = QS.ft; if (qualityStep(+1, QS.bound, QS.ft > 45 && !QS.cap ? 2 : 1)) QS.chk = { ft:ft0, t:QS.t }; return; // far too slow (under 22 fps): two rungs at once
   }
   // very smooth for a long time, and the scene is at least as busy as when we had to step down: try one step up
-  if (QS.ft < 15.4 && QS.p95 < 20.5 && !QS.cap) QS.good += rawDt; else QS.good = Math.max(0, QS.good - rawDt * 3);
+  if (QS.ft < 17.6 && QS.p95 < 20.5 && !QS.cap) QS.good += rawDt; // a solid 60 fps (16.7 ms) counts as smooth else QS.good = Math.max(0, QS.good - rawDt * 3);
   const wait = QS.upFails >= 3 ? Infinity : 32 * Math.pow(2, QS.upFails);
   if (QS.good > wait && QS.lvl > 0 && units >= QS.downLoad * 0.7) { if (qualityStep(-1)) QS.lastUp = QS.t; }
 }
@@ -6109,6 +6141,7 @@ function frame() {
   waterClock.value = clock; windClock.value = clock;
   water.position.y = (MAP && MAP.lift ? -9.7 : WL) + Math.sin(clock * 0.8) * 0.035;
   for (const c of clouds) { c.position.x += dt * 1.6; if (c.position.x > 140) c.position.x = -140; }
+  if (mapGroup && MAP && MAP.lift && QS.deco !== false) for (const o of mapGroup.children) { const md = o.userData.mist; if (md) { o.position.x = md.x + Math.sin(clock * 0.25 + md.ph) * 2.2; o.position.z = md.z + Math.cos(clock * 0.2 + md.ph) * 1.4; o.material.opacity = 0.55 + 0.25 * Math.sin(clock * 0.5 + md.ph); o.updateMatrix(); } }
   baseViews.forEach((b, i) => {
     if (b.shooter) { const sh = b.shooter; if (sh.aimYaw !== undefined) { const d = angDiff(sh.aimYaw, sh.g.rotation.y); sh.g.rotation.y += d * Math.min(1, dt * 10); } animateRig(sh, dt, false, sh.atkT < 1.5); }
     if (b.shake > 0) { b.shake -= dt; b.g.position.x = BASES[i].x + Math.sin(clock * 70) * 0.12 * (b.shake / 0.25); } else b.g.position.x = BASES[i].x;

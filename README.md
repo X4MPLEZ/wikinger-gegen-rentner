@@ -6,9 +6,9 @@
 
 - **Fahnen** bringen Einkommen. Fahnen tief im Feindesland bringen weniger und verblassen ohne Wache.
 - **Konter:** Nahkampf schlägt Reiter, Reiter schlagen Fernkampf, Fernkampf schlägt Nahkampf. Mit Überzahl, Gelände oder direkter Steuerung lässt sich ein schlechtes Duell trotzdem gewinnen.
-- **Heimvorteil:** Im gestrichelten Kreis um die eigene Basis nehmen deine Krieger weniger Schaden. Basen halten viel aus, nur Katapulte treffen sie mit voller Wucht.
+- **Heimvorteil:** Im gestrichelten Kreis um die eigene Basis nehmen deine Krieger weniger Schaden. Die beiden roten Ringe zeigen, wie weit der Basisturm schießt: innen auf normale Krieger, außen (gepunktet) auf gesteuerte. Basen halten viel aus, nur Katapulte treffen sie mit voller Wucht.
 - **Sturm:** Ab Minute 9 nehmen Basen mehr Schaden, ab Minute 12 beginnt der Endkampf.
-- **Übernehmen:** Jeder Krieger kann direkt gesteuert werden, mit Spezialfähigkeit (Reiter-Rammstoß, Pfeilfächer, Stockwirbel, Wikingerwurf …).
+- **Übernehmen:** Jeder Krieger kann direkt gesteuert werden, mit Spezialfähigkeit (Reiter-Rammstoß, Pfeilfächer, Stockwirbel, Wikingerwurf …). Reiter können den Rammstoß auch mitten im Sprungpad-Flug zünden und landen rammend. Gesteuerte Katapulte treffen mit einem Volltreffer auf den Kopf doppelt.
 - **Kegeln:** Wer umgerammt oder geworfen wird, fliegt – und kegelt alle um, die im Weg stehen. Drei auf einen Streich sind ein „Strike“.
 - **Katapulte:** Der Wikinger-Fels rollt nach dem Einschlag weiter und walzt um, was im Weg steht. Die Rentner-Torte hinterlässt eine Sahnepfütze, in der jeder kleben bleibt.
 - **Noch eine Runde:** Online könnt ihr nach dem Spiel sofort eine Revanche auf neuer Karte starten, ohne neuen Code.
@@ -18,7 +18,7 @@
 - **Wiesen:** übersichtlich, Sprungpads über den Fluss.
 - **Wüste:** offen; Fernkämpfer und Katapulte schießen weiter, Kakteen stechen.
 - **Arktis:** schnelles, rutschiges Eis. Katapulttreffer brechen dauerhafte Löcher ins Eis, Eisbären lassen sich zähmen.
-- **Klippen:** Abgründe und Sprungpads. Reiter stoßen Gegner in die Tiefe.
+- **Klippen:** Bodenlose Abgründe und Sprungpads. Reiter stoßen Gegner in die Tiefe; wer läuft, bleibt von selbst an der Kante stehen.
 
 ## Grafik
 
