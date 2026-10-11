@@ -245,6 +245,7 @@ body.zoomed #game,body.zoomed #game *{touch-action:pinch-zoom!important}
 #egoSp .spE{font-size:1.55rem;line-height:1;position:relative;z-index:1;margin-top:-8px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
 #egoSp svg.i{position:relative;z-index:1;width:30px;height:30px;margin-top:-8px}
 #egoSp .cd{position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.6) var(--p,0%),transparent 0)}
+#egoAtk{position:relative;overflow:hidden}#egoAtk .cd{position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.55) var(--p,0%),transparent 0);pointer-events:none}#egoAtk.rdy{box-shadow:0 3px 0 var(--gold-deep),0 0 0 3px rgba(255,240,180,.9)}#egoAtk>svg,#egoAtk .i{position:relative}
 #egoSp small{position:absolute;bottom:6px;left:0;right:0;font-size:.5rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 #egoAtk.dance{background:linear-gradient(135deg,#ff6bd5,#a46bff 55%,#6be3ff);box-shadow:0 3px 0 #8a3a86;font-size:2.5rem;animation:danceBtn .45s ease-in-out infinite alternate}
 @keyframes danceBtn{to{transform:rotate(-10deg) scale(1.07)}}
@@ -1076,8 +1077,9 @@ function holeAt(x, z, pad = 0) {
   }
   return false;
 }
-const wadeAt = (x, z) => !MAP.frozen && !MAP.lift && !onBridge(MAP, x, z) && sampleH(MAP, x, z) < WL + 0.42;
-const inWater = (x, z) => holeAt(x, z) || (!onIce(x, z) && !landIn(MAP, x, z) && !onBridge(MAP, x, z) && sampleH(MAP, x, z) < WL + 0.4);
+// Only feet that are really under the water surface slow down: ankle-deep = wading (mild), deeper = swimming.
+const wadeAt = (x, z) => !MAP.frozen && !MAP.lift && !onBridge(MAP, x, z) && sampleH(MAP, x, z) < WL + 0.3;
+const inWater = (x, z) => holeAt(x, z) || (!onIce(x, z) && !onBridge(MAP, x, z) && sampleH(MAP, x, z) < WL + 0.05);
 const unitY = (x, z) => holeAt(x, z) ? WL - 0.75 : onIce(x, z) ? Math.max(groundY(x, z), WL + 0.14) : (MAP.lift ? groundY(x, z) : Math.max(groundY(x, z), WL - 0.85));
 const walkable = (x, z) => walkableIn(MAP, x, z);
 function nearestWalkable(m, x, z) {
@@ -1837,7 +1839,7 @@ function step(G) {
         steer(G, u, approach ? approach.x : tx, approach ? approach.z : tz, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1)); }
     } else if (u.navPad !== undefined || Math.hypot(o.x - u.x, o.z - u.z) > 0.3) steer(G, u, o.x, o.z, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1));
     const ox = u.x, oz = u.z;
-    { const icy = onIce(u.x, u.z), sw = (icy ? 1 : inWater(u.x, u.z) ? 0.33 : wadeAt(u.x, u.z) ? 0.65 : 1) * (u.cold > 0 ? 0.88 : 1); iceVelocity(u, u.vx, u.vz, DT); u.vx = u.ivx; u.vz = u.ivz; let nx = u.x + u.vx * DT * sw, nz = u.z + u.vz * DT * sw;
+    { const icy = onIce(u.x, u.z), sw = (icy ? 1 : inWater(u.x, u.z) ? 0.4 : wadeAt(u.x, u.z) ? 0.82 : 1) * (u.cold > 0 ? 0.88 : 1); iceVelocity(u, u.vx, u.vz, DT); u.vx = u.ivx; u.vz = u.ivz; let nx = u.x + u.vx * DT * sw, nz = u.z + u.vz * DT * sw;
       if (MAP.cliff && !(u.kb && u.kb.left > 0) && !(u.dashUntil > G.t) && fallZone(nx, nz) && !fallZone(u.x, u.z)) { const r = railing(u.x, u.z, nx, nz); nx = r.x; nz = r.z; } // walking units stop at the edge (bridge rail / cliff rim)
       if ((Math.abs(u.vx) + Math.abs(u.vz) > 0.001) && (fallZone(nx, nz) || (unitY(u.x, u.z) - unitY(nx, nz) > 1.2 && edgeSlide(nx, nz)))) { advanceGround(u, nx, nz, u.vx * sw, u.vz * sw, DT); if (u.air || u.hp <= 0) continue; } else { u.x = nx; u.z = nz; } }
     if (!walkable(u.x, u.z)) {
@@ -2409,6 +2411,8 @@ THREE.MeshLambertMaterial = (Lam => function (o = {}) { if (!TOON || o.noToon) r
 const lam = c => matCache[c] || (matCache[c] = new THREE.MeshLambertMaterial({ color:lin(c) }));
 // Ink outline: the same instances drawn once more, back faces only, pushed out along the normals (shares the matrix buffer)
 const INK = new THREE.MeshBasicMaterial({ color:lin(0x1c1526), side:THREE.BackSide }); INK.onBeforeCompile = sh => { sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(normal) * 0.028;'); }; INK.customProgramCacheKey = () => 'ink';
+const INK_TEAM = INK.clone(); INK_TEAM.color.set(0xffffff); INK_TEAM.onBeforeCompile = INK.onBeforeCompile; INK_TEAM.customProgramCacheKey = () => 'ink'; // white base: the per-instance colour decides (black = own, red = enemy)
+const INK_OWN = new THREE.Color(lin(0x1c1526)), INK_FOE = new THREE.Color(lin(0xc0242c));
 function inkify(root) { const add = []; root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !o.userData.isInk && o.material && !o.material.transparent) add.push(o); }); for (const o of add) { const c = new THREE.Mesh(o.geometry, INK); c.userData.isInk = true; c.renderOrder = -1; o.add(c); } return root; } // outlines for the few non-instanced figures (catapults, bears, bases)
 const basic = (c, o = 1) => new THREE.MeshBasicMaterial({ color:lin(c), transparent:o < 1, opacity:o, depthWrite:o >= 1 });
 const ctex = c => { const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t; };
@@ -2783,7 +2787,7 @@ function ubRegister(u) {
 function ubRelease(u) { if (u.parts) { for (const m of u.parts) m.layers.set(0); u.parts = null; } }
 function ubDetach(obj) { obj.traverse(m => { if (m.isMesh) { m.layers.set(0); m.userData.ubOff = true; } }); } // a part flying off as debris renders on its own again
 function ubMake(geo, mat, cast, r, cap = 16) { const im = new THREE.InstancedMesh(geo, mat, cap); im.count = 0; im.frustumCulled = false; im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.castShadow = cast; im.receiveShadow = false; im.visible = false; scene.add(im);
-  const ol = new THREE.InstancedMesh(geo, INK, cap); ol.instanceMatrix = im.instanceMatrix; ol.count = 0; ol.frustumCulled = false; ol.castShadow = false; ol.visible = false; ol.renderOrder = -1; scene.add(ol); im.userData.ol = ol; return im; }
+  const ol = new THREE.InstancedMesh(geo, INK_TEAM, cap); ol.instanceMatrix = im.instanceMatrix; ol.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3); ol.instanceColor.setUsage(THREE.DynamicDrawUsage); ol.count = 0; ol.frustumCulled = false; ol.castShadow = false; ol.visible = false; ol.renderOrder = -1; scene.add(ol); im.userData.ol = ol; return im; }
 function ubEntry(m, near, lod) {
   const geo = lod && m.userData.lo ? m.userData.lo : m.geometry;
   let gm = UB.groups.get(geo); if (!gm) UB.groups.set(geo, gm = new Map());
@@ -2801,10 +2805,11 @@ function unitBatch() {
       if (m.userData.ubOff || !m.visible || !m.parent || !m.parent.visible) continue;
       const e = ubEntry(m, near, lod);
       if (e.n >= e.cap) { const im = ubMake(e.im.geometry, e.im.material, e.cast, e.r, e.cap * 2); im.instanceMatrix.array.set(e.im.instanceMatrix.array); scene.remove(e.im); if (e.im.userData.ol) scene.remove(e.im.userData.ol); e.im.dispose(); e.im = im; e.cap *= 2; }
+      { const ol = e.im.userData.ol; if (ol) { const c = u.team === V.myTeam ? INK_OWN : INK_FOE, ca = ol.instanceColor.array, o3 = e.n * 3; ca[o3] = c.r; ca[o3 + 1] = c.g; ca[o3 + 2] = c.b; } }
       e.im.instanceMatrix.array.set(m.matrixWorld.elements, e.n++ * 16);
     }
   }
-  for (const e of UB.list) { e.im.count = e.n; e.im.visible = e.n > 0; if (e.n) e.im.instanceMatrix.needsUpdate = true; e.im.castShadow = e.cast && e.r > QS.unitSh; const ol = e.im.userData.ol; if (ol) { ol.count = QS.ink ? e.n : 0; ol.visible = QS.ink && e.n > 0; } }
+  for (const e of UB.list) { e.im.count = e.n; e.im.visible = e.n > 0; if (e.n) e.im.instanceMatrix.needsUpdate = true; e.im.castShadow = e.cast && e.r > QS.unitSh; const ol = e.im.userData.ol; if (ol) { ol.count = QS.ink ? e.n : 0; ol.visible = QS.ink && e.n > 0; if (e.n) ol.instanceColor.needsUpdate = true; } }
 }
 function hpBatch() {
   let n = 0; const { bg, fg, m, c, N } = HPB;
@@ -3241,10 +3246,10 @@ function waterMotionFX(u, x, y, z, wet, dt) {
 }
 const CONTACT_CAP = 128;
 const contactGeo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-const contactTex = (() => { const c = cnv(64, 64), x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 4, 32, 32, 32); g.addColorStop(0, 'rgba(0,0,0,.8)'); g.addColorStop(0.4, 'rgba(0,0,0,.45)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
-const contactMat = new THREE.MeshBasicMaterial({ map:contactTex, transparent:true, opacity:0.4, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1 });
+const contactTex = (() => { const c = cnv(64, 64), x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 4, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,.8)'); g.addColorStop(0.4, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+const contactMat = new THREE.MeshBasicMaterial({ map:contactTex, transparent:true, opacity:0.5, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-1 });
 const contactAlpha = instanceFadeMaterial(contactMat, contactGeo, CONTACT_CAP);
-const contactMesh = new THREE.InstancedMesh(contactGeo, contactMat, CONTACT_CAP); contactMesh.count = 0; contactMesh.frustumCulled = false; contactMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(contactMesh);
+const contactMesh = new THREE.InstancedMesh(contactGeo, contactMat, CONTACT_CAP); contactMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(CONTACT_CAP * 3).fill(1), 3); contactMesh.instanceColor.setUsage(THREE.DynamicDrawUsage); contactMesh.count = 0; contactMesh.frustumCulled = false; contactMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(contactMesh);
 function unitShadowRange(u) { // per tier: which parts cast (by size) and up to which distance
   if (!u.shadowCasters) { u.shadowCasters = []; u.g.traverse(m => { if (m.isMesh && m.castShadow) { if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere(); u.shadowCasters.push([m, m.geometry.boundingSphere.radius * Math.max(m.scale.x, m.scale.y, m.scale.z)]); } }); }
   const p = V.poss || camS, d = Math.hypot(u.g.position.x - (p.x || 0), u.g.position.z - (p.z || 0)), near = d < QS.shDist;
@@ -3258,9 +3263,9 @@ function contactTick() {
     if (height > 18 || Math.hypot(p.x - camera.position.x, p.z - camera.position.z) > 160) continue;
     const size = KINDS[u.k].r * 3.1 + Math.min(1.6, height * 0.12);
     puffDummy.position.set(p.x, floor + 0.04, p.z); puffDummy.scale.set(size, 1, size); puffDummy.rotation.set(0, 0, 0); puffDummy.updateMatrix();
-    contactMesh.setMatrixAt(i, puffDummy.matrix); contactAlpha.setX(i++, 1 / (1 + height * 0.16));
+    contactMesh.setMatrixAt(i, puffDummy.matrix); { const foe = u.team !== V.myTeam, ca = contactMesh.instanceColor.array, o3 = i * 3; ca[o3] = foe ? 0.75 : 0.05; ca[o3 + 1] = foe ? 0.08 : 0.05; ca[o3 + 2] = foe ? 0.08 : 0.08; } contactAlpha.setX(i++, 1 / (1 + height * 0.16)); // enemies stand on a reddish shadow
   }
-  contactMesh.count = i; contactMesh.instanceMatrix.needsUpdate = true; contactAlpha.needsUpdate = true;
+  contactMesh.count = i; contactMesh.instanceMatrix.needsUpdate = true; contactMesh.instanceColor.needsUpdate = true; contactAlpha.needsUpdate = true;
 }
 const spriteCache = new Map();
 function spriteMat(key, make) { if (!spriteCache.has(key)) { const c = make(), tx = ctex(c); c._tex = tx; spriteCache.set(key, { mat:new THREE.SpriteMaterial({ map:tx, depthTest:false, transparent:true }), ar:c.width / c.height }); } return spriteCache.get(key); }
@@ -4695,7 +4700,7 @@ function egoUpdate(dt) {
   let vx = (cy * fwd - cyz * str), vz = (cyz * fwd + cy * str);
   const slowMu = V.units.get(P.id); let speed = K.speed * 1.15 * (slowMu && slowMu.slowed ? 0.7 : 1) * (P.rageT > 0 ? 1.4 : 1) * [1, 2][tpk(V.myTeam, 'turbo')] * (K.role === 'cav' ? [1, 1.5][tpk(V.myTeam, 'cavspd')] : 1);
   const dashing = P.dashT > 0; if (dashing) { P.dashT -= dt; vx = cy; vz = cyz; speed = 27; }
-  const inW = inWater(P.x, P.z), wd = !inW && wadeAt(P.x, P.z); if (P.dashT > 0 && (inW || wd)) { P.dashT -= dt * 0.8; if (Math.random() < dt * 30) puff(P.x + (Math.random() - .5) * 1.4, WL + 0.2, P.z + (Math.random() - .5) * 1.4, 0xe8f8ff, 1, 0.6); } const swim = inW ? (P.dashT > 0 ? 0.5 : 0.36) : wd ? (P.dashT > 0 ? 0.6 : 0.65) : 1, fz = frozen || P.pj || P.air ? 0 : (P.waterDrag = lerp(P.waterDrag ?? swim, swim, 1 - Math.exp(-dt * 9))); let wvx = vx * speed * fz, wvz = vz * speed * fz; if (!P.pj && !P.air && !frozen) { iceVelocity(P, wvx, wvz, dt); wvx = P.ivx; wvz = P.ivz; if (onIce(P.x, P.z) && Math.hypot(wvx, wvz) > 3 && Math.random() < dt * 8) emitFX('ice', P.x, unitY(P.x, P.z) + 0.1, P.z, { n:1, size:.4, dx:-cy, dz:-cyz }); } else if (!P.air) { P.ivx = wvx; P.ivz = wvz; } const nx = P.x + wvx * dt, nz = P.z + wvz * dt;
+  const inW = inWater(P.x, P.z), wd = !inW && wadeAt(P.x, P.z); if (P.dashT > 0 && (inW || wd)) { P.dashT -= dt * 0.8; if (Math.random() < dt * 30) puff(P.x + (Math.random() - .5) * 1.4, WL + 0.2, P.z + (Math.random() - .5) * 1.4, 0xe8f8ff, 1, 0.6); } const swim = inW ? (P.dashT > 0 ? 0.5 : 0.42) : wd ? (P.dashT > 0 ? 0.7 : 0.82) : 1, fz = frozen || P.pj || P.air ? 0 : (P.waterDrag = lerp(P.waterDrag ?? swim, swim, 1 - Math.exp(-dt * 9))); let wvx = vx * speed * fz, wvz = vz * speed * fz; if (!P.pj && !P.air && !frozen) { iceVelocity(P, wvx, wvz, dt); wvx = P.ivx; wvz = P.ivz; if (onIce(P.x, P.z) && Math.hypot(wvx, wvz) > 3 && Math.random() < dt * 8) emitFX('ice', P.x, unitY(P.x, P.z) + 0.1, P.z, { n:1, size:.4, dx:-cy, dz:-cyz }); } else if (!P.air) { P.ivx = wvx; P.ivz = wvz; } const nx = P.x + wvx * dt, nz = P.z + wvz * dt;
   if (P.pj) { /* Pad flight owns the trajectory. */ } else if (P.air) { const landed = airStep(P, dt); if (landed && !(P.hp <= 0) && P.landV > 5) emitFX('land', P.x, P.fy + .1, P.z, { size:.7 }); } else if (walkable(nx, nz) && !fallZone(nx, nz)) { advanceGround(P, nx, nz, wvx, wvz, dt, dashing); } else if (fallZone(nx, nz) || edgeSlide(nx, nz) && (dashing || groundY(nx, nz) <= groundY(P.x, P.z) + 0.03)) { advanceGround(P, nx, nz, wvx, wvz, dt, dashing); } else if (walkable(nx, P.z) && Math.abs(nx - P.x) > 1e-4) P.x = nx; else if (walkable(P.x, nz) && Math.abs(nz - P.z) > 1e-4) P.z = nz;
   else { const mx = nx - P.x, mz = nz - P.z; for (const ang of [0.5, -0.5, 1.0, -1.0, 1.45, -1.45]) { const c = Math.cos(ang), sn = Math.sin(ang), f = Math.cos(ang) * 0.9, tx = P.x + (mx * c - mz * sn) * f, tz = P.z + (mx * sn + mz * c) * f; if (walkable(tx, tz)) { P.x = tx; P.z = tz; break; } } }
   P.slope = !walkable(P.x, P.z) && edgeSlide(P.x, P.z);
@@ -4719,7 +4724,7 @@ function egoUpdate(dt) {
   { const sf = $('#speedFx'), fast = P.dashT > 0 ? 0.95 : P.moving && (tpk(V.myTeam, 'turbo') || (KINDS[P.k].role === 'cav' && tpk(V.myTeam, 'cavspd')) || P.rageT > 0) ? 0.4 : 0; if (sf.style.opacity !== String(fast)) sf.style.opacity = String(fast); }
   { const rdy = !(P.spT > 0) && !P.dance; if (rdy !== !!EG.spReady) { EG.spReady = rdy; sp.classList.toggle('ready', rdy);
       if (rdy && now() - P.t0 > 1500) { SFX.play('ready'); const o = V.units.get(P.id); if (o) for (let k = 0; k < 10; k++) { const a = k / 10 * TAU; puff(P.x + Math.cos(a) * 1.1, (P.fy ?? unitY(P.x, P.z)) + 1 + Math.sin(k) * 0.6, P.z + Math.sin(a) * 1.1, 0xffd75e, 1, 0.45); } } } }
-  { const dz = !!P.dance, ab = $('#egoAtk'); if (ab.classList.contains('dance') !== dz) { ab.classList.toggle('dance', dz); ab.innerHTML = (dz ? si('dance') : ICON.sword) + (COARSE ? '' : '<kbd class="kb">Klick</kbd>'); ab.setAttribute('aria-label', dz ? 'Tanzen' : 'Angriff'); $('#danceBan').hidden = !dz; if (!dz) P.mv = null; } if (P.mv) { P.mv.t += rdt; if (P.mv.t > 0.9) P.mv = null; } cssSet(ab, 'opacity', !dz && P.cdT > 0 ? '0.7' : '1'); }
+  { const dz = !!P.dance, ab = $('#egoAtk'); if (ab.classList.contains('dance') !== dz) { ab.classList.toggle('dance', dz); ab.innerHTML = '<i class="cd"></i>' + (dz ? si('dance') : ICON.sword) + (COARSE ? '' : '<kbd class="kb">Klick</kbd>'); ab.setAttribute('aria-label', dz ? 'Tanzen' : 'Angriff'); $('#danceBan').hidden = !dz; if (!dz) P.mv = null; } if (P.mv) { P.mv.t += rdt; if (P.mv.t > 0.9) P.mv = null; } cssSet(ab, 'opacity', !dz && P.cdT > 0 ? '0.85' : '1'); cssVar(ab, '--p', (dz ? 0 : Math.round(P.cdT / (K.cd * CFG.possCd) * 100)) + '%'); const rd = !dz && P.cdT <= 0; if (ab._rdy !== rd) { ab._rdy = rd; ab.classList.toggle('rdy', rd); } }
   const u = V.units.get(P.id); if (u) cssSet($('#egoHp'), 'width', u.hpPct + '%');
   if (V.latest) { const gt = String(V.latest.g[V.myTeam]); if (gt !== EG.gtxt) { EG.gtxt = gt; $('#egoGold').textContent = gt; } }
   if (!P.confirmed && u && u.isPoss) P.confirmed = true;
@@ -4823,7 +4828,7 @@ function updateHud() {
     $$('.chip[data-sel]').forEach(b => { const w = b.dataset.sel; const on = w === 'none' ? false : w === 'all' ? same(own) : same(own.filter(u => KINDS[u.k].role === w)); attr(b, 'aria-pressed', String(on)); }); }
   txt($('#selCount'), V.selected.size); hid($('#selCount'), !V.selected.size);
   { const n = V.selected.size, one = n === 1 && V.units.get([...V.selected][0]), t = COARSE ? 'Tippe' : 'Klicke', ord = COARSE ? 'Tippe' : 'Rechtsklick';
-    const h = V.tut ? '' : V.rallyMode ? t + ' auf den Boden: Dort sammeln sich neue Krieger' : n === 0 ? '<b>' + t + '</b> auf einen Krieger oder „Alle“ zum Auswählen' : one ? '<b>' + ord + '</b> auf Ziel oder Gegner · <b>Übernehmen</b>: selbst steuern' : '<b>' + n + ' gewählt</b> · ' + ord + ' auf Boden, Gegner oder Basis' + (COARSE ? ' · „Abwählen“ für Einzelauswahl' : '');
+    const h = V.tut ? '' : V.rallyMode ? t + ' auf den Boden: Dort sammeln sich neue Krieger' : n === 0 ? '<b>' + t + '</b> auf einen Krieger oder „Alle“ zum Auswählen · <b style="color:#ff6b62">rot umrandet</b> = Gegner' : one ? '<b>' + ord + '</b> auf Ziel oder Gegner · <b>Übernehmen</b>: selbst steuern' : '<b>' + n + ' gewählt</b> · ' + ord + ' auf Boden, Gegner oder Basis' + (COARSE ? ' · „Abwählen“ für Einzelauswahl' : '');
     const el = $('#ctxHint'); if (el._h !== h) { el._h = h; el.innerHTML = h; } }
   hid($('#possBtn'), !(V.selected.size === 1 && V.playing && !V.ending && (() => { const u = V.units.get([...V.selected][0]); return !!u; })()));
   const cd = $('#countdown');
@@ -5355,7 +5360,7 @@ $('#btnAgain').addEventListener('click', playAi);
 $('#btnMenu').addEventListener('click', toMenu);
 $('#btnNetQuit').addEventListener('click', toMenu);
 $('#rallyIco').innerHTML = ICON.flag; $('#menuBtn').innerHTML = ICON.pause; $('#armyIco').innerHTML = ICON.army; $('#exitIco').innerHTML = ICON.exit;
-$('#egoAtk').innerHTML = ICON.sword; $('#spIco').innerHTML = ICON.star; $('#possIco').innerHTML = ICON.enter;
+$('#egoAtk').innerHTML = '<i class="cd"></i>' + ICON.sword; $('#spIco').innerHTML = ICON.star; $('#possIco').innerHTML = ICON.enter;
 let gameMode = store.get('wvr-mode') === 'chaos' ? 'chaos' : 'classic';
 function syncMode() { $$('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === gameMode))); }
 $$('[data-mode]').forEach(b => b.addEventListener('click', () => { gameMode = b.dataset.mode; store.set('wvr-mode', gameMode); syncMode(); if (typeof syncLvl === 'function') syncLvl(); }));
@@ -6057,7 +6062,7 @@ function applyQuality() {
   if (shOn && sun.shadow.mapSize.x !== shT.sh) { sun.shadow.mapSize.set(shT.sh, shT.sh); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
   sun.shadow.radius = shT.shR + 1; QS.shEvery = shT.shEvery; renderer.shadowMap.autoUpdate = shT.shEvery === 1; renderer.shadowMap.needsUpdate = true;
   QS.unitSh = shT.unitSh; QS.shDist = shT.shDist; QS.vegSh = shT.veg; QS.ver++;
-  contactMat.opacity = shOn && shT.unitSh < 1 ? 0.4 : 0.6; // without real unit shadows the soft contact shadow carries the grounding
+  contactMat.opacity = shOn && shT.unitSh < 1 ? 0.5 : 0.65; // without real unit shadows the soft contact shadow carries the grounding
   QS.fx = fxT.fx; QS.fxCap = fxT.fxCap; QS.ripples = fxT.ripples; QS.waterFx = fxT === GTIERS[0] || fxT === GTIERS[1] ? 1 : 1.8;
   QS.lod = T.lod; windStrength.value = T.wind; QS.deco = T.deco;
   // light tiers: no blurred HUD glass (the browser re-blurs the moving 3D image behind every panel each frame),
