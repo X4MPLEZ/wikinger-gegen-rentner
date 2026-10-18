@@ -1,0 +1,22 @@
+{
+  "name": "rentner-gegen-wikinger",
+  "private": true,
+  "description": "Browser game (three.js r128). The deployed page is index.html, built from src/ by tools/build.mjs - see CLAUDE.md.",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "format": "prettier --write src/js/*.js src/style.css",
+    "test": "sh tests/run.sh",
+    "test:mp": "sh tests/run.sh mp"
+  },
+  "devDependencies": {
+    "@vladmandic/face-api": "1.7.14",
+    "aedes": "0.51.3",
+    "express": "4.22.3",
+    "mqtt": "5.10.1",
+    "peer": "1.0.2",
+    "peerjs": "1.5.4",
+    "prettier": "3.8.1",
+    "three": "0.128.0",
+    "websocket-stream": "5.5.2"
+  }
+}

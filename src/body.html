@@ -1,0 +1,252 @@
+<div id="game">
+  <canvas id="c" aria-label="Schlachtfeld"></canvas>
+  <canvas id="lasso"></canvas>
+  <div id="vignette"></div>
+
+  <div id="hud" hidden>
+    <div class="hud-tl">
+      <div class="stat panel" title="Einkommen"><span id="resIco"></span><b id="gold">0</b><small id="inc">+0/s</small></div>
+      <div class="stat panel flagdots" id="flagdots" title="Fahnen"></div>
+      <div class="stat panel" title="Armee"><span id="armyIco"></span><b id="pop">0/30</b></div>
+    </div>
+    <div class="hud-chips">
+      <div id="phaseChip" class="panel" hidden></div>
+      <div id="evChip" class="panel" hidden></div>
+      <div id="perkBar"></div>
+    </div>
+    <div class="hud-tr">
+      <div class="ibrow"><button class="ibtn panel fsBtn" aria-label="Vollbild"></button><button class="ibtn panel muteBtn" aria-label="Ton an oder aus"></button><button class="ibtn panel" id="menuBtn" aria-label="Pause"></button></div>
+      <canvas id="mini" aria-label="Übersichtskarte"></canvas>
+    </div>
+    <div id="toast" class="panel"></div>
+    <div id="hlBan" aria-live="polite"><b></b><small></small></div>
+    <div class="hud-orders">
+      <button id="possBtn" hidden><span id="possIco"></span>Übernehmen</button>
+      <div class="ctl">
+        <div class="seg panel" role="group" aria-label="Befehl">
+          <button class="atk" id="modeAtk" aria-pressed="true">Angreifen</button>
+          <button class="mv" id="modeMv" aria-pressed="false">Laufen</button>
+        </div>
+      </div>
+      <div id="ctxHint" class="panel"></div>
+      <div class="ctl orders2">
+        <button class="chip panel" data-sel="all">Alle</button>
+        <button class="chip panel" data-sel="melee">Nah</button>
+        <button class="chip panel" data-sel="ranged">Fern</button>
+        <button class="chip panel" data-sel="cav">Reiter</button>
+        <button class="chip panel" data-sel="none" aria-label="Auswahl aufheben"><svg class="si" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Abwählen</button>
+        <button class="chip panel" id="rallyBtn" aria-pressed="false" aria-label="Sammelfahne versetzen" title="Sammelfahne versetzen"><span id="rallyIco"></span><span class="pcOnly">Fahne</span></button>
+        <span id="selCount">0</span>
+      </div>
+    </div>
+    <div class="hud-spawn">
+      <div class="spawn panel" data-slot="0"><button class="main"><img alt=""><span class="tx"><span class="nm"></span><span class="beats"></span><span class="cost"></span></span></button><button class="auto" aria-pressed="false">AUTO</button><span class="q" hidden></span><i class="prog"></i></div>
+      <div class="spawn panel" data-slot="1"><button class="main"><img alt=""><span class="tx"><span class="nm"></span><span class="beats"></span><span class="cost"></span></span></button><button class="auto" aria-pressed="false">AUTO</button><span class="q" hidden></span><i class="prog"></i></div>
+            <div class="spawn panel" data-slot="2"><button class="main"><img alt=""><span class="tx"><span class="nm"></span><span class="beats"></span><span class="cost"></span></span></button><button class="auto" aria-pressed="false">AUTO</button><span class="q" hidden></span><i class="prog"></i></div>
+      <div class="spawn panel" data-slot="3"><button class="main"><img alt=""><span class="tx"><span class="nm"></span><span class="beats"></span><span class="cost"></span></span></button><button class="auto" aria-pressed="false">AUTO</button><span class="q" hidden></span><i class="prog"></i></div>
+    </div>
+    <div id="countdown" hidden></div>
+  </div>
+
+  <div id="killFeed" aria-live="polite"></div>
+  <div id="ego" hidden>
+    <button id="egoExit" class="panel"><span id="exitIco"></span>Verlassen</button>
+    <button class="ego-top panel" id="egoSelfie" aria-label="Eigenes Gesicht ansehen"><img id="egoFace" alt=""><div><div class="nm" id="egoName"></div><div class="track"><i id="egoHp"></i></div></div></button>
+    <div id="frost"></div>
+    <div id="nadeDist" class="panel" hidden></div>
+    <div id="xhair" hidden><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3v10M20 27v10M3 20h10M27 20h10" stroke-width="2.6" stroke-linecap="round"/><circle cx="20" cy="20" r="2.2"/></svg></div>
+    <div id="speedFx"></div>
+    <div id="xhairTxt">KOPFSCHUSS!</div>
+    <div class="stat panel ego-gold"><span id="egoResIco"></span><b id="egoGold">0</b></div>
+    <div id="joy" hidden><i></i></div>
+    <div class="ego-btns">
+      <button id="egoNade" class="panel" aria-label="Discogranate" hidden><i class="cd"></i><span class="sic" data-si="nade"></span></button>
+      <button id="egoJump" class="panel" aria-label="Springen" hidden><i class="cd"></i><span class="sic" data-si="spring"></span></button>
+      <button id="egoSp" class="panel" aria-label="Spezialfähigkeit"><i class="cd"></i><span id="spIco"></span><small id="spName"></small></button>
+      <button id="egoAtk" aria-label="Angriff"></button>
+    </div>
+    <div id="egoCmds"><button id="egoHere" class="panel" aria-label="Alle zu mir"><span class="sic" data-si="flag"></span><small>Zu mir</small></button><button id="egoAtkAll" class="panel" aria-label="Alle greifen Blickziel an"><span class="sic" data-si="swords"></span><small>Angriff!</small></button><button id="egoSwap" class="panel" aria-label="Nächsten Krieger steuern"><span class="sic" data-si="dash"></span><small>Wechseln</small></button></div>
+    <button id="egoHero" aria-label="Den Helden spielen" hidden><span class="hIco"></span><b>Den Helden spielen</b></button>
+    <div id="egoHint" class="panel"></div>
+    <div id="plHint" class="panel" hidden><span class="sic" data-si="mouse"></span><span> Klicken, um die Maus zu fangen</span></div>
+    <div id="danceBan" hidden><span class="sic" data-si="dance"></span> Discogranate – du tanzt!</div>
+  </div>
+
+  <div id="tut" hidden>
+    <div class="tut-card panel">
+      <img id="tutFace" alt="">
+      <div class="tut-body">
+        <div class="tut-head"><b id="tutName"></b><span class="tut-r"><span id="tutStep"></span><button id="tutSkip" class="tut-x" aria-label="Tutorial beenden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></span></div>
+        <p id="tutText"></p>
+        <div class="tut-acts"><button class="btn small" id="tutNo" hidden>Weiter üben</button><button class="btn small" id="tutYes" hidden>Ja, beenden</button><button class="btn small gold" id="tutNext" hidden>Weiter</button></div>
+      </div>
+    </div>
+  </div>
+  <div id="tutRing" hidden></div>
+
+  <div id="alarm" hidden><span class="sic" data-si="warn"></span> Deine Basis wird angegriffen!</div>
+  <div id="rush" hidden><div class="rt" id="rushT"></div><div class="ra" id="rushA"></div></div>
+  <div id="coinLayer"></div>
+
+  <div id="menu" class="screen">
+    <div id="menuTR"><button class="ibtn panel fsBtn" aria-label="Vollbild"></button><button class="ibtn panel muteBtn" id="menuMute" aria-label="Ton an oder aus"></button></div>
+    <div class="card">
+      <h1 class="logo"><span class="b">Rentner</span><span class="vs">GEGEN</span><span class="a">Wikinger</span></h1>
+      <p class="sub">Erobere die Fahnen. Reiß die Basis ein.</p>
+      <div class="label">Deine Seite</div>
+      <div class="facs">
+        <button class="fac rentner" data-fac="rentner" aria-pressed="true"><span class="faces"><img data-face="2" alt=""><img data-face="3" alt=""><img data-face="5" alt=""></span><b>Rentner</b><small>clever und gemein</small></button>
+        <button class="fac viking" data-fac="viking" aria-pressed="false"><span class="faces"><img data-face="0" alt=""><img data-face="1" alt=""><img data-face="4" alt=""></span><b>Wikinger</b><small>wild und direkt</small></button>
+      </div>
+      <div class="me">
+        <div class="ph" id="mePh">kein Foto</div>
+        <div class="tx"><b>Dein Gesicht</b>Wenn du in einen Krieger schlüpfst, trägt er deinen Kopf.</div>
+        <div class="acts">
+          <button class="btn small" id="btnCam">Foto</button>
+          <button class="btn small" id="btnGal">Galerie</button>
+        </div>
+      </div>
+      <input type="file" id="inCam" accept="image/*" capture="user" hidden>
+      <input type="file" id="inGal" accept="image/*" hidden>
+      <div class="mopts">
+        <div class="lvl modes panel" role="group" aria-label="Spielmodus">
+          <button data-mode="classic" aria-pressed="true">Klassisch</button><button data-mode="chaos" aria-pressed="false">Chaos <small>mit Perks</small></button><button data-mode="fog" aria-pressed="false">Nebel <small>überall</small></button>
+        </div>
+        <div class="lvl panel" role="group" aria-label="Schwierigkeit">
+          <button data-lvl="easy" aria-pressed="false">Einfach</button><button data-lvl="medium" aria-pressed="true">Mittel</button><button data-lvl="hard" aria-pressed="false">Schwer</button><button data-lvl="insane" aria-pressed="false">Sehr schwer</button><button data-lvl="extreme" aria-pressed="false">Extrem</button>
+        </div>
+      </div>
+      <div class="label">Karte</div>
+      <div class="maps" role="group" aria-label="Karte">
+        <button class="mcard m0" data-map="0" aria-pressed="false"><i class="sic" data-si="dice"></i><b>Zufällig</b><small>Überraschung</small></button>
+        <button class="mcard m1" data-map="1" aria-pressed="false"><i class="sic" data-si="flower"></i><b>Wiesen</b><small>Insel &amp; Sprungpads</small></button>
+        <button class="mcard m2" data-map="2" aria-pressed="false"><i class="sic" data-si="cactus"></i><b>Wüste</b><small>Kakteen &amp; Sandwürmer</small></button>
+        <button class="mcard m3" data-map="3" aria-pressed="false"><i class="sic" data-si="snow"></i><b>Arktis</b><small>Eisbären &amp; Glatteis</small></button>
+        <button class="mcard m4" data-map="4" aria-pressed="false"><i class="sic" data-si="mountain"></i><b>Klippen</b><small>Absturzgefahr</small></button>
+      </div>
+      <button class="btn gold big" id="btnAi"><span class="lg"><span class="sic" data-si="swords"></span> Los geht's</span> <small id="aiInfo"></small></button>
+      <div class="row tutrow"><button class="btn" id="btnTut"><span id="tutBadge" class="badge" hidden>Neu hier?</span><span>Tutorial</span><small>Grundlagen</small></button><button class="btn" id="btnTutPro" title="Profi-Tutorial: alle Tricks"><span>Profi</span><small>Tutorial</small></button></div>
+      <div class="online panel">
+        <div class="olabel">Online zu zweit</div>
+        <div class="orow"><button class="btn" id="btnHost">Erstellen</button><input class="code" id="codeIn" maxlength="4" placeholder="CODE" inputmode="numeric" pattern="[0-9]{4}" autocomplete="off" spellcheck="false" aria-label="Vierstelliger Spielcode"><button class="btn" id="btnJoin">Beitreten</button></div>
+        <p class="status" id="onlineStatus" role="status" aria-live="polite" hidden></p>
+        <p class="note" id="onlineNote" hidden></p>
+        <div class="online-actions" id="onlineActions" hidden><button class="btn small" id="btnCodeCopy">Code kopieren</button><button class="btn small" id="btnHostCancel">Abbrechen</button></div>
+      </div>
+      <div class="mfoot"><span></span><button class="linkbtn" id="btnGfx"><span class="sic" data-si="gfx"></span> Grafik</button><button class="linkbtn" id="btnSnd"><span class="sic" data-si="snd"></span> Sound</button><button class="linkbtn pcOnly" id="btnKeys"><span class="sic" data-si="keys"></span> Steuerung</button></div>
+      <details class="help">
+        <summary>So wird gespielt</summary>
+        <div class="counter"><div><b>Nahkampf</b>schlägt Reiter</div><div><b>Reiter</b>überrennen Fernkampf</div><div><b>Fernkampf</b>erledigt Nahkampf</div></div>
+        <ul>
+          <li>Unten tippen bildet Krieger aus. <b>AUTO</b> bildet die Einheit laufend nach, solange das Geld reicht.</li>
+          <li><b>Alle / Nah / Fern / Reiter</b> wählt Truppen aus. Oder lange drücken und eine Schlinge ziehen.</li>
+          <li>Mit Auswahl auf den Boden tippen schickt die Truppe los. <b>Angreifen</b> kämpft unterwegs, <b>Laufen</b> ignoriert Gegner.</li>
+          <li>Mit dem <b>Fahnen</b>-Knopf versetzt du die Sammelfahne: Dort warten neue Krieger.</li>
+          <li>Wähle genau einen Krieger und tippe <b>Übernehmen</b>: Du steuerst ihn selbst, mit Großkopf, mehr Schaden und Spezialfähigkeit.</li>
+          <li>Fernkämpfer auf Hügeln schießen weiter. Über den Fluss geht es nur per Brücke oder Furt.</li>
+          <li>Wer weniger Fahnen hat, bekommt einen Aufholbonus. An der eigenen Basis heilen sich Krieger.</li>
+          <li>Besiegst du einen übernommenen Gegner mit deinem eigenen übernommenen Krieger, gibt es einen <b>Goldrausch</b> (bei den Rentnern: Pfandflaschenrausch).</li>
+        </ul>
+      </details>
+    </div>
+  </div>
+
+  <div id="faceScr" class="screen" hidden>
+    <div class="card">
+      <h2 class="h2">Gesicht zuschneiden</h2>
+      <div class="faceWrap"><canvas id="faceCv" width="560" height="560"></canvas></div>
+      <p class="note" id="faceMsg"></p>
+      <label class="zoom"><button class="btn small" id="faceOutB" type="button">－</button><input type="range" id="faceZoom" min="0.15" max="1.2" step="0.005" value="0.5" style="direction:rtl;flex:1"><button class="btn small" id="faceIn" type="button">＋</button></label>
+      <div class="row"><button class="btn" id="faceCancel">Abbrechen</button><button class="btn gold" id="faceOk">Übernehmen</button></div>
+    </div>
+  </div>
+
+  <div id="keysScr" class="screen" hidden>
+    <div class="card keyscard">
+      <h2 class="h2">Steuerung (PC)</h2>
+      <p class="note" id="keysNote" data-t="Klick auf ein Feld und drück dann eine Taste oder Maustaste. Esc bricht ab, Rücktaste löscht.">Klick auf ein Feld und drück dann eine Taste oder Maustaste. Esc bricht ab, Rücktaste löscht.</p>
+      <div id="keysList"></div>
+      <div class="label">Maus</div>
+      <label class="krow"><span>Empfindlichkeit <b id="setSensV">1.0</b></span><input type="range" id="setSens" min="0.2" max="2" step="0.1" value="1"></label>
+      <label class="krow"><span>Maus-Y umkehren</span><input type="checkbox" id="setInv"></label>
+      <label class="krow"><span>Kamera am Bildschirmrand bewegen</span><input type="checkbox" id="setEdge" checked></label>
+      <div class="row"><button class="btn" id="keysReset">Standard</button><button class="btn gold" id="keysBack">Fertig</button></div>
+    </div>
+  </div>
+
+  <div id="gfxScr" class="screen" hidden>
+    <div class="card keyscard">
+      <h2 class="h2">Grafik</h2>
+      <div class="label">Grafikqualität</div>
+      <div class="qseg" id="gfxQ" role="radiogroup" aria-label="Grafikqualität">
+        <button type="button" data-q="auto" role="radio">Automatisch</button><button type="button" data-q="high" role="radio">Hoch</button><button type="button" data-q="mid" role="radio">Mittel</button><button type="button" data-q="low" role="radio">Niedrig</button><button type="button" data-q="vlow" role="radio">Sehr niedrig</button>
+      </div>
+      <p class="note" id="gfxNow"></p>
+      <details class="gfxAdv">
+        <summary>Erweitert</summary>
+        <label class="krow"><span>Schatten</span><select id="gfxSh"><option value="auto">Automatisch</option><option value="high">Hoch</option><option value="low">Niedrig</option><option value="off">Aus</option></select></label>
+        <label class="krow"><span>Partikel</span><select id="gfxFx"><option value="auto">Automatisch</option><option value="high">Hoch</option><option value="mid">Mittel</option><option value="low">Niedrig</option></select></label>
+        <label class="krow"><span>Render-Auflösung</span><select id="gfxRes"><option value="auto">Automatisch</option><option value="high">Hoch</option><option value="mid">Mittel</option><option value="low">Niedrig</option></select></label>
+        <label class="krow"><span>Bildrate</span><select id="gfxFps"><option value="auto">Automatisch</option><option value="30">Max. 30 (gleichmäßiger)</option><option value="off">Unbegrenzt</option></select></label>
+      </details>
+      <p class="note">Ändert nur die Darstellung auf diesem Gerät. Spielablauf und Mehrspieler bleiben gleich.</p>
+      <div class="row"><button class="btn gold" id="gfxBack">Fertig</button></div>
+    </div>
+  </div>
+
+  <div id="sndScr" class="screen" hidden>
+    <div class="card keyscard">
+      <h2 class="h2">Sound</h2>
+      <div class="vols">
+        <label class="vrow"><span>Gesamt</span><input type="range" min="0" max="100" step="5" data-vol="all" aria-label="Gesamtlautstärke"><output></output></label>
+        <label class="vrow"><span>Disco-Musik</span><input type="range" min="0" max="100" step="5" data-vol="mus" aria-label="Lautstärke der Disco-Musik"><output></output></label>
+        <label class="vrow"><span>Effekte</span><input type="range" min="0" max="100" step="5" data-vol="fx" aria-label="Lautstärke der Effekte"><output></output></label>
+        <label class="vrow"><span>Umgebung</span><input type="range" min="0" max="100" step="5" data-vol="amb" aria-label="Lautstärke der Umgebung"><output></output></label>
+      </div>
+      <label class="krow"><span>Ton aus</span><input type="checkbox" id="sndMute"></label>
+      <p class="note">Geräusche von Kenney (frei, CC0), die Disco-Musik spielt das Spiel selbst.</p>
+      <div class="row"><button class="btn gold" id="sndBack">Fertig</button></div>
+    </div>
+  </div>
+
+  <div id="lobby" class="screen" hidden>
+    <div class="card">
+      <h2 class="h2" id="lobbyTitle">Spiel erstellt</h2>
+      <div id="lobbyCodeWrap"><div class="label" style="text-align:center;margin-bottom:8px">Code für deinen Gegner</div><div class="bigcode" id="lobbyCode">----</div></div>
+      <p class="status" id="lobbyStatus"></p>
+      <p class="note" id="lobbyNote"></p>
+      <button class="btn" id="btnLobbyBack">Zurück</button>
+    </div>
+  </div>
+
+  <div id="pause" class="screen" hidden>
+    <div class="card">
+      <h2 class="h2" id="pauseTitle">Pause</h2>
+      <button class="btn gold" id="btnResume">Weiter</button>
+      <button class="btn" id="btnGfx2"><span class="sic" data-si="gfx"></span> Grafik</button>
+      <button class="btn" id="btnSnd2"><span class="sic" data-si="snd"></span> Sound</button>
+      <button class="btn pcOnly" id="btnKeys2"><span class="sic" data-si="keys"></span> Steuerung</button>
+      <button class="btn" id="btnQuit">Aufgeben</button>
+    </div>
+  </div>
+
+  <div id="end" class="screen" hidden>
+    <div class="card">
+      <h2 class="endtitle" id="endTitle">Sieg!</h2>
+      <p class="sub" id="endSub"></p>
+      <div class="stats"><div><b id="stTime">0:00</b><span>Dauer</span></div><div><b id="stKills">0</b><span>Besiegt</span></div><div><b id="stFlags">0</b><span>Max. Fahnen</span></div></div>
+      <div class="cmp" id="endCmp"></div>
+      <button class="btn gold" id="btnAgain">Revanche auf neuer Karte</button>
+      <button class="btn gold" id="btnRematch" hidden>Noch eine Runde!</button>
+      <p class="note" id="rematchNote" hidden></p>
+      <button class="btn" id="btnMenu">Zum Menü</button>
+    </div>
+  </div>
+
+ <div id="pauseTag" hidden>PAUSE</div>
+  <div id="foePerk" hidden></div>
+  <div id="perkPick" hidden><div class="ph"><span>Pause · Wähle einen Perk</span><small id="perkInfo"></small></div><div class="bar"><i id="perkTimer"></i></div><div class="cards" id="perkCards"></div></div>
+  <div id="zoomwarn" class="panel" hidden><span>Die Seite ist vergrößert. Mit zwei Fingern zusammenziehen oder neu laden.</span><button class="btn small gold" id="zoomReload">Neu laden</button></div>
+  <div id="netBadge" hidden></div>
+  <div id="netwarn" hidden><div class="card"><p class="status" id="netwarnTxt"></p><button class="btn" id="btnNetQuit">Zum Menü</button></div></div>
+</div>

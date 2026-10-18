@@ -1,0 +1,226 @@
+/* 99-boot.js - BOOT: starts the menu scene and the frame loop. window.__wvr exposes internals for the browser tests (tests/), not used by the game itself. */
+document.fonts &&
+  document.fonts
+    .load('40px "Lilita One"')
+    .then(() => {
+      spriteCache.clear();
+      if (V.mode === 'menu') buildBases(V.facs);
+    })
+    .catch(() => {});
+menuScene();
+applyCam();
+initQuality();
+requestAnimationFrame(frame);
+window.__wvr = {
+  HERO,
+  heroWormPose,
+  heroWorm,
+  heroStart,
+  heroTick,
+  heroTargetView,
+  egoHero,
+  wormSndLevels,
+  wormSndRange,
+  aiSees,
+  FAC,
+  egoSpecial,
+  egoAttack,
+  wormHead,
+  wormRayHit,
+  FOGW,
+  fogVis,
+  inkify,
+  loTemplate,
+  canBurrow: (x, z) => canBurrow(x, z),
+  swooshFx,
+  swooshTick,
+  swooshes,
+  swooshMesh,
+  buildWorm,
+  wormRig,
+  WW,
+  grabTick,
+  wormWorldView,
+  wormApplyState,
+  WORM,
+  startEvent,
+  endEvent,
+  eventView,
+  FOG,
+  egoCmdHere,
+  egoCmdAttack,
+  egoSwitch,
+  killFeed,
+  goView,
+  get paused() {
+    return paused;
+  },
+  get BASES() {
+    return BASES;
+  },
+  salvoTargets,
+  UB,
+  unitBatch,
+  QS,
+  GTIERS,
+  LADDER,
+  applyQuality,
+  qualityStep,
+  setGfx,
+  guessQuality,
+  PROF,
+  ML,
+  PL,
+  LOOK,
+  applyLook,
+  mlReset,
+  get SET() {
+    return SET;
+  },
+  startAir,
+  airStep,
+  ramImpulse,
+  startFall,
+  iceVelocity,
+  iceStep,
+  hitBear,
+  tameBearStep,
+  baseGap,
+  baseApproach,
+  baseAttackSlots,
+  tutCommand,
+  tutTick,
+  tutSteps,
+  sendCmd,
+  setOrderMode,
+  endTutorial,
+  toMenu,
+  processSnap,
+  holeAt,
+  genCode,
+  leaveNet,
+  worldStep,
+  puffTick,
+  emitFX,
+  waterRipple,
+  waterMotionFX,
+  camera,
+  get water() {
+    return water;
+  },
+  dropPart,
+  debrisTick,
+  disposeUnit,
+  egoUpdate,
+  inWater,
+  wadeAt,
+  unitY,
+  contactMesh,
+  puffMesh,
+  renderer,
+  perfTick,
+  puff,
+  fx,
+  padStep,
+  padHeight,
+  padFlight,
+  onPad,
+  spawnUnit,
+  pushSnap,
+  renderUnits,
+  updateWorld,
+  beginMatch,
+  startSim,
+  stopSim,
+  playAi,
+  hostBroadcast,
+  hostReadGuest,
+  joinOnline,
+  localRoom,
+  peerTransport,
+  get protocol() {
+    return NET_VER;
+  },
+  get NETS() {
+    return NET;
+  },
+  PADV: () => PADV,
+  clawLife: v => {
+    CLAW_LIFE = v;
+  },
+  clawStreak: (...a) => clawStreak(...a),
+  holeMesh: (x, z) => holeMesh(x, z),
+  WV: () => WV,
+  iceImpact: (G, x, z, r, t) => iceImpact(G, x, z, r, t),
+  los: (a, b, c, d) => los(a, b, c, d),
+  knockFly,
+  advanceGround,
+  CFG,
+  highlight,
+  phaseOf,
+  onIce: (x, z) => onIce(x, z),
+  edgeSlide: (x, z) => edgeSlide(x, z),
+  sampleH: (x, z) => sampleH(MAP, x, z),
+  knockFalls: (e, x, z, d) => knockFalls(e, x, z, d),
+  fallZone: (x, z) => fallZone(x, z),
+  V,
+  SFX,
+  scene,
+  loadMap,
+  buildBases,
+  applyCam,
+  THEMES,
+  get G() {
+    return G;
+  },
+  set G(value) {
+    G = value;
+  },
+  get MAP() {
+    return MAP;
+  },
+  step,
+  snapOf,
+  applyCmd,
+  newGame,
+  camS,
+  aiThink,
+  genMap,
+  setMap,
+  buildUnit,
+  groundY,
+  animateRig,
+  enterEgo,
+  exitEgo,
+  setMyFace,
+  FACE,
+  KINDS,
+  findPath,
+  AI_LVL,
+  aiNew,
+  TUT,
+  tutGo,
+  startTutorial,
+  toScreen,
+  ff: n => {
+    for (let i = 0; i < n; i++) {
+      step(G);
+    }
+    pushSnap(snapOf(G));
+  },
+  get FLAGS() {
+    return FLAGS;
+  },
+  get BASES() {
+    return BASES;
+  },
+  nw: (x, z) => nearestWalkable(MAP, x, z),
+  walkable,
+  unitIcon,
+  EG,
+  faceTexFromCrop,
+  headBox,
+  NET,
+  projGeo,
+  THREE_: THREE,
+};
