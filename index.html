@@ -1012,7 +1012,10 @@ function tryMap(seed, noForest, force, nf = 5, seed0 = seed) {
     const rr = r(); m.decor.push({ x, z, s:0.8 + r() * 0.7, ty:m.type === 'wueste' ? (rr < 0.55 ? 3 : 2) : m.type === 'arktis' ? (rr < 0.12 ? 4 : 0) : rr < 0.65 ? 0 : 1 });
   }
   m.bears = [];
-  if (m.type === 'wueste') for (let t4 = 0; t4 < 60; t4++) { const sx = rs() < 0.5 ? -1 : 1, z = 16 + rs() * 22, p = nearestWalkable(m, sx * (HALF_W - 10), z); if (m.flags.some(f => Math.hypot(f.x - p.x, f.z - p.z) < 11)) continue; m.bears.push({ x:p.x, z:p.z, worm:1 }, { x:-p.x, z:-p.z, worm:1 }); break; }
+  if (m.type === 'wueste') { // two sandworms, mirrored: one in each half of the map, out on a flank, away from the flags
+    const sx = rs() < 0.5 ? -1 : 1; let best = null, bs = -1;
+    for (const z of [26, 22, 30, 34, 19, 38, 28, 24]) for (const s2 of [sx, -sx]) { const p = nearestWalkable(m, s2 * (HALF_W - 10), z); if (p.z < 14 || p.z > 44) continue; const fd = Math.min(...m.flags.map(f => Math.hypot(f.x - p.x, f.z - p.z))); if (fd > bs) { bs = fd; best = p; } if (fd >= 12) break; }
+    if (best) m.bears.push({ x:best.x, z:best.z, worm:1 }, { x:-best.x, z:-best.z, worm:1 }); }
   if (m.type === 'arktis') for (let i = 0, t4 = 0; i < 1 && t4 < 80; t4++) { const sx = rs() < 0.5 ? -1 : 1, z = 14 + rs() * 34, p = nearestWalkable(m, sx * (HALF_W - 3.5), z); if (m.flags.some(f => Math.hypot(f.x - p.x, f.z - p.z) < 12) || m.bears.some(b => Math.hypot(b.x - p.x, b.z - p.z) < 14)) continue; m.bears.push({ x:p.x, z:p.z }, { x:-p.x, z:-p.z }); i++; }
   return m;
 }
@@ -1078,9 +1081,23 @@ function airStep(u, dt) {
   }
   return false;
 }
-function advanceGround(u, nx, nz, vx, vz, dt, dash = false) {
+// How far along a straight walk (0..1) the climb rule lets a walker get, checked in 10 cm steps. The answer does not depend on
+// frame or tick length, so the ego's own screen and the host agree on which slopes it can climb.
+function climbFrac(x0, z0, x1, z1) {
+  const n = Math.min(80, Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 0.1))), holes = MAP.holes && MAP.holes.length;
+  let px = x0, pz = z0, py = unitY(x0, z0);
+  for (let i = 1; i <= n; i++) {
+    const t = i / n, qx = x0 + (x1 - x0) * t, qz = z0 + (z1 - z0) * t, qy = unitY(qx, qz);
+    if (qy - py > 0.5 && !(holes && qy - py < 1.6 && holeAt(px, pz))) return (i - 1) / n; // the rim of an ice hole can always be climbed
+    px = qx; pz = qz; py = qy;
+  }
+  return 1;
+}
+function advanceGround(u, nx, nz, vx, vz, dt, dash = false, fine = false) {
+  const fn = fine && !dash;
+  if (fn) { const k = climbFrac(u.x, u.z, nx, nz); if (k < 1) { if (k <= 0) { u.vx = u.vz = 0; u.groundVy = 0; return false; } nx = u.x + (nx - u.x) * k; nz = u.z + (nz - u.z) * k; } }
   const oldFloor = unitY(u.x, u.z), floor = unitY(nx, nz), drop = oldFloor - floor, inHole = MAP.holes && MAP.holes.length && holeAt(u.x, u.z);
-  if (floor - oldFloor > Math.max(0.5, Math.hypot(nx - u.x, nz - u.z) * 0.9) && !(inHole && floor - oldFloor < 1.6)) { u.vx = u.vz = 0; u.groundVy = 0; return false; } // the rim of an ice hole can always be climbed
+  if (!fn && floor - oldFloor > Math.max(0.5, Math.hypot(nx - u.x, nz - u.z) * 0.9) && !(inHole && floor - oldFloor < 1.6)) { u.vx = u.vz = 0; u.groundVy = 0; return false; } // the rim of an ice hole can always be climbed
   if (fallZone(nx, nz) || drop > (dash ? 0.32 : 1.2)) {
     startAir(u, vx, vz, dash ? clamp(u.groundVy || 0, 0, 7) : 0, dash ? 'dash' : 'fall');
     airStep(u, dt); return true;
@@ -1635,7 +1652,7 @@ function possStep(G, u, byId) {
       const d = Math.hypot(In.x - u.x, In.z - u.z);
       if (d > 0.02) {
         const old = { x:u.x, z:u.z };
-        if (d < 6 && (walkable(In.x, In.z) || (edgeSlide(In.x, In.z) && (G.t < (u.dashUntil || 0) || groundY(In.x, In.z) <= groundY(u.x, u.z) + 0.03)) || fallZone(In.x, In.z))) { const scale = Math.min(45 / Math.max(0.01, d / DT), 1); advanceGround(u, In.x, In.z, (In.x - u.x) / DT * scale, (In.z - u.z) / DT * scale, DT, G.t < (u.dashUntil || 0)); }
+        if (d < 6 && (walkable(In.x, In.z) || (edgeSlide(In.x, In.z) && (G.t < (u.dashUntil || 0) || groundY(In.x, In.z) <= groundY(u.x, u.z) + 0.03)) || fallZone(In.x, In.z))) { const scale = Math.min(45 / Math.max(0.01, d / DT), 1); advanceGround(u, In.x, In.z, (In.x - u.x) / DT * scale, (In.z - u.z) / DT * scale, DT, G.t < (u.dashUntil || 0), true); }
         else { const s = Math.min(d, K.speed * 3 * DT); const nx = u.x + (In.x - u.x) / d * s, nz = u.z + (In.z - u.z) / d * s; if (walkable(nx, nz)) { u.x = nx; u.z = nz; } }
         u.run = Math.hypot(u.x - old.x, u.z - old.z) > K.speed * 0.5 * DT ? u.run + DT : 0;
       } else u.run = 0;
@@ -1663,6 +1680,7 @@ function hitBear(G, b, dmg, team, attK, bp, head) {
     // Remain a neutral, defeated bear through collapse, conversion and stand-up.
     // Population, possession, combat and capture only see an ally after stand-up.
     b.hp = 0; b.tameTeam = team; b.tameT = 0; b.mv = 0; b.path = null;
+    if (b.worm) { b.ws = 4; b.st = 0; b.bw = 0; } // a beaten sandworm stays out of the sand while it turns
   }
 }
 const BEAR_COLLAPSE = 0.65, BEAR_GLOW = 1, BEAR_STAND = 0.6, BEAR_TAME = BEAR_COLLAPSE + BEAR_GLOW + BEAR_STAND;
@@ -1670,11 +1688,12 @@ const BEAR_COLLAPSE = 0.65, BEAR_GLOW = 1, BEAR_STAND = 0.6, BEAR_TAME = BEAR_CO
    second (a ring shows the reach), then the worm bursts out, seizes up to four with its grabbers and swallows them. An ego is too tough:
    chewed and spat out. Out of the sand it is vulnerable for a few seconds; beaten, it joins the winner like a polar bear.
    States (wild b.ws / tamed u.ws): 0 under (wild) or on the surface (tamed), 1 tunnelling, 2 trembling, 3 strike, 4 out of the sand, 5 diving (wild). */
-const WORM = { warn:1.0, warnT:0.7, warnE:0.35, grabR:3.2, grabRT:2.8, max:4, maxT:3, strike:1.9, grabAt:0.3, gulpAt:1.4, up:4.2, upT:1.1, dive:0.8, hunt:9.5, home:17, speed:6.4, rest:7, hp:900, cdT:9, spit:0.4, egoDist:6.5 };
+const WORM = { warn:1.0, warnT:0.7, warnE:0.35, grabR:3.2, grabRT:2.8, max:4, maxT:3, strike:1.9, grabAt:0.3, gulpAt:1.4, up:4.2, upT:1.1, dive:0.8, hunt:9.5, home:16, speed:6.4, rest:7, hp:650, cdT:9, spit:0.4, egoDist:6.5 };
 const wildWorm = (id, p) => ({ id, x:p.x, z:p.z, hx:p.x, hz:p.z, yaw:0, cd:0, atk:0, mv:0, wt:0, hp:WORM.hp, mhp:WORM.hp, worm:1, ws:0, st:0, hc:6 + Math.random() * 5, gn:-1, bite:0, warnN:0 });
 const canBurrow = (x, z) => MAP.type === 'wueste' && walkable(x, z) && !inWater(x, z) && !onBridge(MAP, x, z) && BASES.every(B => baseGap(B, x, z) > 5);
 const wormEdible = u => u.hp > 0 && !u.air && !u.pj && !(u.fall > 0) && !u.grab && !u.bur && !u.tutDummy && !KINDS[u.k].worm && !KINDS[u.k].bear && KINDS[u.k].role !== 'siege';
-const wormUp = b => (b.ws === 2 && b.st >= 0.25) || b.ws === 4 || (b.ws === 5 && b.st < 0.45); // a wild worm out of the sand: it can be hit
+const wormUp = b => (b.ws === 2 && b.st >= 0.25) || b.ws === 4 || (b.ws === 5 && b.st < 0.45) || b.ws === 6; // a wild worm out of the sand (or swimming with its head above it): it can be hit
+const wormSide = (b, z) => Math.sign(z) === Math.sign(b.hz) && Math.abs(z) > 4; // each worm keeps to its own half of the map
 const bearHere = b => !!b && b.hp > 0 && (!b.worm || wormUp(b)); // bears always, worms only above the sand
 const wormHold = W => W.k === undefined ? -(W.id + 1) : W.id; // grab owner: wild worm (negative) or worm unit (its id)
 function wormGrab(G, W, x, z, team, max, r) {
@@ -1708,7 +1727,7 @@ function grabHold(G, u, byId) { // in the claws: no will of its own; dropped if 
   u.x = W.ex ?? W.x; u.z = W.ez ?? W.z; u.vx = 0; u.vz = 0; u.run = 0; u.cd = Math.max(u.cd || 0, 0.3);
 }
 function wormPrey(G, b) {
-  const cur = b.prey ? G.units.find(u => u.id === b.prey) : null, ok = u => wormEdible(u) && Math.hypot(u.x - b.hx, u.z - b.hz) < WORM.home + 5 && canBurrow(u.x, u.z);
+  const cur = b.prey ? G.units.find(u => u.id === b.prey) : null, ok = u => wormEdible(u) && Math.hypot(u.x - b.hx, u.z - b.hz) < WORM.home + 5 && wormSide(b, u.z) && canBurrow(u.x, u.z);
   if (cur && ok(cur) && Math.hypot(cur.x - b.x, cur.z - b.z) < WORM.hunt + 4) return cur; // keeps on the trail
   let best = null, bd = WORM.hunt * WORM.hunt;
   for (const u of G.units) { if (!ok(u)) continue; const d2 = (u.x - b.x) ** 2 + (u.z - b.z) ** 2; if (d2 < bd) { bd = d2; best = u; } }
@@ -1716,14 +1735,17 @@ function wormPrey(G, b) {
 }
 function wildWormStep(G, b, byId) {
   b.st += DT; b.mv = 0; b.cd -= DT; b.at = (b.at || 0) - DT;
-  if (b.ws === 0) { // under the sand: roams its dunes, stalks prey
-    b.hc -= DT; let tx = b.wx, tz = b.wz, sp = 2.6;
+  if (b.ws === 0 || b.ws === 6) { // roams its dunes: under the sand, or ploughing along the surface with its head up (then it can be hit); stalks prey from below
+    b.hc -= DT; let tx = b.wx, tz = b.wz, sp = b.ws === 6 ? 2.3 : 2.6;
+    if (b.ws === 6 && b.at > 2.9) b.hc = Math.min(b.hc, 1.2); // hit while swimming: it dives and comes for them
     const prey = b.hc <= 0 ? wormPrey(G, b) : null;
+    if (prey && b.ws === 6) { b.ws = 0; b.st = 0; } // dives before the ambush
     if (prey) { b.prey = prey.id; tx = prey.x; tz = prey.z; sp = WORM.speed;
       if (Math.hypot(prey.x - b.x, prey.z - b.z) < 1.4) { b.ws = 1; b.st = 0; b.ex = prey.x; b.ez = prey.z; b.x = prey.x; b.z = prey.z; b.warnN = (b.warnN + 1) % 100; return; } }
     else { b.prey = 0; b.wt -= DT;
-      if (b.wt <= 0 || tx === undefined || Math.hypot(tx - b.x, tz - b.z) < 1) { b.wt = 5 + Math.random() * 6; for (let k = 0; k < 10; k++) { const a = Math.random() * TAU, r = Math.random() * WORM.home * 0.75, x = b.hx + Math.cos(a) * r, z = b.hz + Math.sin(a) * r; if (canBurrow(x, z)) { b.wx = x; b.wz = z; break; } } tx = b.wx; tz = b.wz; } }
-    if (tx !== undefined) { const dx = tx - b.x, dz = tz - b.z, d = Math.hypot(dx, dz); if (d > 0.2) { const st = Math.min(d, sp * DT), nx = b.x + dx / d * st, nz = b.z + dz / d * st; if (canBurrow(nx, nz)) { b.x = nx; b.z = nz; b.mv = sp > 3 ? 2 : 1; } else { b.wx = undefined; b.wt = 0; } b.yaw = Math.atan2(dx, dz); } }
+      if (b.wt <= 0 || tx === undefined || Math.hypot(tx - b.x, tz - b.z) < 1) { b.wt = 5 + Math.random() * 6; for (let k = 0; k < 12; k++) { const a = Math.random() * TAU, r = Math.random() * WORM.home * 0.75, x = b.hx + Math.cos(a) * r, z = b.hz + Math.sin(a) * r; if (canBurrow(x, z) && wormSide(b, z)) { b.wx = x; b.wz = z; break; } } tx = b.wx; tz = b.wz;
+        const surf = Math.random() < 0.45; if (surf !== (b.ws === 6) && b.st > 2.5) { b.ws = surf ? 6 : 0; b.st = 0; } } } // now and then it digs along with its head above the sand
+    if (tx !== undefined) { const dx = tx - b.x, dz = tz - b.z, d = Math.hypot(dx, dz); if (d > 0.2) { const st = Math.min(d, sp * DT), nx = b.x + dx / d * st, nz = b.z + dz / d * st; if (canBurrow(nx, nz) && (wormSide(b, nz) || b.prey)) { b.x = nx; b.z = nz; b.mv = sp > 3 ? 2 : 1; } else { b.wx = undefined; b.wt = 0; } b.yaw = Math.atan2(dx, dz); } }
     return;
   }
   if (b.ws === 1) { if (b.st >= WORM.warn) { b.ws = 2; b.st = 0; b.atk = (b.atk + 1) % 100; b.gn = -1; b.gulped = 0; } return; } // one second of trembling sand
@@ -3266,8 +3288,8 @@ function bearRig(u, dt, moving) {
   const spd = clamp(u.speed || 0, 0, 10), run = clamp((spd - 4) / 3, 0, 1); u.walk += dt * (moving ? Math.max(2.5, spd) * 1.25 : 0);
   const w = u.walk, sw = u.gait, p0 = u.g.position, yaw = u.g.rotation.y, sc = u.g.scale.x || 1, A = (0.5 + 0.22 * run) * sw;
   // diagonal pairs: a fore leg moves with the opposite hind leg; a paw lifts while it swings forward
-  let fl = Math.sin(w) * A, fr = Math.sin(w + Math.PI) * A, hl = Math.sin(w + Math.PI + 0.5) * A * 0.92, hr = Math.sin(w + 0.5) * A * 0.92, lean = 0, rear = 0, roll = Math.sin(w) * 0.07 * sw, frZ = 0, flZ = 0;
-  const breath = Math.sin(u.ph * 1.8) * 0.02 * (1 - sw);
+  let fl = Math.sin(w) * A, fr = Math.sin(w + Math.PI) * A, hl = Math.sin(w + Math.PI + 0.5) * A * 0.92, hr = Math.sin(w + 0.5) * A * 0.92, lean = 0, rear = 0, roll = Math.sin(w) * 0.035 * sw, frZ = 0, flZ = 0;
+  const breath = Math.sin(u.ph * 1.8) * 0.008 * (1 - sw);
   if (u.atkT < u.lastAtk) { const side = (u.swSide = -(u.swSide || 1)); clawStreak(p0.x + Math.sin(yaw) * 0.7 * sc, p0.y + 1.3 * sc, p0.z + Math.cos(yaw) * 0.7 * sc, yaw, side, 1.05 * sc); } u.lastAtk = u.atkT;
   if (u.clawFx > 0) { u.clawFx -= dt; const c = Math.sin(u.ph * 30); rear = 0.55; fl = -1.9 + c * 0.9; fr = -1.9 - c * 0.9; flZ = 0.35 * c; frZ = 0.35 * c; lean = 0.05;
     u.clawP = (u.clawP || 0) - dt; if (u.clawP <= 0) { u.clawP = 0.16; const side = (u.swSide = -(u.swSide || 1)); clawStreak(p0.x + Math.sin(yaw) * 0.6 * sc, p0.y + 1.5 * sc, p0.z + Math.cos(yaw) * 0.6 * sc, yaw + side * 0.3, side, 1.6 * sc, 0xffffff); } }
@@ -3279,7 +3301,7 @@ function bearRig(u, dt, moving) {
   u.torso.rotation.set(-rear + lean + Math.sin(2 * w) * 0.03 * sw, 0, roll); u.torso.scale.set(1 + breath, 1 - breath * 0.5, 1 + breath);
   u.rig.position.y = Math.abs(Math.sin(w)) * (0.05 + 0.05 * run) * sw + rear * 0.55; u.rig.position.z = 0;
   if (u.spin > 0) { u.spin -= dt; u.rig.rotation.y = (0.6 - u.spin) / 0.6 * TAU * 2; } else u.rig.rotation.y = 0;
-  u.neck.rotation.set(rear * 0.7 + Math.sin(w * 2 + 0.5) * 0.1 * sw - lean * 0.5 + (1 - sw) * Math.max(0, Math.sin(u.ph * 0.4 + u.id)) * 0.25, Math.sin(u.ph * 0.6) * 0.3 * (1 - sw * 0.8), -roll * 0.6);
+  u.neck.rotation.set(rear * 0.7 + Math.sin(w * 2 + 0.5) * 0.1 * sw - lean * 0.5 + (1 - sw) * Math.max(0, Math.sin(u.ph * 0.4 + (u.id | 0))) * 0.25, Math.sin(u.ph * 0.6) * 0.3 * (1 - sw * 0.8), -roll * 0.6);
   if (u.headTarget !== undefined) u.neck.scale.setScalar(lerp(u.neck.scale.x, u.headTarget, Math.min(1, dt * 6)));
   if (u.pop !== undefined) { u.pop += dt; const s = Math.min(1, u.pop / 0.3); u.g.scale.setScalar(s < 1 ? s * (1 + 0.35 * Math.sin(s * Math.PI)) : 1); if (s >= 1) delete u.pop; }
 }
@@ -3394,7 +3416,8 @@ function wormHolePose(st, ws, t, bite) {
 function wormRig(u, dt, moving) {
   const W = u.wP || (u.wP = { ws:'crawl', st:9 }), t = (u.ph = (u.ph || 0) + dt); W.st += dt;
   if (u.atkT !== undefined) u.atkT += dt;
-  const ws = W.ws, hidden = ws === 'under' || ws === 'warn', crawl = ws === 'crawl', bite = u.atkT < 0.7 ? u.atkT : -1;
+  const sinking = W.ws === 'under' && W.from === 'crawl' && W.st < 0.55, rising = W.ws === 'crawl' && W.from === 'under' && W.st < 0.6;
+  const ws = sinking ? 'crawl' : W.ws, hidden = ws === 'under' || ws === 'warn', crawl = ws === 'crawl', bite = u.atkT < 0.7 ? u.atkT : -1;
   let o; if (crawl) { o = wormHolePose(0, 'crawl', t, bite); o.h = 2.1 + 0.12 * Math.sin(t * 1.7) + (o.h - 5) * 0.5; if (bite < 0) o.jaw = 0.08 + 0.12 * Math.max(0, Math.sin(t * 1.9)); }
   else o = wormHolePose(W.st, ws, t, bite);
   if (W.dieT !== undefined) { const q = sstep(0, 1.4, W.dieT); o.h -= 6.5 * q; o.pitch = lerp(o.pitch, -1.2, q); o.jaw = 0.6 * (1 - q); o.reach = 0; o.sway = Math.sin(W.dieT * 11) * 1.4 * (1 - q); }
@@ -3421,6 +3444,7 @@ function wormRig(u, dt, moving) {
   u.mound.visible = hidden || (ws === 'strike' && W.st < 0.25); u.rim.visible = u.pit.visible = !hidden && !crawl && o.out > 0.05;
   if (u.mound.visible) { const wq = ws === 'warn' ? Math.min(1, W.st / 0.9) : 0, sw = 1 + wq * 0.35 + (ws === 'under' ? 0.08 * Math.sin(t * 6) : 0); u.mound.scale.set(sw, (0.28 + wq * 0.25) * (1 + 0.15 * Math.sin(t * (ws === 'warn' ? 40 : 7))), 1.4 * sw); u.mound.position.y = ws === 'strike' ? -W.st * 4 : 0; }
   if (u.rim.visible) { const e = Math.min(1, o.out * 1.5); u.rim.scale.set(e, e, 0.45 * e); u.pit.scale.setScalar(e); }
+  u.rig.position.y = sinking ? -2.6 * sstep(0, 0.55, W.st) : rising ? -2.6 * (1 - sstep(0, 0.6, W.st)) : 0; // ploughs into / out of the sand
   u.hpY = hidden ? 1.8 : crawl ? 3.4 : Math.max(2.4, o.h + 2.2);
 }
 function buildUnit(k) {
@@ -3523,8 +3547,8 @@ function unitHead(k) {
   if (UNIT_HEAD[k]) return UNIT_HEAD[k];
   const S = 192, rt = new THREE.WebGLRenderTarget(S, S); rt.texture.encoding = THREE.sRGBEncoding;
   const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(lin(0xf4f7ff), lin(0x6a5a4a), 0.9)); const dl = new THREE.DirectionalLight(lin(0xfff0dc), 1.35); dl.position.set(3, 5, 6); sc.add(dl); const rl = new THREE.DirectionalLight(lin(0x9fc8ff), 0.6); rl.position.set(-5, 2, -3); sc.add(rl);
-  const u = Object.assign(buildUnit(k), { wob:0, wobV:0, atkT:9, walk:0, speed:0, flash:0 }); scene.remove(u.g); hpGroup.remove(u.hp); u.blob.visible = false; sc.add(u.g);
-  animateRig(u, 0.001, false, false); u.neck.scale.setScalar(1.15); u.g.updateMatrixWorld(true);
+  const u = Object.assign(buildUnit(k), { id:0, wob:0, wobV:0, atkT:9, walk:0, speed:0, flash:0 }); scene.remove(u.g); hpGroup.remove(u.hp); u.blob.visible = false; sc.add(u.g);
+  for (let i = 0; i < 12; i++) animateRig(u, 0.05, false, false); u.neck.scale.setScalar(1.15); u.g.updateMatrixWorld(true);
   const hp = new THREE.Vector3(); u.head.getWorldPosition(hp); hp.y += 0.25; const cam = new THREE.PerspectiveCamera(30, 1, 0.05, 30), a = 0.42, d = 5.2;
   cam.position.set(hp.x + Math.sin(a) * d, hp.y + 0.35, hp.z + Math.cos(a) * d); cam.lookAt(hp.x, hp.y - 0.05, hp.z);
   const oc = renderer.getClearColor(new THREE.Color()), oa = renderer.getClearAlpha();
@@ -3542,8 +3566,8 @@ function unitIcon(k) {
   try {
     const S = 256, rt = new THREE.WebGLRenderTarget(S, S); rt.texture.encoding = THREE.sRGBEncoding;
     const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(lin(0xf4f7ff), lin(0x7a6a5a), 0.95)); const dl = new THREE.DirectionalLight(lin(0xfff0dc), 1.3); dl.position.set(4, 7, 6); sc.add(dl);
-    const u = Object.assign(buildUnit(k), { wob:0, wobV:0, atkT:9, walk:0, speed:0, flash:0 }); scene.remove(u.g); hpGroup.remove(u.hp); u.blob.visible = false; sc.add(u.g);
-    animateRig(u, 0.001, false, true); u.g.updateMatrixWorld(true);
+    const u = Object.assign(buildUnit(k), { id:0, wob:0, wobV:0, atkT:9, walk:0, speed:0, flash:0 }); scene.remove(u.g); hpGroup.remove(u.hp); u.blob.visible = false; sc.add(u.g);
+    for (let i = 0; i < 12; i++) animateRig(u, 0.05, false, false); u.g.updateMatrixWorld(true); // settle into the calm stance
     const cav = KINDS[k].role === 'cav', sg = KINDS[k].role === 'siege', wm = !!KINDS[k].worm, cam = new THREE.PerspectiveCamera(24, 1, 0.1, 60), d = wm ? 14 : sg ? 11 : cav ? 8.2 : 5.9, ty = wm ? 1.9 : sg ? 1.6 : cav ? 1.95 : 1.6, a = wm ? 0.95 : sg ? 0.8 : 0.55;
     cam.position.set(Math.sin(a) * d, ty + d * 0.2, Math.cos(a) * d); cam.lookAt(0, ty, 0);
     const oc = renderer.getClearColor(new THREE.Color()), oa = renderer.getClearAlpha(), osm = renderer.shadowMap.enabled;
@@ -4111,12 +4135,12 @@ function processSnap(s) {
     u.yawNet = poss ? e[9] / 100 : null; u.rage = poss && e[10] === 1; u.spcd = poss ? e[11] / 10 : 0; u.spm = poss && e[12] === 1;
     u.dancing = (e[7] & 8) === 8; const ch = (e[7] & 16) === 16; if (ch !== !!u.chick) setChicken(u, ch); u.bitten = (e[7] & 4) === 4; if ((e[7] & 32) && !(pe && (pe[7] & 32))) { const nearPad = (MAP.pads || []).some(pd => Math.hypot(pd.x - e[2] / 10, pd.z - e[3] / 10) < 3.5); u.jDur = nearPad ? PAD_FLY : 0.9; u.jumpT = u.jDur; if (!nearPad) SFX.play('boing', { x:u.g.position.x, z:u.g.position.z }); }
     if (V.poss && V.poss.id === id) { const dz2 = (e[7] & 8) === 8; if (dz2 && !V.poss.dance) egoHint(matchMedia('(pointer:fine)').matches ? 'Kein Entkommen! Leertaste oder Klick für Tanzmoves!' : 'Kein Entkommen! Tippe den Tanz-Knopf für Tanzmoves!', 2600); V.poss.dance = dz2;  $('#egoExit').classList.toggle('locked', dz2); }
-    if (V.poss && V.poss.id === id) { const dn = (e[7] & 2) === 2; if (dn && !V.poss.down) { egoHint('Umgehauen! Gleich stehst du wieder auf …', 1600); V.poss.dashT = 0; } V.poss.down = dn; V.poss.srv = { x:e[2] / 10, z:e[3] / 10 }; }
+    if (V.poss && V.poss.id === id) { const dn = (e[7] & 2) === 2; if (dn && !V.poss.down) { egoHint('Umgehauen! Gleich stehst du wieder auf …', 1600); V.poss.dashT = 0; } V.poss.down = dn; const sx = e[2] / 10, sz = e[3] / 10, os = V.poss.srv; if (!os || Math.abs(os.x - sx) + Math.abs(os.z - sz) > 0.05) V.poss.srvT = now(); V.poss.srvS = now(); V.poss.srv = { x:sx, z:sz }; }
     if (pe && (e[7] >> 8) !== (pe[7] >> 8) && (e[7] & 2)) startRagdoll(u, pe[2] / 10, pe[3] / 10);
     u.frenzy = (e[7] & 64) === 64; u.slowed = (e[7] & 128) === 128;
     if (pe) {
       if (e[6] !== pe[6]) onAttack(u, e[5], cur, poss);
-      if (e[4] < pe[4]) { u.wobV += (Math.random() < .5 ? -1 : 1) * (5 + (pe[4] - e[4]) * 0.3); u.flash = 0.15; u.flinch = 0.2; u.hitV = (u.hitV || 0) + 4 + Math.min(6, (pe[4] - e[4]) * 0.15); emitFX('hit', u.g.position.x, u.g.position.y + 1, u.g.position.z, { dx:-Math.sin(u.g.rotation.y), dz:-Math.cos(u.g.rotation.y), n:3, size:0.4 }); if (!u.arm && Math.random() < 0.14) SFX.play('grunt', { x:u.g.position.x, z:u.g.position.z, vol:0.7 }); }
+      if (e[4] < pe[4]) { u.wobV += (Math.random() < .5 ? -1 : 1) * (1 + (pe[4] - e[4]) * 0.05); u.flash = 0.15; u.flinch = 0.2; u.hitV = (u.hitV || 0) + 2 + Math.min(3, (pe[4] - e[4]) * 0.08); emitFX('hit', u.g.position.x, u.g.position.y + 1, u.g.position.z, { dx:-Math.sin(u.g.rotation.y), dz:-Math.cos(u.g.rotation.y), n:3, size:0.4 }); if (!u.arm && Math.random() < 0.14) SFX.play('grunt', { x:u.g.position.x, z:u.g.position.z, vol:0.7 }); }
       if (poss && (pe[7] & 1) && e[8] !== pe[8]) onSpecial(u, cur);
     }
     u.hpPct = e[4];
@@ -5290,11 +5314,17 @@ function egoUpdate(dt) {
   const slowMu = V.units.get(P.id); let speed = K.speed * 1.15 * (slowMu && slowMu.slowed ? 0.7 : 1) * (P.rageT > 0 ? 1.4 : 1) * [1, 2][tpk(V.myTeam, 'turbo')] * (K.role === 'cav' ? [1, 1.5][tpk(V.myTeam, 'cavspd')] : 1);
   const dashing = P.dashT > 0; if (dashing) { P.dashT -= dt; vx = cy; vz = cyz; speed = 27; }
   const inW = inWater(P.x, P.z), wd = !inW && wadeAt(P.x, P.z); if (P.dashT > 0 && (inW || wd)) { P.dashT -= dt * 0.8; if (Math.random() < dt * 30) puff(P.x + (Math.random() - .5) * 1.4, WL + 0.2, P.z + (Math.random() - .5) * 1.4, 0xe8f8ff, 1, 0.6); } const swim = inW ? (P.dashT > 0 ? 0.5 : 0.42) : wd ? (P.dashT > 0 ? 0.7 : 0.82) : 1, fz = frozen || P.pj || P.air ? 0 : (P.waterDrag = lerp(P.waterDrag ?? swim, swim, 1 - Math.exp(-dt * 9))); let wvx = vx * speed * fz, wvz = vz * speed * fz; if (!P.pj && !P.air && !frozen) { iceVelocity(P, wvx, wvz, dt); wvx = P.ivx; wvz = P.ivz; if (onIce(P.x, P.z) && Math.hypot(wvx, wvz) > 3 && Math.random() < dt * 8) emitFX('ice', P.x, unitY(P.x, P.z) + 0.1, P.z, { n:1, size:.4, dx:-cy, dz:-cyz }); } else if (!P.air) { P.ivx = wvx; P.ivz = wvz; } const nx = P.x + wvx * dt, nz = P.z + wvz * dt;
-  if (P.pj) { /* Pad flight owns the trajectory. */ } else if (P.air) { const landed = airStep(P, dt); if (landed && !(P.hp <= 0) && P.landV > 5) emitFX('land', P.x, P.fy + .1, P.z, { size:.7 }); } else if (walkable(nx, nz) && !fallZone(nx, nz)) { advanceGround(P, nx, nz, wvx, wvz, dt, dashing); } else if (fallZone(nx, nz) || edgeSlide(nx, nz) && (dashing || groundY(nx, nz) <= groundY(P.x, P.z) + 0.03)) { advanceGround(P, nx, nz, wvx, wvz, dt, dashing); } else if (walkable(nx, P.z) && Math.abs(nx - P.x) > 1e-4) P.x = nx; else if (walkable(P.x, nz) && Math.abs(nz - P.z) > 1e-4) P.z = nz;
+  if (P.pj) { /* Pad flight owns the trajectory. */ } else if (P.air) { const landed = airStep(P, dt); if (landed && !(P.hp <= 0) && P.landV > 5) emitFX('land', P.x, P.fy + .1, P.z, { size:.7 }); } else if (walkable(nx, nz) && !fallZone(nx, nz)) { advanceGround(P, nx, nz, wvx, wvz, dt, dashing, true); } else if (fallZone(nx, nz) || edgeSlide(nx, nz) && (dashing || groundY(nx, nz) <= groundY(P.x, P.z) + 0.03)) { advanceGround(P, nx, nz, wvx, wvz, dt, dashing, true); } else if (walkable(nx, P.z) && Math.abs(nx - P.x) > 1e-4) P.x = nx; else if (walkable(P.x, nz) && Math.abs(nz - P.z) > 1e-4) P.z = nz;
   else { const mx = nx - P.x, mz = nz - P.z; for (const ang of [0.5, -0.5, 1.0, -1.0, 1.45, -1.45]) { const c = Math.cos(ang), sn = Math.sin(ang), f = Math.cos(ang) * 0.9, tx = P.x + (mx * c - mz * sn) * f, tz = P.z + (mx * sn + mz * c) * f; if (walkable(tx, tz)) { P.x = tx; P.z = tz; break; } } }
   P.slope = !walkable(P.x, P.z) && edgeSlide(P.x, P.z);
   if (!walkable(P.x, P.z) && !P.pj && !P.air && !P.falling && !P.slope) { const q = nearestWalkable(MAP, P.x, P.z); P.x = q.x; P.z = q.z; }
   P.x = clampX(P.x); P.z = clampZ(P.z);
+  // Safety net: fresh snapshots keep showing the host's ego standing still while we are well away from it (it could not follow
+  // us there): drift back, so our blows never come from a spot the host does not know about.
+  if (P.srv && !frozen && !P.air && !P.pj && !(P.dashT > 0) && !KINDS[P.k].worm) { const t = now(), gap = Math.hypot(P.x - P.srv.x, P.z - P.srv.z);
+    if (gap <= 0.9 || P.gapS === undefined) P.gapS = t;
+    else if (t - P.gapS > 700 && t - (P.srvT || t) > 700 && t - (P.srvS || 0) < 250) { const k = 1 - Math.exp(-dt * 5); P.x = lerp(P.x, P.srv.x, k); P.z = lerp(P.z, P.srv.z, k); } }
+  else P.gapS = now();
   P.yaw = P.camYaw;
   P.moving = !frozen && (jl > 0.15 || P.dashT > 0);
   { // falling: walk off a steep edge -> drop with gravity; hard landings tumble
@@ -5685,7 +5715,7 @@ async function openRoom(code, role) {
   return r;
 }
 /* open every available transport at once (direct P2P + Claude room), so devices that ended up on different ones still meet */
-const NET_VER = 36;
+const NET_VER = 37;
 async function openClaude(code, role) {
   const vr = await viewerRoom(); if (!vr) return null;
   let r; try { r = await vr.join('wvr-' + code.toLowerCase(), role); }
@@ -6420,7 +6450,7 @@ function updateWorld(dt) {
     v.gait = lerp(v.gait || 0, b[4] ? 1 : 0, 1 - Math.exp(-dt * 7)); v.walk += dt * (b[4] === 2 ? 10 : b[4] ? 5.5 : 0);
     { const w = v.walk, g2 = v.gait, A = (b[4] === 2 ? 0.7 : 0.5) * g2, ph4 = [0, Math.PI, Math.PI + 0.5, 0.5];
       v.legs.forEach((l, k) => { const q = w + ph4[k]; l.rotation.x = Math.sin(q) * A; l.position.y = 0.95 + Math.max(0, -Math.cos(q)) * 0.1 * g2; });
-      v.body.rotation.z = Math.sin(w) * 0.06 * g2; v.body.position.y = Math.abs(Math.sin(w)) * 0.06 * g2 + Math.sin(clock * 1.8 + b[6]) * 0.015 * (1 - g2); }
+      v.body.rotation.z = Math.sin(w) * 0.03 * g2; v.body.position.y = Math.abs(Math.sin(w)) * 0.025 * g2 + Math.sin(clock * 1.8 + b[6]) * 0.006 * (1 - g2); }
     if ((b[9] || 0) !== (v.raise || 0)) { v.raise = b[9] || 0; v.rear = 0.4; SFX.play('rumble', { x, z, vol:0.7 }); }
     if (v.rear > 0) { v.rear -= dt; const q = Math.sin(clamp(1 - v.rear / 0.4, 0, 1) * Math.PI / 2); v.body.rotation.x = -0.32 * q; v.legs[0].rotation.x = -1.3 * q; v.legs[1].rotation.x = -0.5 * q; }
     if (b[3] !== v.atk) { v.atk = b[3]; v.swipe = 0.5; v.rear = 0; v.side = -(v.side || 1); const yw = v.g.rotation.y; clawStreak(v.g.position.x + Math.sin(yw) * 0.9, y + 1.3, v.g.position.z + Math.cos(yw) * 0.9, yw, v.side, 1.1); SFX.play('rage', { x, z, vol:0.8 }); if (Math.random() < 0.5) word('GRRR!', x, y + 3, z, { color:'#ffffff', scale:0.9 }); }
@@ -6449,11 +6479,11 @@ function updateWorld(dt) {
 }
 /* ---------- Sandworm world: wild worm views, warning rings, burst effects, sounds and the victims in its grabbers ---------- */
 const WW = { views:new Map(), pool:[], maps:new WeakMap() };
-const WORM_VIS_WILD = ['under', 'warn', 'strike', 'strike', 'up', 'dive'], WORM_VIS_UNIT = ['crawl', 'under', 'warn', 'strike', 'up'];
+const WORM_VIS_WILD = ['under', 'warn', 'strike', 'strike', 'up', 'dive', 'crawl'], WORM_VIS_UNIT = ['crawl', 'under', 'warn', 'strike', 'up'];
 function wormMaps(s) { let m = WW.maps.get(s); if (!m) { m = { wu:new Map(), wg:new Map() }; for (const e of s.wu || []) m.wu.set(e[0], e); for (const e of s.wq || []) m.wg.set(e[0], e); WW.maps.set(s, m); } return m; }
 function wormApplyState(v, vis, st) {
   const W = v.wP || (v.wP = { ws:'crawl', st:9 });
-  if (W.ws !== vis) { const prev = W.ws; W.ws = vis; W.st = st; W.gulped = 0; W.grabbed = 0; wormStateFx(v, prev, vis); }
+  if (W.ws !== vis) { const prev = W.ws; W.ws = vis; W.st = st; W.from = prev; W.gulped = 0; W.grabbed = 0; wormStateFx(v, prev, vis); }
   else if (Math.abs(W.st - st) > 0.3) W.st = st;
 }
 function wormSand(x, z, n, r, size) { const y = groundY(x, z); for (let i = 0; i < n; i++) { const a = Math.random() * TAU, d = Math.random() * r; puff(x + Math.cos(a) * d, y + 0.2 + Math.random() * 0.6, z + Math.sin(a) * d, i % 3 ? 0xdcb878 : 0xc9a164, 1, size * (0.7 + Math.random() * 0.6)); } }
@@ -6463,10 +6493,12 @@ function wormStateFx(v, prev, vis) {
   if (vis === 'strike') { if (near) { wormSand(x, z, 26, 3.4, 1.4); emitFX('land', x, groundY(x, z) + 0.2, z, { col:0xd9b874, n:16, size:1.6 }); SFX.play('sandBurst', { x, z, vol:1.1 }); SFX.play('wormRoar', { x, z, vol:1 }); } if (cd < 40) shake(0.32 * (1 - cd / 40)); v.wP.gulp = undefined; }
   if ((vis === 'dive' || vis === 'under') && prev !== 'warn' && prev !== 'under' && near) { wormSand(x, z, 16, 2.6, 1.1); SFX.play('wormDive', { x, z, vol:0.9 }); }
   if (vis === 'crawl' && (prev === 'up' || prev === 'strike') && near) wormSand(x, z, 10, 2.2, 1);
+  if (vis === 'crawl' && prev === 'under' && near) { wormSand(x, z, 14, 2.2, 1.1); SFX.play('sandBurst', { x, z, vol:0.45 }); }
 }
 function wormFrameFx(v, dt) { // per-frame sand, gulp, chomp
   const W = v.wP, p = v.g.position, x = p.x, z = p.z, near = Math.hypot(x - camera.position.x, z - camera.position.z) < 60;
   if (W.ws === 'under' && near && Math.random() < dt * 10) wormSand(x, z, 1, 1.2, 0.7);
+  if (W.ws === 'crawl' && near && (v.speed || 0) > 0.8 && Math.random() < dt * 14) { const yw = v.g.rotation.y, side = Math.random() < 0.5 ? -1 : 1; puff(x + Math.sin(yw) * 0.4 + Math.cos(yw) * side * 1.1, groundY(x, z) + 0.25, z + Math.cos(yw) * 0.4 - Math.sin(yw) * side * 1.1, 0xdcb878, 1, 0.8); }
   if (W.ws === 'warn') { if (near && Math.random() < dt * 30) { const a = Math.random() * TAU, r = WORM.grabR * (0.3 + Math.random() * 0.7); puff(x + Math.cos(a) * r, groundY(x, z) + 0.15, z + Math.sin(a) * r, 0xdcb878, 1, 0.6); } }
   if (W.ws === 'strike') {
     if (W.st >= 0.3 && !W.grabbed) { W.grabbed = 1; if (near) SFX.play('chomp', { x, z, vol:1.2 }); }
@@ -6501,7 +6533,10 @@ function wormWorldView(dt) {
     wormApplyState(v, ws, b[12] / 100 + age);
     v.speed = b[4] ? (b[4] === 2 ? WORM.speed : 2.6) : 0;
     wormRig(v, dt, !!b[4]); wormFrameFx(v, dt);
-    const hpP = b[5] ?? 100, W = v.wP; v.hp.visible = hpP < 100 && W.ws !== 'under' && W.ws !== 'warn' && !b[7];
+    const hpP = b[5] ?? 100, W = v.wP;
+    if ((W.ws === 'up' || W.ws === 'crawl') && !b[7] && V.playing && !V.tut) { // tell the player once in a while that it can be beaten and tamed
+      const P = V.poss, d = P ? Math.hypot(P.x - x, P.z - z) : Math.hypot(camS.x - x, camS.z - z);
+      if (d < (P ? 16 : 26) && now() - (WW.hintT || -1e9) > (P ? 25000 : 60000)) { WW.hintT = now(); if (P) egoHint('Sandwurm verwundbar! Besiege ihn, dann kämpft er für dich.', 2400); else toast('Ein Sandwurm! Besiegt ihn, solange er aus dem Sand ragt – dann kämpft er für euch.', 3200); } } v.hp.visible = hpP < 100 && W.ws !== 'under' && W.ws !== 'warn' && !b[7];
     if (v.hp.visible) { v.hp.position.set(v.g.position.x, v.g.position.y + v.hpY, v.g.position.z); v.hp.quaternion.copy(camera.quaternion); v.hpf.scale.x = Math.max(0.01, hpP / 100); }
   }
   for (const [id, v] of WW.views) if (!seen.has(id)) { if (v.wP && v.wP.tame !== undefined) wormSand(v.g.position.x, v.g.position.z, 12, 2.4, 1); scene.remove(v.g); v.hp.visible = false; if (v.aura) v.aura.visible = false; v.held = null; WW.views.delete(id); WW.pool.push(v); }
@@ -6684,10 +6719,10 @@ const STANCE = {
 };
 // gait per walking character: stride, knee lift, arm swing [left, right], bounce, waddle ...
 const GAIT = {
-  0:{ stride:0.62, knee:1.05, arm:[0.22, 0.38], elbow:0.25, bob:0.07, sway:0.045, roll:0.07, twist:0.16, rate:2.25, lean:0.08 },
-  1:{ stride:0.6, knee:1.0, arm:[0.32, 0.5], elbow:0.3, bob:0.06, sway:0.03, roll:0.04, twist:0.12, rate:2.45, lean:0.08 },
-  2:{ stride:0.36, knee:0.62, arm:[0, 0.3], elbow:0.2, bob:0.03, sway:0.04, roll:0.06, twist:0.07, rate:2.9, lean:0.05 },
-  3:{ stride:0.34, knee:0.55, arm:[0.06, 0.36], elbow:0.3, bob:0.04, sway:0.06, roll:0.1, twist:0.06, rate:3.3, lean:0.06 },
+  0:{ stride:0.6, knee:0.95, arm:[0.2, 0.34], elbow:0.25, bob:0.016, sway:0.01, roll:0.025, twist:0.09, rate:2.25, lean:0.07 },
+  1:{ stride:0.58, knee:0.9, arm:[0.28, 0.44], elbow:0.3, bob:0.014, sway:0.008, roll:0.018, twist:0.07, rate:2.45, lean:0.07 },
+  2:{ stride:0.36, knee:0.58, arm:[0, 0.26], elbow:0.2, bob:0.008, sway:0.01, roll:0.022, twist:0.05, rate:2.9, lean:0.05 },
+  3:{ stride:0.34, knee:0.52, arm:[0.06, 0.3], elbow:0.3, bob:0.01, sway:0.012, roll:0.03, twist:0.04, rate:3.3, lean:0.05 },
 };
 // melee: combat-ready pose plus [wind-up, follow-through] per attack variant
 const CPOSE = (() => {
@@ -6779,17 +6814,17 @@ function humanRig(u, dt, moving, attacking) {
   if (u.ph === undefined) { u.ph = Math.random() * 10; u.mb = 0; u.cw = 0; u.hitA = 0; u.hitV = 0; u.turn = 0; u.yawPrev = u.g.rotation.y; }
   u.ph += dt; const ph = u.ph;
   P.set(STANCE[k] || STANCE[0]);
-  const spd = clamp(u.speed || 0, 0, 12), run = clamp((spd - 4.6) / 2.6, 0, 1);
+  u.spdS = lerp(u.spdS ?? (u.speed || 0), u.speed || 0, 1 - Math.exp(-dt * 4)); const spd = clamp(u.spdS, 0, 12), run = clamp((spd - 4.6) / 2.6, 0, 1), calm = u.isPoss ? 0.25 : 1; // the warrior you steer barely bobs
   u.mb = lerp(u.mb, moving ? 1 : 0, 1 - Math.exp(-dt * 9)); const mb = u.mb, idle = 1 - mb;
   u.walk += dt * (moving ? Math.max(3.2, spd) * (seated ? 1.75 : G0.rate) : 0);
   const t = u.walk, s = Math.sin(t), c = Math.cos(t);
   { const dy = angDiff(u.g.rotation.y, u.yawPrev ?? u.g.rotation.y); u.yawPrev = u.g.rotation.y; u.turn = lerp(u.turn, clamp(dy / Math.max(dt, 1e-3), -6, 6), 1 - Math.exp(-dt * 6)); }
   let rx = 0, ry = 0;
   // idle life: breathing, weight shift, glances
-  const breath = Math.sin(ph * 2.2) * 0.018; u.torso.scale.set(1 - breath * 0.5, 1 + breath, 1 - breath * 0.5);
-  if (!seated) { const w = Math.sin(ph * 0.55 + u.id); rx += 0.022 * w * idle; P[RL] += 0.03 * w * idle; P[K_L] += 0.08 * Math.max(0, w) * idle; P[K_R] += 0.08 * Math.max(0, -w) * idle; }
-  P[A_L] += Math.sin(ph * 1.3) * 0.04 * idle; P[A_R] -= Math.sin(ph * 1.3 + 0.7) * 0.04 * idle;
-  let look = idle * Math.sin(ph * 0.6) * Math.max(0, Math.sin(ph * 0.23)) * 0.6;
+  const breath = Math.sin(ph * 2.2) * 0.005; u.torso.scale.set(1 - breath * 0.5, 1 + breath, 1 - breath * 0.5);
+  if (!seated) { const w = Math.sin(ph * 0.45 + (u.id | 0)); rx += 0.006 * w * idle; P[RL] += 0.01 * w * idle; P[K_L] += 0.035 * Math.max(0, w) * idle; P[K_R] += 0.035 * Math.max(0, -w) * idle; }
+  P[A_L] += Math.sin(ph * 1.1) * 0.02 * idle; P[A_R] -= Math.sin(ph * 1.1 + 0.7) * 0.02 * idle;
+  let look = idle * Math.sin(ph * 0.45) * Math.max(0, Math.sin(ph * 0.19)) * 0.35;
   // gait: thighs swing, knees lift the foot through the swing phase, hips bob twice per cycle, arms counter-swing
   if (!seated && mb > 0.001) {
     const A = G0.stride * (1 + 0.35 * run), Kb = G0.knee * (1 + 0.55 * run), aw = 1 + 0.9 * run;
@@ -6797,14 +6832,14 @@ function humanRig(u, dt, moving, attacking) {
     P[K_L] += (Kb * Math.max(0, Math.cos(t + 0.35)) + 0.06) * mb; P[K_R] += (Kb * Math.max(0, Math.cos(t + Math.PI + 0.35)) + 0.06) * mb;
     P[A_L] += G0.arm[0] * aw * s * mb; P[A_R] -= G0.arm[1] * aw * s * mb;
     P[E_L] -= (G0.elbow + 0.9 * run + 0.25 * Math.max(0, -s)) * mb * (k === 3 || k === 2 ? 0.2 : 1); P[E_R] -= (G0.elbow + 0.9 * run + 0.25 * Math.max(0, s)) * mb;
-    P[LN] += (G0.lean + 0.16 * run) * mb; P[TW] -= G0.twist * s * mb; P[RL] += G0.roll * c * mb;
-    ry += (G0.bob * (1 + 0.6 * run) * (0.5 + 0.5 * Math.cos(2 * t)) - 0.02) * mb; rx += G0.sway * c * mb;
-    P[NX] += 0.05 * Math.sin(2 * t + 0.6) * mb; look = look * idle + G0.twist * 0.8 * s * mb;
+    P[LN] += (G0.lean + 0.12 * run) * mb; P[TW] -= G0.twist * s * mb; P[RL] += G0.roll * c * mb * calm;
+    ry += (G0.bob * (1 + 0.3 * run) * (0.5 + 0.5 * Math.cos(2 * t)) - 0.01) * mb * calm; rx += G0.sway * c * mb * calm;
+    P[NX] += 0.012 * Math.sin(2 * t + 0.6) * mb * calm; look = look * idle + G0.twist * 0.6 * s * mb;
   } else if (seated) { // the rider sits the gallop / the bumps: counter-lean, soft bob, leans into curves
     const gp = k === 4 ? Math.sin(t) : Math.sin(t * 2.3);
-    P[LN] += (k === 4 ? -0.08 * gp + 0.06 : 0.02 * gp + 0.03) * mb;
-    P[A_L] += (k === 4 ? 0.12 * Math.sin(t + 0.5) : 0.03 * gp) * mb; P[A_R] += (k === 4 ? 0.1 * Math.sin(t + 0.9) : 0.03 * gp) * mb;
-    P[RL] += clamp(-u.turn * 0.06, -0.3, 0.3); P[NX] -= 0.06 * gp * mb;
+    P[LN] += (k === 4 ? -0.035 * gp + 0.06 : 0.008 * gp + 0.03) * mb * calm;
+    P[A_L] += (k === 4 ? 0.06 * Math.sin(t + 0.5) : 0.015 * gp) * mb * calm; P[A_R] += (k === 4 ? 0.05 * Math.sin(t + 0.9) : 0.015 * gp) * mb * calm;
+    P[RL] += clamp(-u.turn * 0.035, -0.18, 0.18); P[NX] -= 0.02 * gp * mb * calm;
   }
   // combat: wind-up (anticipated from the attack rhythm), strike, follow-through, recovery
   const cd = u.cdA || K.cd, at = u.atkT;
@@ -6819,9 +6854,9 @@ function humanRig(u, dt, moving, attacking) {
     if (ok) { const wA = u.cw, wL = u.cw * (1 - mb * 0.85); for (let i = 0; i < NP; i++) { const w = (i >= K_L && i <= T_R) || i === HOP ? wL : wA; P[i] += (C[i] - P[i]) * w; } }
   }
   // reactions: hit recoil spring (kicked by every hit), cheering after the target went down
-  u.hitV += (-u.hitA * 140 - u.hitV * 11) * dt; u.hitA += u.hitV * dt; if (u.flinch > 0) u.flinch -= dt;
-  { const hA = u.hitA; P[LN] -= hA * 0.9; P[NX] += hA * 0.8; P[A_L] -= hA * 0.7; P[A_R] -= hA * 0.5; P[E_L] -= hA * 0.4; P[K_L] += Math.abs(hA) * 0.3; P[K_R] += Math.abs(hA) * 0.3; }
-  if (u.cheerT > 0) { u.cheerT -= dt; if (!moving && at > 0.45) { const q = Math.sin(clamp(1 - u.cheerT / 1.1, 0, 1) * Math.PI), j = Math.abs(Math.sin((1.1 - u.cheerT) * 9)); P[A_R] = lerp(P[A_R], -2.85, q); P[E_R] = lerp(P[E_R], -0.4, q); if (k !== 0 && k !== 3) { P[A_L] = lerp(P[A_L], -2.6, q * 0.8); P[E_L] = lerp(P[E_L], -0.5, q); } P[NX] -= 0.25 * q; if (!seated) P[HOP] += j * 0.16 * q; } }
+  u.hitV += (-u.hitA * 140 - u.hitV * 21) * dt; u.hitA += u.hitV * dt; if (u.flinch > 0) u.flinch -= dt;
+  { const hA = u.hitA; P[LN] -= hA * 0.5; P[NX] += hA * 0.4; P[A_L] -= hA * 0.35; P[A_R] -= hA * 0.25; P[E_L] -= hA * 0.2; P[K_L] += Math.abs(hA) * 0.15; P[K_R] += Math.abs(hA) * 0.15; }
+  if (u.cheerT > 0) { u.cheerT -= dt; if (!moving && at > 0.45) { const q = Math.sin(clamp(1 - u.cheerT / 1.1, 0, 1) * Math.PI), j = Math.abs(Math.sin((1.1 - u.cheerT) * 9)); P[A_R] = lerp(P[A_R], -2.85, q); P[E_R] = lerp(P[E_R], -0.4, q); if (k !== 0 && k !== 3) { P[A_L] = lerp(P[A_L], -2.6, q * 0.8); P[E_L] = lerp(P[E_L], -0.5, q); } P[NX] -= 0.15 * q; if (!seated) P[HOP] += j * 0.04 * q; } }
   if (u.wet) { P[A_L] = -2.2 + Math.sin(ph * 7) * 1.3; P[A_R] = -2.2 + Math.sin(ph * 7 + Math.PI) * 1.3; P[E_L] = -0.6; P[E_R] = -0.6; if (!seated) { P[T_L] = Math.sin(ph * 12) * 0.7; P[T_R] = -Math.sin(ph * 12) * 0.7; P[K_L] = 0.5 + 0.4 * Math.sin(ph * 12 + 1); P[K_R] = 0.5 - 0.4 * Math.sin(ph * 12 + 1); } P[LN] = 0.5; }
   if (!moving && !attacking && at > 1.5 && !u.isPoss && !u.wet && !u.dancing && !(u.cheerT > 0)) {
     if (!u.fid) { u.fidN = (u.fidN ?? (2 + Math.random() * 7)) - dt; if (u.fidN <= 0) { u.fid = { n:pick(FIDGETS[k] || FIDGETS[0]), t:0 }; u.fidN = 5 + Math.random() * 9; } }
@@ -6832,29 +6867,29 @@ function humanRig(u, dt, moving, attacking) {
   if (u.foreL) { u.foreL.rotation.set(Math.min(0, P[E_L]), P[F_L], 0); u.foreR.rotation.set(Math.min(0, P[E_R]), P[F_R], 0); }
   if (u.bow) { const a = (u.bowA || 0) * u.cw * (u.fid ? 0 : 1), rx2 = Math.PI / 2 * a; u.bow.rotation.x = rx2; u.bow.position.set(0, -0.245 + 0.5 * Math.sin(rx2), 0.1 - 0.5 * Math.cos(rx2)); } // held at the grip: hangs at the side, stands upright when aiming
   if (u.legL) { u.legL.rotation.x = P[T_L]; u.legR.rotation.x = P[T_R]; const kl = Math.max(0, P[K_L]), kr = Math.max(0, P[K_R]); u.shinL.rotation.x = kl; u.shinR.rotation.x = kr;
-    ry -= Math.max(0, 0.48 - Math.max(legExt(P[T_L], kl), legExt(P[T_R], kr))) * 1.25; } // bent knees lower the hips: feet stay on the ground
+    const drop = Math.max(0, 0.48 - Math.max(legExt(P[T_L], kl), legExt(P[T_R], kr))) * 1.25; u.dropS = u.dropS === undefined ? drop : lerp(u.dropS, drop, 1 - Math.exp(-dt * (mb > 0.5 ? (u.isPoss ? 2.2 : 5) : 12))); ry -= u.dropS; } // bent knees lower the hips (smoothed: a steady crouch while running, no bouncing)
   u.torso.rotation.set(P[LN], P[TW], P[RL]);
   u.rig.position.set(rx, ry + P[HOP], 0);
   if (u.spin > 0) { u.spin -= dt; u.rig.rotation.y = (0.6 - u.spin) / 0.6 * TAU * 2; } else u.rig.rotation.y = 0;
-  const target = moving ? Math.sin(t * 0.5) * 0.08 : 0;
-  u.wobV += (-(u.wob - target) * 90 - u.wobV * 7) * dt; u.wob += u.wobV * dt;
+  const target = moving ? Math.sin(t * 0.5) * 0.02 * calm : 0;
+  u.wobV += (-(u.wob - target) * 90 - u.wobV * 14) * dt; u.wob += u.wobV * dt;
   u.neck.rotation.z = u.wob - P[RL] * 0.5; u.neck.rotation.x = Math.abs(u.wob) * 0.3 + P[NX] - P[LN] * 0.55; u.neck.rotation.y = look - P[TW] * 0.6;
   // props
   if (u.bag) { u.bag.rotation.x = -(P[A_L] + Math.min(0, P[E_L]) + P[LN]) * 0.95 + 0.3 * Math.sin(t + 1) * mb + u.hitA * 0.8 + Math.sin(ph * 1.7) * 0.04; u.bag.rotation.z = -P[Z_L] + 0.15 * c * mb; }
   if (k === 2 && u.weapon) { // Opa leans on the cane while walking and standing, swings it in a fight
     const wk = (1 - u.cw) * (1 - 0.8 * run), beta = P[A_R] + Math.min(0, P[E_R]) + P[LN], delta = 0.3 + 0.22 * s * mb, gam = (-Math.PI / 2 - beta - delta) * wk, gz = 0.65 * wk; // rotate about the grip, not the cane's end
     u.weapon.rotation.x = gam; u.weapon.position.set(0, -0.245 + gz * Math.sin(gam), 0.05 - gz * Math.cos(gam)); }
-  if (u.flag) u.flag.rotation.y = Math.sin(ph * (6 + 6 * mb) + u.id) * (0.25 + 0.4 * mb);
+  if (u.flag) u.flag.rotation.y = Math.sin(ph * (6 + 6 * mb) + (u.id | 0)) * (0.25 + 0.4 * mb);
   if (k === 4 && u.mount) { // goat: transverse gallop (hind pair, then fore pair), rocking body, nodding head, wagging tail
     const G4 = u.mount, gs = Math.min(1, spd / 6), off = [0.5, 0.62, 0, 0.12];
-    u.mountLegs.forEach((l, i) => { const q = t + off[i] * TAU; l.rotation.x = -Math.sin(q) * (0.25 + 0.55 * gs) * mb; l.scale.y = 1 - 0.2 * Math.max(0, Math.cos(q)) * mb; });
-    G4.rotation.x = Math.sin(t - 0.6) * 0.07 * mb + P[MP]; G4.position.y = Math.abs(Math.sin(t)) * 0.06 * mb; G4.position.z = P[MZ]; G4.rotation.z = clamp(-u.turn * 0.04, -0.15, 0.15);
-    if (u.goatHead) { const graze = sstep(0.72, 0.95, Math.sin(ph * 0.31 + u.id)) * idle * (1 - u.cw); u.goatHead.rotation.x = Math.sin(t * 2 + 0.4) * 0.12 * mb + P[MH] + Math.sin(ph * 0.9) * 0.05 * idle + graze * 0.75; u.goatHead.rotation.y = Math.sin(ph * 0.5 + u.id) * 0.25 * idle * (1 - graze); }
+    u.mountLegs.forEach((l, i) => { const q = t + off[i] * TAU; l.rotation.x = -Math.sin(q) * (0.25 + 0.5 * gs) * mb; l.scale.y = 1; });
+    G4.rotation.x = Math.sin(t - 0.6) * 0.035 * mb * calm + P[MP]; G4.position.y = Math.abs(Math.sin(t)) * 0.025 * mb * calm; G4.position.z = P[MZ]; G4.rotation.z = clamp(-u.turn * 0.025, -0.1, 0.1);
+    if (u.goatHead) { const graze = sstep(0.72, 0.95, Math.sin(ph * 0.31 + (u.id | 0))) * idle * (1 - u.cw); u.goatHead.rotation.x = Math.sin(t * 2 + 0.4) * 0.06 * mb + P[MH] + Math.sin(ph * 0.9) * 0.03 * idle + graze * 0.75; u.goatHead.rotation.y = Math.sin(ph * 0.5 + (u.id | 0)) * 0.25 * idle * (1 - graze); }
     if (u.tail) u.tail.rotation.z = Math.sin(ph * 14) * 0.35 * (0.3 + 0.7 * mb);
   } else if (k === 5 && u.mount) { // scooter: wheels roll with the ground, suspension jiggles, leans into curves, lunges on a hit
     const M = u.mount; u.wheels.forEach(w => { w.rotation.x += dt * spd / 0.2; });
-    M.position.y = (Math.sin(t * 2.3) * 0.012 + Math.max(0, Math.sin(t * 0.7 + u.id)) * 0.02) * mb + (moving ? 0 : Math.sin(ph * 40) * 0.002); M.position.z = P[MZ];
-    M.rotation.z = clamp(-u.turn * 0.05, -0.2, 0.2); M.rotation.x = P[MP] + Math.sin(t * 2.3) * 0.01 * mb;
+    M.position.y = (Math.sin(t * 2.3) * 0.004 + Math.max(0, Math.sin(t * 0.7 + (u.id | 0))) * 0.008) * mb * calm; M.position.z = P[MZ];
+    M.rotation.z = clamp(-u.turn * 0.03, -0.12, 0.12); M.rotation.x = P[MP] + Math.sin(t * 2.3) * 0.004 * mb * calm;
   }
   if (u.headTarget !== undefined) u.neck.scale.setScalar(lerp(u.neck.scale.x, u.headTarget, Math.min(1, dt * 6)));
   if (u.pop !== undefined) { u.pop += dt; const sc = Math.min(1, u.pop / 0.3); u.g.scale.setScalar(sc < 1 ? sc * (1 + 0.35 * Math.sin(sc * Math.PI)) : 1); u.rig.position.y += Math.sin(sc * Math.PI) * 0.5; if (sc >= 1) delete u.pop; }
@@ -6872,8 +6907,8 @@ function catapultRig(u, dt, moving) { // wheels roll with the ground, ratchet wi
   else arm = -0.3 + Math.sin(u.ph * 1.1) * 0.012;
   u.armA = arm; u.arm.rotation.x = arm;
   u.rkV += (-u.rk * 150 - u.rkV * 8) * dt; u.rk += u.rkV * dt;
-  u.rig.rotation.x = u.rk + Math.sin(u.walk * 1.7 + 0.8) * 0.012 * mb; u.rig.rotation.z = Math.sin(u.walk * 1.7) * 0.025 * mb;
-  u.rig.position.y = Math.abs(Math.sin(u.walk * 1.7)) * 0.03 * mb; u.rig.position.z = u.rk * 0.5;
+  u.rig.rotation.x = u.rk + Math.sin(u.walk * 1.7 + 0.8) * 0.006 * mb; u.rig.rotation.z = Math.sin(u.walk * 1.7) * 0.01 * mb;
+  u.rig.position.y = Math.abs(Math.sin(u.walk * 1.7)) * 0.012 * mb; u.rig.position.z = u.rk * 0.5;
   if (u.pop !== undefined) { u.pop += dt; const s2 = Math.min(1, u.pop / 0.4); u.g.scale.setScalar(Math.max(0.01, s2)); if (s2 >= 1) delete u.pop; }
   if (u.headTarget !== undefined) u.neck.scale.setScalar(lerp(u.neck.scale.x, u.isPoss ? u.headTarget : 0.001, Math.min(1, dt * 6)));
 }
@@ -7153,7 +7188,7 @@ function renderUnits(t, dt) {
     if (u.worm) wormUnitState(u, A, rt);
     { // animation LOD (visual only): far or off-screen units update their rig at 30 or 15 Hz, the controlled and enemy ego unit always at full rate
       const cdx = x - camera.position.x, cdz = z - camera.position.z, cd2 = cdx * cdx + cdz * cdz, L = QS.lod; LODS.center.set(x, y + 1, z);
-      const skip = mine || u.isPoss || u.rag || airborne || u.pop !== undefined ? 1 : !LODS.fr.intersectsSphere(LODS.sph) || cd2 > L[1] * L[1] ? 4 : cd2 > L[0] * L[0] ? 2 : 1;
+      const skip = mine || u.isPoss || u.rag || airborne || u.pop !== undefined ? 1 : !LODS.fr.intersectsSphere(LODS.sph) ? 4 : cd2 > L[1] * L[1] * 1.6 ? 2 : 1;
       u.animAcc = (u.animAcc || 0) + dt;
       if (skip === 1 || (QS.fr + u.id) % skip === 0) { animateRig(u, Math.min(u.animAcc, 0.1), moving && !u.rag && !airborne, u.atkT < 1.5); u.animAcc = 0; }
     }
@@ -7184,7 +7219,7 @@ function renderUnits(t, dt) {
     u.hp.visible = u.hpPct < 100 && !mine && !(V.poss && EG.intro > 0) && u.g.visible && !(u.worm && u.wP && (u.wP.ws === 'under' || u.wP.ws === 'warn'));
     egoCdSprite(u, x, y, z, mine);
     if (u.hp.visible) { u.hp.position.set(x, y + (u.worm ? (u.hpY || 3.4) : KINDS[u.k].bear ? 3.9 : KINDS[u.k].role === 'cav' ? 3.6 : 3.1) + (u.isPoss ? 1.3 : 0), z); u.hp.quaternion.copy(camQ); u.hpf.scale.x = Math.max(0.01, u.hpPct / 100); u.hpf.material = hpMats[u.team === V.myTeam ? 0 : 1]; }
-    if (u.flash > 0) { u.flash -= dt; u.head.scale.setScalar(1 + u.flash * 1.5); } else u.head.scale.setScalar(1);
+    if (u.flash > 0) { u.flash -= dt; u.head.scale.setScalar(1 + u.flash * 0.7); } else u.head.scale.setScalar(1);
     if (u.k === 5 && moving && Math.random() < dt * 6) puff(x - Math.sin(u.g.rotation.y) * 0.9, y + 0.5, z - Math.cos(u.g.rotation.y) * 0.9, 0x999999, 1, 0.5);
   }
   for (let i = V.dying.length - 1; i >= 0; i--) {

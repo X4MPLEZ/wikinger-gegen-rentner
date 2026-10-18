@@ -16,7 +16,7 @@
 - **Ego-Feldherr:** Als gesteuerter Krieger rufst du mit F (bzw. „Zu mir“) alle Krieger zu dir, mit V („Angriff!“) greifen alle an, was du anschaust, mit Tab („Wechseln“) springst du zum nächsten Krieger. Drei Kills in Folge laden die Spezialfähigkeit sofort wieder auf.
 - **Lesbares Chaos:** Kill-Feed oben links (wer wen womit erledigt hat), rote Gefahrenzonen vor rollenden Felsen und um gegnerische Sahnepfützen, über gegnerischen Riesenköpfen ein Ring, der zeigt, wann ihre Spezialfähigkeit wieder bereit ist.
 - **Katapulte:** höchstens 4 pro Seite; die Ego-Salve bleibt auf der Basis, wenn man darauf zielt.
-- **Lebendige Figuren:** Alle Krieger bewegen sich mit Knien und Ellbogen, holen sichtbar aus, ziehen durch, zucken bei Treffern, jubeln nach einem Sieg und haben im Leerlauf ihre Eigenheiten. Ziegen galoppieren, E-Mobile federn, Katapulte spannen hörbar.
+- **Lebendige Figuren:** Alle Krieger bewegen sich mit Knien und Ellbogen, holen sichtbar aus, ziehen durch, zucken bei Treffern, jubeln nach einem Sieg und haben im Leerlauf ihre Eigenheiten – ruhig und ohne Wackeln; der gesteuerte Krieger wippt praktisch gar nicht. Ziegen galoppieren, E-Mobile federn, Katapulte spannen hörbar.
 - **Gegnerische Hiebe sind sichtbar:** Ein dezenter roter Bogen zeigt, wie weit und in welche Richtung ein Gegner zuschlägt – wer ihn sieht, kann ausweichen.
 - **Dein Krieger bleibt stehen:** Normale Gegner werfen einen gesteuerten Krieger nicht mehr um. Das schaffen nur gegnerische Helden – und höchstens alle paar Sekunden Gefahren wie rollende Felsen, fliegende Körper oder wilde Tiere.
 - **Noch eine Runde:** Online könnt ihr nach dem Spiel sofort eine Revanche auf neuer Karte starten, ohne neuen Code.
@@ -24,7 +24,7 @@
 ## Karten
 
 - **Wiesen:** übersichtlich, Sprungpads über den Fluss.
-- **Wüste:** offen; Fernkämpfer und Katapulte schießen weiter, Kakteen stechen. An beiden Flanken lauert je ein **Sandwurm** unter den Dünen: Bebt der Sand (ein Ring zeigt seine Reichweite), bleibt eine Sekunde zum Weglaufen. Dann bricht er hervor, packt bis zu vier Krieger mit seinen Greifern und verschlingt sie. Gesteuerte Krieger sind zu zäh – sie werden zerkaut und wieder ausgespuckt. Verwundbar ist er nur, solange er aus dem Sand ragt; besiegt, kämpft er für dich, gräbt sich unter Gegner und verschlingt bis zu drei auf einmal (gesteuert: Spezial = abtauchen und vor dir zuschnappen).
+- **Wüste:** offen; Fernkämpfer und Katapulte schießen weiter, Kakteen stechen. In jeder Kartenhälfte lauert ein **Sandwurm** an der Flanke unter den Dünen; manchmal pflügt er mit dem Kopf über dem Sand durch die Dünen. Bebt der Sand (ein Ring zeigt seine Reichweite), bleibt eine Sekunde zum Weglaufen. Dann bricht er hervor, packt bis zu vier Krieger mit seinen Greifern und verschlingt sie. Gesteuerte Krieger sind zu zäh – sie werden zerkaut und wieder ausgespuckt. Verwundbar ist er nur, solange er aus dem Sand ragt oder mit dem Kopf an der Oberfläche gräbt; besiegt, wird er wie der Eisbär gezähmt und kämpft für dich, gräbt sich unter Gegner und verschlingt bis zu drei auf einmal (gesteuert: Spezial = abtauchen und vor dir zuschnappen).
 - **Arktis:** schnelles, rutschiges Eis. Katapulttreffer brechen dauerhafte Löcher ins Eis, Eisbären lassen sich zähmen.
 - **Klippen:** Bodenlose Abgründe und Sprungpads. Reiter stoßen Gegner in die Tiefe; wer läuft, bleibt von selbst an der Kante stehen.
 
