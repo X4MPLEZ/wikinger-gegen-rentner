@@ -73,6 +73,7 @@ function resetView() {
   fx.swings.forEach(w => scene.remove(w.m));
   fx.swings.length = 0;
   swooshClear();
+  FEET.list.length = 0;
   V.markers.forEach(mk => scene.remove(mk.m));
   V.markers.length = 0;
   if (typeof EG !== 'undefined' && EG.sgRing) EG.sgRing.visible = false;
@@ -305,7 +306,7 @@ function processSnap(s) {
         });
         if (!u.arm && Math.random() < 0.14) SFX.play('grunt', { x: u.g.position.x, z: u.g.position.z, vol: 0.7, k: u.k });
       }
-      if (poss && pe[7] & 1 && e[8] !== pe[8]) onSpecial(u, cur);
+      if (((poss && pe[7] & 1) || (!poss && (u.k === 0 || u.k === 2))) && e[8] !== pe[8]) onSpecial(u, cur); // perk whirls and rages of ordinary units too
     }
     u.hpPct = e[4];
   }
@@ -733,7 +734,7 @@ function onSpecial(u, cur) {
   }
   if (u.k === 0) setTimeout(() => SFX.play('heave', { x: p.x, z: p.z, vol: 1 }), 60);
   if (u.k === 2) {
-    u.spin = 0.6 + [0, 5][tpk(u.team, 'spin')];
+    u.spin = 0.6 + (u.isPoss ? [0, 5][tpk(u.team, 'spin')] : 0);
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * TAU;
       puff(p.x + Math.cos(a) * 2.5, p.y + 0.6, p.z + Math.sin(a) * 2.5, 0xf6f1e7, 1, 0.8);

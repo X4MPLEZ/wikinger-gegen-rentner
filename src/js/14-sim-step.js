@@ -426,7 +426,7 @@ function step(G) {
         spawnUnit(G, i, k);
         if (pkL(G, i, 'twins') && KINDS[k].role !== 'siege') {
           T.twN = (T.twN || 0) + 1;
-          if (T.twN % 3 === 0) spawnUnit(G, i, k);
+          if (T.twN % 4 === 0) spawnUnit(G, i, k);
         }
         T.qt = 0;
       }
@@ -518,7 +518,7 @@ function step(G) {
           sx: u.x,
           sz: u.z,
           t: Math.max(0.6, dd / K.pspeed) * Math.max(0.4, hw.k),
-          dmg: K.dmg * (u.chick > 0 ? 0.6 : 1),
+          dmg: K.dmg * (u.chick > 0 ? 0.3 : 1),
           tgt: w.tgt,
           team: u.team,
           k: u.k,
@@ -637,8 +637,13 @@ function step(G) {
       if (d <= range) {
         u.eng = 0.5;
         if (u.cd <= 0) {
-          u.cd = K.cd * (u.frenzy > 0 ? 0.85 : 1);
+          const rage = u.k === 0 && G.chaos && u.hp < maxHp(u) * 0.6 && pkL(G, u.team, 'walhalla'); // Walhalla-Raserei: battered Berserkers rage
+          u.cd = K.cd * (u.frenzy > 0 ? 0.85 : 1) * (rage ? 0.6 : 1);
           u.atk = (u.atk + 1) % 100;
+          if (rage && !u.rageV) {
+            u.rageV = 1;
+            u.sp = (u.sp + 1) % 100; // shows the rage on every screen
+          }
           u.at = tgt ? tgt.id : -2;
           const charge = K.role === 'cav' && u.run > 1.2 ? (u.k === 5 ? 1.55 : 1.4) : 1;
           const hm = homeMul(G, u);
@@ -649,12 +654,12 @@ function step(G) {
             else hitBear(G, b, K.dmg * charge, u.team, u.k);
           } else if (K.proj && K.role === 'siege')
             u.wind = { t: SIEGE_WIND, tx, tz, tgt: u.at }; // the arm winds up first: everyone can see it coming
-          else if (K.proj)
+          else if (K.proj) {
             G.proj.push({
               sx: u.x,
               sz: u.z,
               t: dist / K.pspeed,
-              dmg: K.dmg * hm * (u.chick > 0 ? 0.6 : 1),
+              dmg: K.dmg * hm * (u.chick > 0 ? 0.3 : 1),
               tgt: u.at,
               team: u.team,
               k: u.k,
@@ -662,9 +667,51 @@ function step(G) {
               tx,
               tz,
             });
-          else {
-            hit(G, u.at, K.dmg * hm * charge * (u.chick > 0 ? 0.6 : 1), u.team, byId, u.k);
+            if (tgt && G.chaos && pkL(G, u.team, 'volley')) {
+              // Salvenhölle: every shot is a double shot – at a second foe in range if there is one
+              let t2 = tgt;
+              for (const e of G.units)
+                if (e !== tgt && e.team !== u.team && e.hp > 0 && (e.x - u.x) ** 2 + (e.z - u.z) ** 2 < range * range) {
+                  t2 = e;
+                  break;
+                }
+              const d2 = Math.hypot(t2.x - u.x, t2.z - u.z);
+              G.proj.push({
+                sx: u.x,
+                sz: u.z,
+                t: d2 / K.pspeed + 0.08,
+                dmg: K.dmg * hm,
+                tgt: t2.id,
+                team: u.team,
+                k: u.k,
+                tx: t2.x,
+                tz: t2.z,
+              });
+            }
+          } else {
+            hit(G, u.at, K.dmg * hm * charge * (u.chick > 0 ? 0.3 : 1) * (rage ? 1.5 : 1), u.team, byId, u.k);
             traitHit(G, u, tgt, charge > 1);
+            if (tgt && rage) {
+              const t3 = byId.get(u.at);
+              if (
+                t3 &&
+                t3.hp > 0 &&
+                !KINDS[t3.k].bear &&
+                KINDS[t3.k].role !== 'siege' &&
+                knockFly(t3, u.x, u.z, 2.6, undefined, undefined, 0, 'ai')
+              )
+                t3.kbTeam = u.team;
+            }
+            if (u.k === 2 && G.chaos && pkL(G, u.team, 'spin') && G.t >= (u.spinA || 0)) {
+              // Tornado-Opa: in a fight the Opa whirls his stick every 6 s and knocks everyone around him back
+              u.spinA = G.t + 6;
+              u.sp = (u.sp + 1) % 100;
+              enemiesInCone(G, u, 3.4, Math.PI).forEach(c => {
+                hit(G, c.e.id, 20, u.team, byId, u.k);
+                if (!KINDS[c.e.k].bear && KINDS[c.e.k].role !== 'siege' && knockFly(c.e, u.x, u.z, 2.6, undefined, undefined, 0, 'ai'))
+                  c.e.kbTeam = u.team;
+              });
+            }
           }
           u.run = 0;
         }
@@ -1050,12 +1097,12 @@ function step(G) {
         }
       }
       if (best) {
-        T.tcd = CFG.towerCd * pk(G, i, 'tower', [1, 0.67]);
+        T.tcd = CFG.towerCd * pk(G, i, 'tower', [1, 0.65]);
         T.tatk = (T.tatk + 1) % 100;
         T.ttgt = best.id;
         G.proj.push({
           t: Math.sqrt(bd) / CFG.towerSpeed,
-          dmg: CFG.towerDmg * G.towerMul[i] * CFG.phaseTower[G.phase || 0] * pk(G, i, 'tower', [1, 2]) * (best.poss ? CFG.towerPoss : 1),
+          dmg: CFG.towerDmg * G.towerMul[i] * CFG.phaseTower[G.phase || 0] * pk(G, i, 'tower', [1, 2.3]) * (best.poss ? CFG.towerPoss : 1),
           tgt: best.id,
           team: i,
           k: -1,
@@ -1089,6 +1136,12 @@ function step(G) {
   for (const u of us)
     if (u.hp <= 0 && !u.kfd) {
       u.kfd = 1;
+      if (G.chaos && pkL(G, u.team, 'revive') && KINDS[u.k].role !== 'siege' && !KINDS[u.k].bear && !KINDS[u.k].worm) {
+        // Unkraut vergeht nicht: every third fallen warrior comes back at the base after 4 s
+        const T = G.teams[u.team];
+        T.revN = (T.revN || 0) + 1;
+        if (T.revN % 4 === 0) (T.revQ || (T.revQ = [])).push([G.t + 4, u.k]);
+      }
       const lh = u.lh || [-9, -1, 0],
         cause = u.swal
           ? lh[0] === -8
@@ -1251,6 +1304,7 @@ function snapOf(G) {
           ch: 1,
           pk: [Object.assign({}, T0.pk), Object.assign({}, T1.pk)],
           of: [T0.offer, T1.offer],
+          ou: [T0.offerUp | 0, T1.offerUp | 0], // behind: better odds for epic and legendary cards
           pn: [T0.pkN, T1.pkN],
           lp: [T0.lastPk, T1.lastPk],
           no: Math.max(0, Math.ceil(G.nextOffer - G.t)),

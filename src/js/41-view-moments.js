@@ -7,6 +7,7 @@ function shake(a) {
 const HL = { q: [], busy: 0, seen: undefined, last: {} };
 function hlText(ty, team, n) {
   const mine = team === V.myTeam;
+  if (ty === 'quake') return mine ? ['ERDBEBEN!', n + ' Gegner liegen am Boden'] : ['ERDBEBEN!', 'Die Erde bebt unter deinen Kriegern'];
   if (ty === 'ram')
     return mine
       ? [n >= 5 ? 'RAMMBOCK-FESTIVAL!' : n === 4 ? 'VIERFACH-RAMME!' : 'DREIFACH-RAMME!', n + ' Gegner mit einem Anlauf umgenietet']
@@ -60,6 +61,17 @@ function hlText(ty, team, n) {
   return null;
 }
 function hlPush(ty, team, n, x, z) {
+  if (ty === 'quake' && Number.isFinite(x)) {
+    // the earthquake itself: dust all around the spot, the screen shakes
+    shake(0.55);
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * TAU,
+        r = 2 + Math.random() * 7;
+      puff(x + Math.cos(a) * r, groundY(x + Math.cos(a) * r, z + Math.sin(a) * r) + 0.4, z + Math.sin(a) * r, 0xb8a27a, 2, 1.2);
+    }
+    SFX.play('boom', { x, z, vol: 1.3 });
+    SFX.play('rumble', { x, z, vol: 1.2 });
+  }
   const t = hlText(ty, team, n);
   if (!t) return;
   if (ty !== 'phase' && now() - (HL.last[ty + team] || -1e9) < 12000) return;

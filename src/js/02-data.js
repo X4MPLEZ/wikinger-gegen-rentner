@@ -298,55 +298,71 @@ const CFG = {
 };
 const maxHp = u => u.mhp || KINDS[u.k].hp;
 const SIEGE_EGO_REACH = 6; // the aiming ring and the simulation clamp an ego catapult shot to the same distance
+/* Chaos-mode perks. Rules of thumb (checked with tools/balance.py, computer vs computer):
+   - every perk helps the whole army (also for a commander player and the computer); ego bonuses come on top, pure ego perks are at most rare
+   - Gewöhnlich: a small, always useful edge · Selten: a specialisation · Episch: a new way to play · Legendär: a spectacle, still counterable
+   - the first offer has no epic or legendary perk; the tiers open up offer by offer, and the side that is behind draws better (makeOffer)
+   t tier 0-3, ic icon, n name, d what it does (German, shown on the card), f only for this faction. Effects: grep the id in src/js. */
 const PERKS = {
   gold: { t: 0, ic: si('coins'), n: 'Geldregen', d: '+20 % Einkommen' },
   flagger: { t: 0, ic: si('flag'), n: 'Fahnenträger', d: 'Fahnen 2,5× schneller erobern' },
-  charge: { t: 0, ic: si('battery'), n: 'Spezial-Akku', d: 'Spezialfähigkeit lädt 3× schneller' },
   heal: { t: 0, ic: si('heal'), n: 'Heilquelle', d: 'Deine Krieger heilen sich überall' },
-  cavspd: { t: 0, ic: si('horseshoe'), n: 'Galopp', d: 'Reiter +50 % Tempo' },
-  arrows: { t: 1, ic: si('arrow'), n: 'Scharfe Pfeile', d: 'Fernkämpfer +80 % Schaden' },
-  armor: { t: 1, ic: si('shield'), n: 'Eiserne Haut', d: 'Deine Krieger nehmen 35 % weniger Schaden' },
-  turbo: { t: 1, ic: si('bolt'), n: 'Turbo-Held', d: 'Dein Ego-Krieger rennt doppelt so schnell' },
-  tower: { t: 1, ic: si('tower'), n: 'Turmwache', d: 'Basisturm: doppelter Schaden, schießt schneller' },
+  cavspd: { t: 0, ic: si('horseshoe'), n: 'Galopp', d: 'Reiter +50 % Tempo und +25 % Schaden' },
+  fast: { t: 0, ic: si('gear'), n: 'Fließband', d: 'Ausbildung doppelt so schnell' },
+  moon: { t: 0, ic: si('moon'), n: 'Mondschwerkraft', d: 'Umgestoßene Gegner fliegen sehr hoch und lange' },
+  charge: { t: 0, ic: si('battery'), n: 'Spezial-Akku', d: 'Spezialfähigkeiten laden 3× schneller' },
+  arrows: { t: 1, ic: si('arrow'), n: 'Scharfe Pfeile', d: 'Fernkämpfer machen 60 % mehr Schaden' },
+  tower: { t: 1, ic: si('tower'), n: 'Turmwache', d: 'Basisturm: mehr als doppelter Schaden, schießt schneller' },
   bounty: { t: 1, ic: si('crown'), n: 'Kopfgeld', d: 'Gold- und Pfandrausch bringen doppelt so viel' },
-  ram: { t: 2, ic: si('burst'), n: 'Abrissbirne', d: 'Reiter-Anlauf schleudert Gegner 5× so weit' },
-  spin: { t: 2, ic: si('tornado'), n: 'Tornado-Opa', d: 'Stockwirbel: riesig und brutal', f: 'rentner' },
-  bite: { t: 2, ic: si('teeth'), n: 'Beißgebiss', d: 'Oma-Gebisse setzen sich auf den Kopf und knabbern 6 s kräftig weiter', f: 'rentner' },
+  kegel: { t: 1, ic: si('pin'), n: 'Kegelkönig', d: 'Von dir umgehauene Gegner kegeln weiter: kaum Bremsen, fast vierfacher Schaden' },
+  wall: { t: 1, ic: si('wall'), n: 'Schildwall', d: 'Nahkämpfer nehmen von Pfeilen, Gebissen und Katapulten nur halben Schaden' },
+  dance: { t: 1, ic: si('dance'), n: 'Discogranaten', d: 'Ego-Krieger wirft Discokugeln: Gegner müssen tanzen' },
+  jump: { t: 1, ic: si('spring'), n: 'Sprungfedern', d: 'Ego: springen – die Landung haut Gegner um' },
+  turbo: { t: 1, ic: si('bolt'), n: 'Turbo-Held', d: 'Ego: dein Krieger rennt doppelt so schnell' },
+  bighead: { t: 1, ic: si('bighead'), n: 'Dickschädel', d: 'Ego: +40 % Schaden, aber Riesenkopf – Pfeile treffen doppelt hart' },
+  armor: { t: 2, ic: si('shield'), n: 'Eiserne Haut', d: 'Deine Krieger nehmen 18 % weniger Schaden' },
+  chicken: { t: 2, ic: si('chicken'), n: 'Hühnerfluch', d: 'Alle 12 s werden vier gegnerische Krieger 8 s lang zu harmlosen Hühnern' },
+  berserk: { t: 2, ic: si('axe'), n: 'Berserkerwut', d: 'Nahkämpfer doppelter Schaden – nehmen aber 25 % mehr von Fernkampf und Ego' },
+  volley: {
+    t: 2,
+    ic: si('target'),
+    n: 'Salvenhölle',
+    d: 'Deine Fernkämpfer schießen immer doppelt · Ego-Salve +5 Geschosse',
+  },
+  ram: {
+    t: 2,
+    ic: si('burst'),
+    n: 'Abrissbirne',
+    d: 'Reiter-Anläufe treffen härter und hauen Gegner weit weg · Ego-Rammstoß schleudert 4× so weit',
+  },
+  spin: { t: 2, ic: si('tornado'), n: 'Tornado-Opa', d: 'Krückstock-Opas wirbeln alle 6 s im Kampf · Ego-Wirbel riesig', f: 'rentner' },
+  bite: { t: 2, ic: si('teeth'), n: 'Beißgebiss', d: 'Oma-Gebisse setzen sich auf den Kopf und knabbern 4 s weiter', f: 'rentner' },
   walhalla: {
     t: 2,
     ic: si('axes'),
     n: 'Walhalla-Raserei',
-    d: 'Berserker-Raserei hält 10 s, schlägt wie wild und haut jeden um',
+    d: 'Angeschlagene Berserker rasen: schneller, härter und hauen um · Ego-Raserei 10 s',
     f: 'viking',
   },
-  stampede: { t: 2, ic: si('goat'), n: 'Ziegen-Stampede', d: 'Ramm-Anlauf der Ziege: riesige Schneise, alle fliegen', f: 'viking' },
-  jump: { t: 1, ic: si('spring'), n: 'Sprungfedern', d: 'Ego-Krieger kann springen – Landung haut Gegner um' },
-  moon: { t: 1, ic: si('moon'), n: 'Mondschwerkraft', d: 'Umgestoßene Gegner fliegen sehr hoch und lange' },
-  dance: { t: 1, ic: si('dance'), n: 'Discogranaten', d: 'Ego-Krieger wirft Discokugeln: Gegner müssen tanzen' },
-  chicken: {
+  stampede: {
     t: 2,
-    ic: si('chicken'),
-    n: 'Hühnerfluch',
-    d: 'Alle 30 s wird ein gegnerischer Krieger 8 s lang zum Huhn und pickt nur noch schwach',
+    ic: si('goat'),
+    n: 'Ziegen-Stampede',
+    d: 'Ziegen sind zäher, ihre Anläufe treffen und werfen auch die Nachbarn um · Ego: riesige Schneise',
+    f: 'viking',
   },
-  volley: { t: 2, ic: si('target'), n: 'Salvenhölle', d: 'Pfeilfächer und Gebiss-Salve: +5 Geschosse' },
-  berserk: {
-    t: 2,
-    ic: si('axe'),
-    n: 'Berserkerwut',
-    d: 'Nahkämpfer: dreifacher Schaden gegen alles – aber Fernkämpfer und Ego-Krieger machen ihnen dreifachen Schaden',
-  },
-  bighead: { t: 2, ic: si('bighead'), n: 'Dickschädel', d: 'Ego-Krieger: +40 % Schaden, aber Riesenkopf – Pfeile treffen doppelt hart' },
+  giant: { t: 3, ic: si('giant'), n: 'Riesenwuchs', d: 'Deine Krieger werden riesig: +20 % Leben, +10 % Schaden' },
+  twins: { t: 3, ic: si('twins'), n: 'Doppelpack', d: 'Jede vierte Ausbildung bringt einen Krieger gratis dazu' },
   catapult: { t: 3, ic: si('boulder'), n: 'Katapult', d: 'Alle 30 s rollt ein mächtiges Katapult aus deiner Basis' },
-  twins: { t: 3, ic: si('twins'), n: 'Doppelpack', d: 'Jede dritte Ausbildung bringt einen Krieger gratis dazu' },
-  giant: { t: 3, ic: si('giant'), n: 'Riesenwuchs', d: 'Deine Krieger werden riesig: +60 % Leben und Schaden' },
-  meteor: { t: 3, ic: si('meteor'), n: 'Meteoritenhagel', d: 'Alle 25 s regnen Meteore auf gegnerische Krieger' },
+  meteor: { t: 3, ic: si('meteor'), n: 'Meteoritenhagel', d: 'Alle 30 s regnen Meteore auf gegnerische Krieger' },
+  quake: { t: 3, ic: si('quake'), n: 'Erdbeben', d: 'Alle 22 s bebt die Erde unter der größten Gegnergruppe: alle fliegen um' },
+  revive: { t: 3, ic: si('sprout'), n: 'Unkraut vergeht nicht', d: 'Jeder vierte gefallene Krieger kommt nach 4 s an deiner Basis zurück' },
 };
 const TIERS = [
-  { n: 'Gewöhnlich', c: '#5fbf6a', w: 42 },
+  { n: 'Gewöhnlich', c: '#5fbf6a', w: 44 },
   { n: 'Selten', c: '#4d9be6', w: 30 },
-  { n: 'Episch', c: '#a865e0', w: 19 },
-  { n: 'Legendär', c: '#f0a92e', w: 9 },
+  { n: 'Episch', c: '#a865e0', w: 18 },
+  { n: 'Legendär', c: '#f0a92e', w: 8 },
 ];
 // Fog (fog mode and the "Nebelwand" event): who sees how far, as [clear up to, fog complete at] in metres. The player's view
 // (FOG.own in 70-world-view.js) and the computer's knowledge (aiVision in 15-ai.js) use the same numbers: both sides see the same.

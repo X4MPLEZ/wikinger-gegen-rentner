@@ -305,25 +305,33 @@ function pickPerk(G, T, id) {
 }
 function makeGiant(u) {
   const K = KINDS[u.k];
-  u.gs = 1.35;
+  u.gs = 1.3;
   if (u.poss) {
-    u.mhp *= 1.6;
-    u.hp *= 1.6;
+    u.mhp *= 1.2;
+    u.hp *= 1.2;
   } else {
-    u.mhp = K.hp * 1.6;
-    u.hp = Math.min(u.mhp, u.hp * 1.6);
+    u.mhp = K.hp * 1.2;
+    u.hp = Math.min(u.mhp, u.hp * 1.2);
   }
 }
+// Two cards. Offer 1: common and rare only; offers 2-3: up to epic; from offer 4: everything. The side that is behind (fewer flags, or a
+// clearly weaker base) draws epic and legendary cards twice as often – a comeback chance that both see (snapshot: ou).
 function makeOffer(G, T) {
-  const pool = PERK_IDS.filter(id => !T.pk[id] && (!PERKS[id].f || PERKS[id].f === T.fac) && (G.offerN > 1 || PERKS[id].t <= 1)),
+  const team = G.teams.indexOf(T),
+    maxT = G.offerN <= 1 ? 1 : G.offerN <= 3 ? 2 : 3,
+    other = G.teams[1 - team],
+    behind = flagsOf(G, team) < flagsOf(G, 1 - team) || T.hp < other.hp - 200,
+    w = id => TIERS[PERKS[id].t].w * (behind && PERKS[id].t >= 2 ? 2 : 1),
+    pool = PERK_IDS.filter(id => !T.pk[id] && (!PERKS[id].f || PERKS[id].f === T.fac) && PERKS[id].t <= maxT),
     o = [];
+  T.offerUp = behind ? 1 : 0;
   while (o.length < 2 && pool.length) {
     let tot = 0;
-    pool.forEach(id => (tot += TIERS[PERKS[id].t].w));
+    pool.forEach(id => (tot += w(id)));
     let r = Math.random() * tot,
       i = 0;
     for (; i < pool.length - 1; i++) {
-      r -= TIERS[PERKS[pool[i]].t].w;
+      r -= w(pool[i]);
       if (r <= 0) break;
     }
     o.push(pool.splice(i, 1)[0]);
@@ -370,7 +378,7 @@ function perkStep(G) {
     }
     if (pkL(G, i, 'meteor')) {
       T.metT = (T.metT || 0) + DT;
-      if (T.metT >= 25) {
+      if (T.metT >= 30) {
         const foes = G.units.filter(u => u.team !== i);
         if (foes.length) {
           T.metT = 0;
@@ -378,9 +386,41 @@ function perkStep(G) {
             const e = foes[Math.floor(Math.random() * foes.length)];
             fireball(G, i, e.x + (Math.random() - 0.5) * 4, e.z + (Math.random() - 0.5) * 4, 1, 3.5, 45, -1);
           }
-        } else T.metT = 25;
+        } else T.metT = 30;
       }
     }
+    if (pkL(G, i, 'quake')) {
+      // the ground shakes under the biggest group of enemies: everyone there is knocked over
+      T.qkT = (T.qkT || 0) + DT;
+      if (T.qkT >= 22) {
+        const foes = G.units.filter(u => u.team !== i && u.hp > 0 && !KINDS[u.k].worm);
+        let best = null,
+          bn = 0;
+        for (const a of foes) {
+          let n = 0;
+          for (const b of foes) if ((a.x - b.x) ** 2 + (a.z - b.z) ** 2 < 100) n++;
+          if (n > bn) {
+            bn = n;
+            best = a;
+          }
+        }
+        if (best && bn >= 2) {
+          T.qkT = 0;
+          const cx = best.x,
+            cz = best.z,
+            byId = new Map(G.units.map(u => [u.id, u]));
+          let n = 0;
+          for (const e of foes)
+            if ((e.x - cx) ** 2 + (e.z - cz) ** 2 < 100) {
+              hit(G, e.id, 42, i, byId, -1);
+              if (KINDS[e.k].role !== 'siege' && knockFly(e, cx, cz, 3.2, undefined, undefined, 2.6, 'hazard')) e.kbTeam = i;
+              n++;
+            }
+          highlight(G, 'quake', i, n, cx, cz);
+        } else T.qkT = 22;
+      }
+    }
+    if (T.revQ && T.revQ.length && T.revQ[0][0] <= G.t) spawnUnit(G, i, T.revQ.shift()[1]); // Unkraut vergeht nicht
     if (pkL(G, i, 'catapult')) {
       T.catT = (T.catT || 0) + DT;
       if (T.catT >= 30) {
@@ -396,20 +436,19 @@ function perkStep(G) {
     if (u.chick > 0) u.chick -= DT;
     if (u.bite > 0) {
       u.bite -= DT;
-      hit(G, u.id, 15 * DT, u.biteT, byId, -1);
+      hit(G, u.id, 10 * DT, u.biteT, byId, -1);
     }
   }
   for (let i = 0; i < 2; i++)
     if (pkL(G, i, 'chicken')) {
       const T = G.teams[i];
       T.chT = (T.chT || 0) + DT;
-      if (T.chT >= 30) {
+      if (T.chT >= 12) {
         const foes = G.units.filter(u => u.team !== i && KINDS[u.k].role !== 'siege' && !u.poss && !(u.chick > 0));
         if (foes.length) {
           T.chT = 0;
-          const e = foes[Math.floor(Math.random() * foes.length)];
-          e.chick = 8;
-        } else T.chT = 30;
+          for (let n = 0; n < 4 && foes.length; n++) foes.splice(Math.floor(Math.random() * foes.length), 1)[0].chick = 8;
+        } else T.chT = 12;
       }
     }
   for (const b of G.fb) {
@@ -534,13 +573,16 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   }
   if (G.chaos) {
     const rg = attK >= 0 && KINDS[attK].role === 'ranged';
-    if (rg) d *= pk(G, team, 'arrows', [1, 1.8]);
+    if (rg) d *= pk(G, team, 'arrows', [1, 1.6]);
     if (bp) d *= pk(G, team, 'bighead', [1, 1.4]);
+    if (attK >= 0 && KINDS[attK].role === 'cav') d *= pk(G, team, 'cavspd', [1, 1.25]);
     if (e.poss && rg) d *= pk(G, e.team, 'bighead', [1, 2]);
-    if (attK >= 0) d *= pk(G, team, 'giant', [1, 1.6]);
-    d *= pk(G, e.team, 'armor', [1, 0.65]);
-    if (attK >= 0 && KINDS[attK].role === 'melee' && pkL(G, team, 'berserk')) d *= 3;
-    if (KINDS[e.k].role === 'melee' && pkL(G, e.team, 'berserk') && (bp || (attK >= 0 && KINDS[attK].role === 'ranged'))) d *= 3;
+    if (attK >= 0) d *= pk(G, team, 'giant', [1, 1.1]);
+    d *= pk(G, e.team, 'armor', [1, 0.82]);
+    if (attK >= 0 && KINDS[attK].role === 'melee' && pkL(G, team, 'berserk')) d *= 2;
+    if (KINDS[e.k].role === 'melee' && pkL(G, e.team, 'berserk') && (bp || (attK >= 0 && KINDS[attK].role === 'ranged'))) d *= 1.25;
+    if (e.k === 4 && pkL(G, e.team, 'stampede')) d *= 0.75;
+    if (KINDS[e.k].role === 'melee' && pkL(G, e.team, 'wall') && attK >= 0 && (rg || KINDS[attK].role === 'siege')) d *= 0.5;
   }
   if (attK >= 0 && KINDS[attK].role === 'siege') {
     if (e.poss) d *= 2.2;
@@ -553,7 +595,7 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   if (attK === 3 && e.hp > 0 && !KINDS[e.k].bear && !KINDS[e.k].worm) e.slowT = 1.5;
   counterHit(G, e, attK, team, bp);
   if (attK === 3 && G.chaos && pkL(G, team, 'bite')) {
-    e.bite = 6;
+    e.bite = 4;
     e.biteT = team;
   }
   if (bp && e.poss) e.egoHit = { team, t: G.t, pid: G.teams[team].pos };
@@ -653,8 +695,20 @@ function traitHit(G, u, tgt, charged) {
     if (u.k === 0) u.frenzy = 4;
     return;
   }
-  if (u.k === 4 && charged && !KINDS[tgt.k].bear && KINDS[tgt.k].role !== 'siege')
-    knockFly(tgt, u.x, u.z, u.poss ? 3 : 2.2, undefined, undefined, 0, u.poss ? 'ego' : 'ai');
+  const kb = (e, d) => {
+    if (!KINDS[e.k].bear && KINDS[e.k].role !== 'siege' && knockFly(e, u.x, u.z, d, undefined, undefined, 0, u.poss ? 'ego' : 'ai'))
+      e.kbTeam = u.team;
+  };
+  const ram = KINDS[u.k].role === 'cav' && charged && G.chaos && pkL(G, u.team, 'ram');
+  if ((u.k === 4 && charged) || ram) kb(tgt, ram ? 4.5 : u.poss ? 3 : 2.2); // Abrissbirne: every rider's charge throws
+  if (ram) hit(G, tgt.id, KINDS[u.k].dmg, u.team, new Map([[tgt.id, tgt]]), u.k); // … and hits harder
+  if (u.k === 4 && charged && G.chaos && pkL(G, u.team, 'stampede'))
+    for (const e of G.units)
+      // Ziegen-Stampede: the neighbours of the target fly too
+      if (e !== tgt && e.team !== u.team && e.hp > 0 && !KINDS[e.k].worm && (e.x - tgt.x) ** 2 + (e.z - tgt.z) ** 2 < 9) {
+        hit(G, e.id, KINDS[4].dmg, u.team, new Map([[e.id, e]]), 4);
+        kb(e, 2.6);
+      }
 }
 const KNOCK_RES = k => (k === 2 ? 0.55 : 1);
 const inHome = (G, u) => !G.phase && !G.tut && (u.x - BASES[u.team].x) ** 2 + (u.z - BASES[u.team].z) ** 2 < CFG.homeR * CFG.homeR;

@@ -7,7 +7,7 @@
 cd "$(dirname "$0")/.." || exit 1
 node tools/build.mjs || exit 1
 mkdir -p tests/out
-ALL="t_smoke t_hud_layout t_ux t_hero_sim t_fogmode t_fogvision t_chaos t_knock t_auto t_climb t_sfx"
+ALL="t_smoke t_hud_layout t_ux t_hero_sim t_fogmode t_fogvision t_perks t_chaos t_knock t_auto t_climb t_sfx"
 MP=0
 LIST=""
 for a in "$@"; do

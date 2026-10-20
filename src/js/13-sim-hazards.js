@@ -31,12 +31,13 @@ function bowlStep(G) {
         e.bowledBy = u.id;
         e.kbN = ((e.kbN || 0) + 1) % 100;
       }
-      e.hp -= 8;
+      const king = G.chaos && u.kbTeam !== undefined && u.kbTeam !== e.team && pkL(G, u.kbTeam, 'kegel'); // Kegelkönig
+      e.hp -= king ? 30 : 8;
       e.hurt = 2;
       e.lh = [-2, u.kbTeam ?? -1, 0];
       G.st && u.kbTeam !== undefined && u.kbTeam !== e.team && G.st[u.kbTeam].rams++;
-      a.vx *= 0.66;
-      a.vz *= 0.66;
+      a.vx *= king ? 0.9 : 0.66;
+      a.vz *= king ? 0.9 : 0.66;
       const chain = (u.bowl || 0) + 1;
       e.bowl = chain;
       u.bowl = chain; // chain length travels with the bodies

@@ -53,6 +53,14 @@ window.__wvr = {
   killFeed,
   goView,
   aiKnownFoes,
+  PERKS,
+  TIERS,
+  SI_D,
+  makeOffer,
+  hit,
+  perkStep,
+  buildTime,
+  bowlStep,
   FOG_SIGHT,
   get paused() {
     return paused;

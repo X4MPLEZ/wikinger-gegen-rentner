@@ -74,7 +74,8 @@ function perkUi() {
   $('#pauseTag').hidden = !paused || !box.hidden;
   if (!box.hidden) {
     $('#perkTimer').style.width = Math.min(1, s.pz / PERK_TIME) * 100 + '%';
-    $('#perkInfo').textContent = 'Runde ' + s.on + ' von ' + PERK_MAX + ' · ' + s.pz + ' s';
+    $('#perkInfo').textContent =
+      'Runde ' + s.on + ' von ' + PERK_MAX + ' · ' + s.pz + ' s' + (s.ou && s.ou[me] ? ' · Aufholjagd: bessere Karten' : '');
   }
   const html =
     Object.keys(mine)

@@ -4,8 +4,8 @@
    Markers draw through the fog (fog: false) and over hills (depthTest: false). Called every frame from frame() (82-frame.js).
    Related: the small map in fog mode (drawMini, 50-input.js) and the faded map in the fog top (fogHintBuild, 70-world-view.js).
    Also here: the watch fires on your own flags (held flags light the fog, FOG_SIGHT.flag), the lanterns of steered warriors (they see
-   farther and are seen from farther: FOG_SIGHT.torch / lanternSeen) and tracks – where an enemy last vanished into the fog. ---------- */
-const FGD = { root: null, flags: [], bases: [], silh: [], fires: [], lamps: [], tracks: [], trackSp: [], mats: new Map() };
+   farther and are seen from farther: FOG_SIGHT.torch / lanternSeen). Footprints of enemies: see fogFeetTick below. ---------- */
+const FGD = { root: null, flags: [], bases: [], silh: [], fires: [], lamps: [], mats: new Map() };
 function fogGlowCanvas(inner, outer) {
   const c = cnv(64, 64),
     x = c.getContext('2d'),
@@ -15,16 +15,6 @@ function fogGlowCanvas(inner, outer) {
   g.addColorStop(1, 'rgba(0,0,0,0)');
   x.fillStyle = g;
   x.fillRect(0, 0, 64, 64);
-  return c;
-}
-function fogTrackCanvas() {
-  // a faint red figure with a question mark: "here someone disappeared"
-  const c = fogSilhouetteCanvas('rgba(255,90,74,0.85)'),
-    x = c.getContext('2d');
-  x.font = 'bold 30px sans-serif';
-  x.textAlign = 'center';
-  x.fillStyle = '#fff';
-  x.fillText('?', 32, 74);
   return c;
 }
 function fogGuideMat(key, draw) {
@@ -158,32 +148,133 @@ function fogGuidesTick() {
     sp.scale.set(2.2, 2.2, 1);
   }
   for (let i = nl; i < FGD.lamps.length; i++) FGD.lamps[i].visible = false;
-  // tracks: an enemy that slips into the fog leaves a faint marker where it was last seen (as long as the computer remembers, too)
-  const tn = now(),
-    life = FOG_SIGHT.memory * 1000;
-  for (const u of V.units.values()) {
-    if (u.team === V.myTeam) continue;
-    const hid = !!u.fogHid;
-    if (hid && u.fogWas === false && u.g.parent) {
-      const p = u.g.position,
-        near = FGD.tracks.find(t => Math.hypot(t.x - p.x, t.z - p.z) < 3);
-      if (near) Object.assign(near, { x: p.x, y: p.y, z: p.z, t: tn });
-      else FGD.tracks.push({ x: p.x, y: p.y, z: p.z, t: tn });
-      if (FGD.tracks.length > 30) FGD.tracks.shift();
+}
+/* ---------- Footprints in the fog: where an enemy walks within your sight (and a little beyond, in the fading edge), it leaves big dark
+   prints – feet, hooves, E-Mobil tyres – that stay for FEET.life seconds and show through the fog (fog: false). So you see where it went
+   after it vanished. Client only, three instanced meshes. Called every frame from frame() (82-frame.js). ---------- */
+const FEET = { cap: 260, life: 9, step: 1.25, kinds: null, list: [] };
+function feetCanvas(kind) {
+  const c = cnv(64, 96),
+    x = c.getContext('2d');
+  x.fillStyle = '#fff';
+  if (kind === 'foot') {
+    x.beginPath();
+    x.ellipse(32, 36, 17, 25, 0, 0, TAU); // ball of the foot
+    x.fill();
+    x.beginPath();
+    x.ellipse(33, 76, 12, 15, 0, 0, TAU); // heel
+    x.fill();
+  } else if (kind === 'hoof') {
+    for (const sx of [-1, 1]) {
+      x.beginPath();
+      x.ellipse(32 + sx * 11, 46, 9, 30, sx * 0.12, 0, TAU);
+      x.fill();
     }
-    u.fogWas = hid;
+  } else {
+    x.fillRect(14, 4, 36, 88); // a tyre: a band with a tread
+    x.globalCompositeOperation = 'destination-out';
+    for (let y = 10; y < 90; y += 13) x.fillRect(14, y, 36, 5);
   }
-  FGD.tracks = FGD.tracks.filter(t => tn - t.t < life);
-  let nt = 0;
-  for (const t of FGD.tracks) {
-    if (!hidden(t.x, t.z)) continue; // where you can see again, the track has done its job
-    const sp = fogGuideSprite(FGD.trackSp, nt++),
-      sc = size(t.x, t.y + 1.4, t.z, 0.65);
-    sp.visible = true;
-    sp.material = fogGuideMat('track', fogTrackCanvas);
-    sp.material.opacity = 0.6 * a * (1 - (tn - t.t) / life);
-    sp.position.set(t.x, t.y + 1.2 + sc * 0.5, t.z);
-    sp.scale.set(sc * 0.67, sc, 1);
+  return c;
+}
+function feetInit() {
+  FEET.kinds = {};
+  for (const kind of ['foot', 'hoof', 'tyre']) {
+    const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      mat = new THREE.MeshBasicMaterial({
+        map: ctex(feetCanvas(kind)),
+        color: lin(0x24180e),
+        transparent: true,
+        depthWrite: false,
+        fog: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+      }),
+      alpha = new THREE.InstancedBufferAttribute(new Float32Array(FEET.cap), 1);
+    alpha.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('instanceFade', alpha);
+    mat.onBeforeCompile = sh => {
+      // per-print fading, no fog (the prints are meant to be seen in it)
+      sh.vertexShader =
+        'attribute float instanceFade; varying float vFade;\n' +
+        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvFade = instanceFade;');
+      sh.fragmentShader =
+        'varying float vFade;\n' +
+        sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.a *= vFade;');
+    };
+    mat.customProgramCacheKey = () => 'feet';
+    const im = new THREE.InstancedMesh(geo, mat, FEET.cap);
+    im.count = 0;
+    im.renderOrder = 3;
+    im.frustumCulled = false;
+    scene.add(im);
+    FEET.kinds[kind] = { im, alpha };
   }
-  for (let i = nt; i < FGD.trackSp.length; i++) FGD.trackSp[i].visible = false;
+}
+const feetKind = k => (k === 5 ? 'tyre' : k === 4 ? 'hoof' : 'foot');
+function fogFeetTick() {
+  const on = FOG.on && FOG.k > 0.05 && V.playing && !V.tut;
+  if (!on && !FEET.list.length) return;
+  if (!FEET.kinds) feetInit();
+  const tn = now();
+  if (on)
+    for (const u of V.units.values()) {
+      if (u.team === V.myTeam || !u.g.parent || KINDS[u.k].worm || KINDS[u.k].role === 'siege') continue;
+      const p = u.g.position;
+      if (u.fpX === undefined) {
+        u.fpX = p.x;
+        u.fpZ = p.z;
+        u.fpS = 1;
+        continue;
+      }
+      const dx = p.x - u.fpX,
+        dz = p.z - u.fpZ,
+        d = Math.hypot(dx, dz);
+      if (d < FEET.step) continue;
+      if (d > 6) {
+        // a jump, a pad flight or a teleport: no trail across the gap
+        u.fpX = p.x;
+        u.fpZ = p.z;
+        continue;
+      }
+      const seen = V.poss ? Math.hypot(p.x - camera.position.x, p.z - camera.position.z) < FOG_EGO.far : fogVis(p.x, p.z) > 0.02;
+      const yaw = Math.atan2(dx, dz),
+        kind = feetKind(u.k),
+        side = (u.fpS = -u.fpS) * (kind === 'tyre' ? 0.55 : 0.32);
+      u.fpX = p.x;
+      u.fpZ = p.z;
+      if (!seen) continue;
+      const x = p.x + Math.cos(yaw) * side,
+        z = p.z - Math.sin(yaw) * side;
+      FEET.list.push({ x, z, y: groundY(x, z) + 0.05, yaw, kind, t: tn });
+      if (FEET.list.length > FEET.cap * 2) FEET.list.splice(0, FEET.list.length - FEET.cap * 2);
+    }
+  const life = FEET.life * 1000;
+  FEET.list = FEET.list.filter(f => tn - f.t < life);
+  const n = { foot: 0, hoof: 0, tyre: 0 },
+    D = sandDummy;
+  for (const f of FEET.list) {
+    const K = FEET.kinds[f.kind],
+      i = n[f.kind];
+    if (i >= FEET.cap) continue;
+    D.position.set(f.x, f.y, f.z);
+    D.rotation.set(0, f.yaw, 0);
+    if (f.kind === 'tyre') D.scale.set(0.42, 1, 1.1);
+    else D.scale.set(0.62, 1, 0.92); // bigger than real feet: they must be seen from the commander's height
+    D.updateMatrix();
+    K.im.setMatrixAt(i, D.matrix);
+    const age = (tn - f.t) / life;
+    K.alpha.setX(i, (on ? 0.85 : 0.6) * Math.min(1, (1 - age) * 3));
+    n[f.kind] = i + 1;
+  }
+  for (const kind in FEET.kinds) {
+    const K = FEET.kinds[kind];
+    K.im.count = n[kind];
+    if (n[kind]) {
+      K.im.instanceMatrix.needsUpdate = true;
+      K.alpha.needsUpdate = true;
+    }
+  }
+  if (!on && FEET.list.length && FOG.k <= 0.05) FEET.list.length = 0;
 }

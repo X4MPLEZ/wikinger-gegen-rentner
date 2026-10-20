@@ -3356,6 +3356,13 @@ const store = {
 /* 01-icons.js - Vector icon set as SVG paths (SI_D, si(name)) and siCanvas() to paint one into a canvas for sprites. No emoji anywhere in the game. */
 /* ---------- vector icon set (no emoji) ---------- */
 const SI_D = {
+  gear: '<circle cx="12" cy="12" r="7.2" fill="#9aa3ad" stroke="#3a4049" stroke-width="1.2"/><path d="M12 2.6v3.2M12 18.2v3.2M2.6 12h3.2M18.2 12h3.2M5.4 5.4l2.2 2.2M16.4 16.4l2.2 2.2M5.4 18.6l2.2-2.2M16.4 7.6l2.2-2.2" stroke="#3a4049" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="12" r="2.8" fill="#3a4049"/>',
+  pin: '<path d="M12 2.4c1.8 0 2.6 1.4 2.4 3.2l-.6 2.6c1.6 2.4 2.8 5.2 2.8 8.2 0 2.6-1.6 5-4.6 5s-4.6-2.4-4.6-5c0-3 1.2-5.8 2.8-8.2l-.6-2.6c-.2-1.8.6-3.2 2.4-3.2z" fill="#f6f3ec" stroke="#3a3a3a" stroke-width="1.1"/><path d="M9.5 9.4h5M9.3 11h5.4" stroke="#e0442e" stroke-width="1.3"/>',
+  wall: '<path d="M3 6.4h5.6v12.4H3zM9.2 5.4h5.6v13.4H9.2zM15.4 6.4H21v12.4h-5.6z" fill="#c9a24a" stroke="#5a3d17" stroke-width="1.2" stroke-linejoin="round"/><circle cx="5.8" cy="12.6" r="1.4" fill="#8a5a2b"/><circle cx="12" cy="12" r="1.4" fill="#8a5a2b"/><circle cx="18.2" cy="12.6" r="1.4" fill="#8a5a2b"/>',
+  quake:
+    '<path d="M2.6 17.2h18.8" stroke="#6b4a2a" stroke-width="2" stroke-linecap="round"/><path d="M12 17.2l-1.6-3.4 2.4-2-1.8-3.2 1.4-2.8" fill="none" stroke="#2f302c" stroke-width="1.8" stroke-linejoin="round"/><path d="M4.4 12.6l1.4-1.6M6.2 9.4l.8-2M19.6 12.6l-1.4-1.6M17.8 9.4l-.8-2" stroke="#e0a030" stroke-width="1.6" stroke-linecap="round"/>',
+  sprout:
+    '<path d="M12 21v-9" stroke="#3f7a2a" stroke-width="2" stroke-linecap="round"/><path d="M12 13c-.4-3.6-3-5.8-7-5.6.2 3.8 3 5.8 7 5.6zM12 11.4c.4-3.8 3.2-6.4 7.4-6.2-.2 4.2-3.2 6.4-7.4 6.2z" fill="#6fbf4f" stroke="#2f5a1f" stroke-width="1.1" stroke-linejoin="round"/><path d="M7 21h10" stroke="#6b4a2a" stroke-width="2" stroke-linecap="round"/>',
   nade: '<path d="M9.3 6.2h5.4l.6 2.4H8.7z" fill="#5d6675"/><path d="M14.4 6.6c2.6-.2 4.6.8 5.4 2.9l-1.6.5c-.6-1.4-2-2-3.6-1.9z" fill="#8a94a3"/><circle cx="18.6" cy="5" r="2.1" fill="none" stroke="#c8ced8" stroke-width="1.4"/><ellipse cx="12" cy="15" rx="6.6" ry="7" fill="#d9e1ec"/><path d="M5.6 13.2h12.8M5.5 16.6h13M8.2 8.8c-1 4-1 8.6.2 12.4M12 8v14M15.8 8.8c1 4 1 8.6-.2 12.4" stroke="#8b97aa" stroke-width=".9" fill="none"/><path d="M7 11.5l3-1.6.8 2.8-2.9 1.1zM13.4 17.9l2.7-.6.2 2.4-2.6.7z" fill="#ff6bd5"/><path d="M13 10.2l2.6.2-.2 2.6-2.5-.2zM7.6 17.4l2.6.4-.5 2.4-2.3-.9z" fill="#6be3ff"/><path d="M16.2 13.6l2.1.4-.2 2.3-2.1-.2z" fill="#ffe66b"/><ellipse cx="12" cy="15" rx="6.6" ry="7" fill="none" stroke="#1d2433" stroke-width="1.3"/>',
   bag: '<path d="M9 4.2c1 .9 2 1.2 3 1.2s2-.3 3-1.2l-1.2 3.6h-3.6z" fill="#b5843f" stroke="#5a3d17" stroke-width="1.1" stroke-linejoin="round"/><path d="M10.2 7.8h3.6c4.2 2.2 6.6 6.2 6 10.2-.4 2.4-2.6 3.8-7.8 3.8S4.6 20.4 4.2 18c-.6-4 1.8-8 6-10.2z" fill="#c9974d" stroke="#5a3d17" stroke-width="1.2" stroke-linejoin="round"/><path d="M9.6 8.2h4.8" stroke="#d23a2e" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="15.4" r="3.6" fill="#f4c64f" stroke="#a87512" stroke-width="1"/><path d="M13.3 13.9c-.9-.7-2.6-.5-2.9.9-.3 1.5 1 2.4 2.9 1.5M10 15.1h2.6" stroke="#a87512" stroke-width="1" fill="none" stroke-linecap="round"/>',
   spring:
@@ -3775,55 +3782,71 @@ const CFG = {
 };
 const maxHp = u => u.mhp || KINDS[u.k].hp;
 const SIEGE_EGO_REACH = 6; // the aiming ring and the simulation clamp an ego catapult shot to the same distance
+/* Chaos-mode perks. Rules of thumb (checked with tools/balance.py, computer vs computer):
+   - every perk helps the whole army (also for a commander player and the computer); ego bonuses come on top, pure ego perks are at most rare
+   - Gewöhnlich: a small, always useful edge · Selten: a specialisation · Episch: a new way to play · Legendär: a spectacle, still counterable
+   - the first offer has no epic or legendary perk; the tiers open up offer by offer, and the side that is behind draws better (makeOffer)
+   t tier 0-3, ic icon, n name, d what it does (German, shown on the card), f only for this faction. Effects: grep the id in src/js. */
 const PERKS = {
   gold: { t: 0, ic: si('coins'), n: 'Geldregen', d: '+20 % Einkommen' },
   flagger: { t: 0, ic: si('flag'), n: 'Fahnenträger', d: 'Fahnen 2,5× schneller erobern' },
-  charge: { t: 0, ic: si('battery'), n: 'Spezial-Akku', d: 'Spezialfähigkeit lädt 3× schneller' },
   heal: { t: 0, ic: si('heal'), n: 'Heilquelle', d: 'Deine Krieger heilen sich überall' },
-  cavspd: { t: 0, ic: si('horseshoe'), n: 'Galopp', d: 'Reiter +50 % Tempo' },
-  arrows: { t: 1, ic: si('arrow'), n: 'Scharfe Pfeile', d: 'Fernkämpfer +80 % Schaden' },
-  armor: { t: 1, ic: si('shield'), n: 'Eiserne Haut', d: 'Deine Krieger nehmen 35 % weniger Schaden' },
-  turbo: { t: 1, ic: si('bolt'), n: 'Turbo-Held', d: 'Dein Ego-Krieger rennt doppelt so schnell' },
-  tower: { t: 1, ic: si('tower'), n: 'Turmwache', d: 'Basisturm: doppelter Schaden, schießt schneller' },
+  cavspd: { t: 0, ic: si('horseshoe'), n: 'Galopp', d: 'Reiter +50 % Tempo und +25 % Schaden' },
+  fast: { t: 0, ic: si('gear'), n: 'Fließband', d: 'Ausbildung doppelt so schnell' },
+  moon: { t: 0, ic: si('moon'), n: 'Mondschwerkraft', d: 'Umgestoßene Gegner fliegen sehr hoch und lange' },
+  charge: { t: 0, ic: si('battery'), n: 'Spezial-Akku', d: 'Spezialfähigkeiten laden 3× schneller' },
+  arrows: { t: 1, ic: si('arrow'), n: 'Scharfe Pfeile', d: 'Fernkämpfer machen 60 % mehr Schaden' },
+  tower: { t: 1, ic: si('tower'), n: 'Turmwache', d: 'Basisturm: mehr als doppelter Schaden, schießt schneller' },
   bounty: { t: 1, ic: si('crown'), n: 'Kopfgeld', d: 'Gold- und Pfandrausch bringen doppelt so viel' },
-  ram: { t: 2, ic: si('burst'), n: 'Abrissbirne', d: 'Reiter-Anlauf schleudert Gegner 5× so weit' },
-  spin: { t: 2, ic: si('tornado'), n: 'Tornado-Opa', d: 'Stockwirbel: riesig und brutal', f: 'rentner' },
-  bite: { t: 2, ic: si('teeth'), n: 'Beißgebiss', d: 'Oma-Gebisse setzen sich auf den Kopf und knabbern 6 s kräftig weiter', f: 'rentner' },
+  kegel: { t: 1, ic: si('pin'), n: 'Kegelkönig', d: 'Von dir umgehauene Gegner kegeln weiter: kaum Bremsen, fast vierfacher Schaden' },
+  wall: { t: 1, ic: si('wall'), n: 'Schildwall', d: 'Nahkämpfer nehmen von Pfeilen, Gebissen und Katapulten nur halben Schaden' },
+  dance: { t: 1, ic: si('dance'), n: 'Discogranaten', d: 'Ego-Krieger wirft Discokugeln: Gegner müssen tanzen' },
+  jump: { t: 1, ic: si('spring'), n: 'Sprungfedern', d: 'Ego: springen – die Landung haut Gegner um' },
+  turbo: { t: 1, ic: si('bolt'), n: 'Turbo-Held', d: 'Ego: dein Krieger rennt doppelt so schnell' },
+  bighead: { t: 1, ic: si('bighead'), n: 'Dickschädel', d: 'Ego: +40 % Schaden, aber Riesenkopf – Pfeile treffen doppelt hart' },
+  armor: { t: 2, ic: si('shield'), n: 'Eiserne Haut', d: 'Deine Krieger nehmen 18 % weniger Schaden' },
+  chicken: { t: 2, ic: si('chicken'), n: 'Hühnerfluch', d: 'Alle 12 s werden vier gegnerische Krieger 8 s lang zu harmlosen Hühnern' },
+  berserk: { t: 2, ic: si('axe'), n: 'Berserkerwut', d: 'Nahkämpfer doppelter Schaden – nehmen aber 25 % mehr von Fernkampf und Ego' },
+  volley: {
+    t: 2,
+    ic: si('target'),
+    n: 'Salvenhölle',
+    d: 'Deine Fernkämpfer schießen immer doppelt · Ego-Salve +5 Geschosse',
+  },
+  ram: {
+    t: 2,
+    ic: si('burst'),
+    n: 'Abrissbirne',
+    d: 'Reiter-Anläufe treffen härter und hauen Gegner weit weg · Ego-Rammstoß schleudert 4× so weit',
+  },
+  spin: { t: 2, ic: si('tornado'), n: 'Tornado-Opa', d: 'Krückstock-Opas wirbeln alle 6 s im Kampf · Ego-Wirbel riesig', f: 'rentner' },
+  bite: { t: 2, ic: si('teeth'), n: 'Beißgebiss', d: 'Oma-Gebisse setzen sich auf den Kopf und knabbern 4 s weiter', f: 'rentner' },
   walhalla: {
     t: 2,
     ic: si('axes'),
     n: 'Walhalla-Raserei',
-    d: 'Berserker-Raserei hält 10 s, schlägt wie wild und haut jeden um',
+    d: 'Angeschlagene Berserker rasen: schneller, härter und hauen um · Ego-Raserei 10 s',
     f: 'viking',
   },
-  stampede: { t: 2, ic: si('goat'), n: 'Ziegen-Stampede', d: 'Ramm-Anlauf der Ziege: riesige Schneise, alle fliegen', f: 'viking' },
-  jump: { t: 1, ic: si('spring'), n: 'Sprungfedern', d: 'Ego-Krieger kann springen – Landung haut Gegner um' },
-  moon: { t: 1, ic: si('moon'), n: 'Mondschwerkraft', d: 'Umgestoßene Gegner fliegen sehr hoch und lange' },
-  dance: { t: 1, ic: si('dance'), n: 'Discogranaten', d: 'Ego-Krieger wirft Discokugeln: Gegner müssen tanzen' },
-  chicken: {
+  stampede: {
     t: 2,
-    ic: si('chicken'),
-    n: 'Hühnerfluch',
-    d: 'Alle 30 s wird ein gegnerischer Krieger 8 s lang zum Huhn und pickt nur noch schwach',
+    ic: si('goat'),
+    n: 'Ziegen-Stampede',
+    d: 'Ziegen sind zäher, ihre Anläufe treffen und werfen auch die Nachbarn um · Ego: riesige Schneise',
+    f: 'viking',
   },
-  volley: { t: 2, ic: si('target'), n: 'Salvenhölle', d: 'Pfeilfächer und Gebiss-Salve: +5 Geschosse' },
-  berserk: {
-    t: 2,
-    ic: si('axe'),
-    n: 'Berserkerwut',
-    d: 'Nahkämpfer: dreifacher Schaden gegen alles – aber Fernkämpfer und Ego-Krieger machen ihnen dreifachen Schaden',
-  },
-  bighead: { t: 2, ic: si('bighead'), n: 'Dickschädel', d: 'Ego-Krieger: +40 % Schaden, aber Riesenkopf – Pfeile treffen doppelt hart' },
+  giant: { t: 3, ic: si('giant'), n: 'Riesenwuchs', d: 'Deine Krieger werden riesig: +20 % Leben, +10 % Schaden' },
+  twins: { t: 3, ic: si('twins'), n: 'Doppelpack', d: 'Jede vierte Ausbildung bringt einen Krieger gratis dazu' },
   catapult: { t: 3, ic: si('boulder'), n: 'Katapult', d: 'Alle 30 s rollt ein mächtiges Katapult aus deiner Basis' },
-  twins: { t: 3, ic: si('twins'), n: 'Doppelpack', d: 'Jede dritte Ausbildung bringt einen Krieger gratis dazu' },
-  giant: { t: 3, ic: si('giant'), n: 'Riesenwuchs', d: 'Deine Krieger werden riesig: +60 % Leben und Schaden' },
-  meteor: { t: 3, ic: si('meteor'), n: 'Meteoritenhagel', d: 'Alle 25 s regnen Meteore auf gegnerische Krieger' },
+  meteor: { t: 3, ic: si('meteor'), n: 'Meteoritenhagel', d: 'Alle 30 s regnen Meteore auf gegnerische Krieger' },
+  quake: { t: 3, ic: si('quake'), n: 'Erdbeben', d: 'Alle 22 s bebt die Erde unter der größten Gegnergruppe: alle fliegen um' },
+  revive: { t: 3, ic: si('sprout'), n: 'Unkraut vergeht nicht', d: 'Jeder vierte gefallene Krieger kommt nach 4 s an deiner Basis zurück' },
 };
 const TIERS = [
-  { n: 'Gewöhnlich', c: '#5fbf6a', w: 42 },
+  { n: 'Gewöhnlich', c: '#5fbf6a', w: 44 },
   { n: 'Selten', c: '#4d9be6', w: 30 },
-  { n: 'Episch', c: '#a865e0', w: 19 },
-  { n: 'Legendär', c: '#f0a92e', w: 9 },
+  { n: 'Episch', c: '#a865e0', w: 18 },
+  { n: 'Legendär', c: '#f0a92e', w: 8 },
 ];
 // Fog (fog mode and the "Nebelwand" event): who sees how far, as [clear up to, fog complete at] in metres. The player's view
 // (FOG.own in 70-world-view.js) and the computer's knowledge (aiVision in 15-ai.js) use the same numbers: both sides see the same.
@@ -5443,25 +5466,33 @@ function pickPerk(G, T, id) {
 }
 function makeGiant(u) {
   const K = KINDS[u.k];
-  u.gs = 1.35;
+  u.gs = 1.3;
   if (u.poss) {
-    u.mhp *= 1.6;
-    u.hp *= 1.6;
+    u.mhp *= 1.2;
+    u.hp *= 1.2;
   } else {
-    u.mhp = K.hp * 1.6;
-    u.hp = Math.min(u.mhp, u.hp * 1.6);
+    u.mhp = K.hp * 1.2;
+    u.hp = Math.min(u.mhp, u.hp * 1.2);
   }
 }
+// Two cards. Offer 1: common and rare only; offers 2-3: up to epic; from offer 4: everything. The side that is behind (fewer flags, or a
+// clearly weaker base) draws epic and legendary cards twice as often – a comeback chance that both see (snapshot: ou).
 function makeOffer(G, T) {
-  const pool = PERK_IDS.filter(id => !T.pk[id] && (!PERKS[id].f || PERKS[id].f === T.fac) && (G.offerN > 1 || PERKS[id].t <= 1)),
+  const team = G.teams.indexOf(T),
+    maxT = G.offerN <= 1 ? 1 : G.offerN <= 3 ? 2 : 3,
+    other = G.teams[1 - team],
+    behind = flagsOf(G, team) < flagsOf(G, 1 - team) || T.hp < other.hp - 200,
+    w = id => TIERS[PERKS[id].t].w * (behind && PERKS[id].t >= 2 ? 2 : 1),
+    pool = PERK_IDS.filter(id => !T.pk[id] && (!PERKS[id].f || PERKS[id].f === T.fac) && PERKS[id].t <= maxT),
     o = [];
+  T.offerUp = behind ? 1 : 0;
   while (o.length < 2 && pool.length) {
     let tot = 0;
-    pool.forEach(id => (tot += TIERS[PERKS[id].t].w));
+    pool.forEach(id => (tot += w(id)));
     let r = Math.random() * tot,
       i = 0;
     for (; i < pool.length - 1; i++) {
-      r -= TIERS[PERKS[pool[i]].t].w;
+      r -= w(pool[i]);
       if (r <= 0) break;
     }
     o.push(pool.splice(i, 1)[0]);
@@ -5508,7 +5539,7 @@ function perkStep(G) {
     }
     if (pkL(G, i, 'meteor')) {
       T.metT = (T.metT || 0) + DT;
-      if (T.metT >= 25) {
+      if (T.metT >= 30) {
         const foes = G.units.filter(u => u.team !== i);
         if (foes.length) {
           T.metT = 0;
@@ -5516,9 +5547,41 @@ function perkStep(G) {
             const e = foes[Math.floor(Math.random() * foes.length)];
             fireball(G, i, e.x + (Math.random() - 0.5) * 4, e.z + (Math.random() - 0.5) * 4, 1, 3.5, 45, -1);
           }
-        } else T.metT = 25;
+        } else T.metT = 30;
       }
     }
+    if (pkL(G, i, 'quake')) {
+      // the ground shakes under the biggest group of enemies: everyone there is knocked over
+      T.qkT = (T.qkT || 0) + DT;
+      if (T.qkT >= 22) {
+        const foes = G.units.filter(u => u.team !== i && u.hp > 0 && !KINDS[u.k].worm);
+        let best = null,
+          bn = 0;
+        for (const a of foes) {
+          let n = 0;
+          for (const b of foes) if ((a.x - b.x) ** 2 + (a.z - b.z) ** 2 < 100) n++;
+          if (n > bn) {
+            bn = n;
+            best = a;
+          }
+        }
+        if (best && bn >= 2) {
+          T.qkT = 0;
+          const cx = best.x,
+            cz = best.z,
+            byId = new Map(G.units.map(u => [u.id, u]));
+          let n = 0;
+          for (const e of foes)
+            if ((e.x - cx) ** 2 + (e.z - cz) ** 2 < 100) {
+              hit(G, e.id, 42, i, byId, -1);
+              if (KINDS[e.k].role !== 'siege' && knockFly(e, cx, cz, 3.2, undefined, undefined, 2.6, 'hazard')) e.kbTeam = i;
+              n++;
+            }
+          highlight(G, 'quake', i, n, cx, cz);
+        } else T.qkT = 22;
+      }
+    }
+    if (T.revQ && T.revQ.length && T.revQ[0][0] <= G.t) spawnUnit(G, i, T.revQ.shift()[1]); // Unkraut vergeht nicht
     if (pkL(G, i, 'catapult')) {
       T.catT = (T.catT || 0) + DT;
       if (T.catT >= 30) {
@@ -5534,20 +5597,19 @@ function perkStep(G) {
     if (u.chick > 0) u.chick -= DT;
     if (u.bite > 0) {
       u.bite -= DT;
-      hit(G, u.id, 15 * DT, u.biteT, byId, -1);
+      hit(G, u.id, 10 * DT, u.biteT, byId, -1);
     }
   }
   for (let i = 0; i < 2; i++)
     if (pkL(G, i, 'chicken')) {
       const T = G.teams[i];
       T.chT = (T.chT || 0) + DT;
-      if (T.chT >= 30) {
+      if (T.chT >= 12) {
         const foes = G.units.filter(u => u.team !== i && KINDS[u.k].role !== 'siege' && !u.poss && !(u.chick > 0));
         if (foes.length) {
           T.chT = 0;
-          const e = foes[Math.floor(Math.random() * foes.length)];
-          e.chick = 8;
-        } else T.chT = 30;
+          for (let n = 0; n < 4 && foes.length; n++) foes.splice(Math.floor(Math.random() * foes.length), 1)[0].chick = 8;
+        } else T.chT = 12;
       }
     }
   for (const b of G.fb) {
@@ -5672,13 +5734,16 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   }
   if (G.chaos) {
     const rg = attK >= 0 && KINDS[attK].role === 'ranged';
-    if (rg) d *= pk(G, team, 'arrows', [1, 1.8]);
+    if (rg) d *= pk(G, team, 'arrows', [1, 1.6]);
     if (bp) d *= pk(G, team, 'bighead', [1, 1.4]);
+    if (attK >= 0 && KINDS[attK].role === 'cav') d *= pk(G, team, 'cavspd', [1, 1.25]);
     if (e.poss && rg) d *= pk(G, e.team, 'bighead', [1, 2]);
-    if (attK >= 0) d *= pk(G, team, 'giant', [1, 1.6]);
-    d *= pk(G, e.team, 'armor', [1, 0.65]);
-    if (attK >= 0 && KINDS[attK].role === 'melee' && pkL(G, team, 'berserk')) d *= 3;
-    if (KINDS[e.k].role === 'melee' && pkL(G, e.team, 'berserk') && (bp || (attK >= 0 && KINDS[attK].role === 'ranged'))) d *= 3;
+    if (attK >= 0) d *= pk(G, team, 'giant', [1, 1.1]);
+    d *= pk(G, e.team, 'armor', [1, 0.82]);
+    if (attK >= 0 && KINDS[attK].role === 'melee' && pkL(G, team, 'berserk')) d *= 2;
+    if (KINDS[e.k].role === 'melee' && pkL(G, e.team, 'berserk') && (bp || (attK >= 0 && KINDS[attK].role === 'ranged'))) d *= 1.25;
+    if (e.k === 4 && pkL(G, e.team, 'stampede')) d *= 0.75;
+    if (KINDS[e.k].role === 'melee' && pkL(G, e.team, 'wall') && attK >= 0 && (rg || KINDS[attK].role === 'siege')) d *= 0.5;
   }
   if (attK >= 0 && KINDS[attK].role === 'siege') {
     if (e.poss) d *= 2.2;
@@ -5691,7 +5756,7 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   if (attK === 3 && e.hp > 0 && !KINDS[e.k].bear && !KINDS[e.k].worm) e.slowT = 1.5;
   counterHit(G, e, attK, team, bp);
   if (attK === 3 && G.chaos && pkL(G, team, 'bite')) {
-    e.bite = 6;
+    e.bite = 4;
     e.biteT = team;
   }
   if (bp && e.poss) e.egoHit = { team, t: G.t, pid: G.teams[team].pos };
@@ -5791,8 +5856,20 @@ function traitHit(G, u, tgt, charged) {
     if (u.k === 0) u.frenzy = 4;
     return;
   }
-  if (u.k === 4 && charged && !KINDS[tgt.k].bear && KINDS[tgt.k].role !== 'siege')
-    knockFly(tgt, u.x, u.z, u.poss ? 3 : 2.2, undefined, undefined, 0, u.poss ? 'ego' : 'ai');
+  const kb = (e, d) => {
+    if (!KINDS[e.k].bear && KINDS[e.k].role !== 'siege' && knockFly(e, u.x, u.z, d, undefined, undefined, 0, u.poss ? 'ego' : 'ai'))
+      e.kbTeam = u.team;
+  };
+  const ram = KINDS[u.k].role === 'cav' && charged && G.chaos && pkL(G, u.team, 'ram');
+  if ((u.k === 4 && charged) || ram) kb(tgt, ram ? 4.5 : u.poss ? 3 : 2.2); // Abrissbirne: every rider's charge throws
+  if (ram) hit(G, tgt.id, KINDS[u.k].dmg, u.team, new Map([[tgt.id, tgt]]), u.k); // … and hits harder
+  if (u.k === 4 && charged && G.chaos && pkL(G, u.team, 'stampede'))
+    for (const e of G.units)
+      // Ziegen-Stampede: the neighbours of the target fly too
+      if (e !== tgt && e.team !== u.team && e.hp > 0 && !KINDS[e.k].worm && (e.x - tgt.x) ** 2 + (e.z - tgt.z) ** 2 < 9) {
+        hit(G, e.id, KINDS[4].dmg, u.team, new Map([[e.id, e]]), 4);
+        kb(e, 2.6);
+      }
 }
 const KNOCK_RES = k => (k === 2 ? 0.55 : 1);
 const inHome = (G, u) => !G.phase && !G.tut && (u.x - BASES[u.team].x) ** 2 + (u.z - BASES[u.team].z) ** 2 < CFG.homeR * CFG.homeR;
@@ -7801,12 +7878,13 @@ function bowlStep(G) {
         e.bowledBy = u.id;
         e.kbN = ((e.kbN || 0) + 1) % 100;
       }
-      e.hp -= 8;
+      const king = G.chaos && u.kbTeam !== undefined && u.kbTeam !== e.team && pkL(G, u.kbTeam, 'kegel'); // Kegelkönig
+      e.hp -= king ? 30 : 8;
       e.hurt = 2;
       e.lh = [-2, u.kbTeam ?? -1, 0];
       G.st && u.kbTeam !== undefined && u.kbTeam !== e.team && G.st[u.kbTeam].rams++;
-      a.vx *= 0.66;
-      a.vz *= 0.66;
+      a.vx *= king ? 0.9 : 0.66;
+      a.vz *= king ? 0.9 : 0.66;
       const chain = (u.bowl || 0) + 1;
       e.bowl = chain;
       u.bowl = chain; // chain length travels with the bodies
@@ -8307,7 +8385,7 @@ function step(G) {
         spawnUnit(G, i, k);
         if (pkL(G, i, 'twins') && KINDS[k].role !== 'siege') {
           T.twN = (T.twN || 0) + 1;
-          if (T.twN % 3 === 0) spawnUnit(G, i, k);
+          if (T.twN % 4 === 0) spawnUnit(G, i, k);
         }
         T.qt = 0;
       }
@@ -8399,7 +8477,7 @@ function step(G) {
           sx: u.x,
           sz: u.z,
           t: Math.max(0.6, dd / K.pspeed) * Math.max(0.4, hw.k),
-          dmg: K.dmg * (u.chick > 0 ? 0.6 : 1),
+          dmg: K.dmg * (u.chick > 0 ? 0.3 : 1),
           tgt: w.tgt,
           team: u.team,
           k: u.k,
@@ -8518,8 +8596,13 @@ function step(G) {
       if (d <= range) {
         u.eng = 0.5;
         if (u.cd <= 0) {
-          u.cd = K.cd * (u.frenzy > 0 ? 0.85 : 1);
+          const rage = u.k === 0 && G.chaos && u.hp < maxHp(u) * 0.6 && pkL(G, u.team, 'walhalla'); // Walhalla-Raserei: battered Berserkers rage
+          u.cd = K.cd * (u.frenzy > 0 ? 0.85 : 1) * (rage ? 0.6 : 1);
           u.atk = (u.atk + 1) % 100;
+          if (rage && !u.rageV) {
+            u.rageV = 1;
+            u.sp = (u.sp + 1) % 100; // shows the rage on every screen
+          }
           u.at = tgt ? tgt.id : -2;
           const charge = K.role === 'cav' && u.run > 1.2 ? (u.k === 5 ? 1.55 : 1.4) : 1;
           const hm = homeMul(G, u);
@@ -8530,12 +8613,12 @@ function step(G) {
             else hitBear(G, b, K.dmg * charge, u.team, u.k);
           } else if (K.proj && K.role === 'siege')
             u.wind = { t: SIEGE_WIND, tx, tz, tgt: u.at }; // the arm winds up first: everyone can see it coming
-          else if (K.proj)
+          else if (K.proj) {
             G.proj.push({
               sx: u.x,
               sz: u.z,
               t: dist / K.pspeed,
-              dmg: K.dmg * hm * (u.chick > 0 ? 0.6 : 1),
+              dmg: K.dmg * hm * (u.chick > 0 ? 0.3 : 1),
               tgt: u.at,
               team: u.team,
               k: u.k,
@@ -8543,9 +8626,51 @@ function step(G) {
               tx,
               tz,
             });
-          else {
-            hit(G, u.at, K.dmg * hm * charge * (u.chick > 0 ? 0.6 : 1), u.team, byId, u.k);
+            if (tgt && G.chaos && pkL(G, u.team, 'volley')) {
+              // Salvenhölle: every shot is a double shot – at a second foe in range if there is one
+              let t2 = tgt;
+              for (const e of G.units)
+                if (e !== tgt && e.team !== u.team && e.hp > 0 && (e.x - u.x) ** 2 + (e.z - u.z) ** 2 < range * range) {
+                  t2 = e;
+                  break;
+                }
+              const d2 = Math.hypot(t2.x - u.x, t2.z - u.z);
+              G.proj.push({
+                sx: u.x,
+                sz: u.z,
+                t: d2 / K.pspeed + 0.08,
+                dmg: K.dmg * hm,
+                tgt: t2.id,
+                team: u.team,
+                k: u.k,
+                tx: t2.x,
+                tz: t2.z,
+              });
+            }
+          } else {
+            hit(G, u.at, K.dmg * hm * charge * (u.chick > 0 ? 0.3 : 1) * (rage ? 1.5 : 1), u.team, byId, u.k);
             traitHit(G, u, tgt, charge > 1);
+            if (tgt && rage) {
+              const t3 = byId.get(u.at);
+              if (
+                t3 &&
+                t3.hp > 0 &&
+                !KINDS[t3.k].bear &&
+                KINDS[t3.k].role !== 'siege' &&
+                knockFly(t3, u.x, u.z, 2.6, undefined, undefined, 0, 'ai')
+              )
+                t3.kbTeam = u.team;
+            }
+            if (u.k === 2 && G.chaos && pkL(G, u.team, 'spin') && G.t >= (u.spinA || 0)) {
+              // Tornado-Opa: in a fight the Opa whirls his stick every 6 s and knocks everyone around him back
+              u.spinA = G.t + 6;
+              u.sp = (u.sp + 1) % 100;
+              enemiesInCone(G, u, 3.4, Math.PI).forEach(c => {
+                hit(G, c.e.id, 20, u.team, byId, u.k);
+                if (!KINDS[c.e.k].bear && KINDS[c.e.k].role !== 'siege' && knockFly(c.e, u.x, u.z, 2.6, undefined, undefined, 0, 'ai'))
+                  c.e.kbTeam = u.team;
+              });
+            }
           }
           u.run = 0;
         }
@@ -8931,12 +9056,12 @@ function step(G) {
         }
       }
       if (best) {
-        T.tcd = CFG.towerCd * pk(G, i, 'tower', [1, 0.67]);
+        T.tcd = CFG.towerCd * pk(G, i, 'tower', [1, 0.65]);
         T.tatk = (T.tatk + 1) % 100;
         T.ttgt = best.id;
         G.proj.push({
           t: Math.sqrt(bd) / CFG.towerSpeed,
-          dmg: CFG.towerDmg * G.towerMul[i] * CFG.phaseTower[G.phase || 0] * pk(G, i, 'tower', [1, 2]) * (best.poss ? CFG.towerPoss : 1),
+          dmg: CFG.towerDmg * G.towerMul[i] * CFG.phaseTower[G.phase || 0] * pk(G, i, 'tower', [1, 2.3]) * (best.poss ? CFG.towerPoss : 1),
           tgt: best.id,
           team: i,
           k: -1,
@@ -8970,6 +9095,12 @@ function step(G) {
   for (const u of us)
     if (u.hp <= 0 && !u.kfd) {
       u.kfd = 1;
+      if (G.chaos && pkL(G, u.team, 'revive') && KINDS[u.k].role !== 'siege' && !KINDS[u.k].bear && !KINDS[u.k].worm) {
+        // Unkraut vergeht nicht: every third fallen warrior comes back at the base after 4 s
+        const T = G.teams[u.team];
+        T.revN = (T.revN || 0) + 1;
+        if (T.revN % 4 === 0) (T.revQ || (T.revQ = [])).push([G.t + 4, u.k]);
+      }
       const lh = u.lh || [-9, -1, 0],
         cause = u.swal
           ? lh[0] === -8
@@ -9132,6 +9263,7 @@ function snapOf(G) {
           ch: 1,
           pk: [Object.assign({}, T0.pk), Object.assign({}, T1.pk)],
           of: [T0.offer, T1.offer],
+          ou: [T0.offerUp | 0, T1.offerUp | 0], // behind: better odds for epic and legendary cards
           pn: [T0.pkN, T1.pkN],
           lp: [T0.lastPk, T1.lastPk],
           no: Math.max(0, Math.ceil(G.nextOffer - G.t)),
@@ -10141,30 +10273,35 @@ function aiThink(G, team) {
       A.pkWait = 0;
       const pref = [
         'giant',
+        'revive',
         'twins',
-        'catapult',
+        'quake',
         'meteor',
-        'chicken',
-        'walhalla',
-        'stampede',
+        'catapult',
         'armor',
-        'gold',
-        'dance',
-        'moon',
-        'bite',
-        'jump',
-        'arrows',
-        'fast',
-        'flagger',
-        'tower',
-        'heal',
-        'cavspd',
-        'ram',
-        'spin',
-        'bighead',
-        'charge',
-        'bounty',
+        'chicken',
         'volley',
+        'berserk',
+        'walhalla',
+        'spin',
+        'stampede',
+        'bite',
+        'ram',
+        'wall',
+        'arrows',
+        'kegel',
+        'dance',
+        'tower',
+        'bounty',
+        'gold',
+        'fast',
+        'heal',
+        'flagger',
+        'cavspd',
+        'moon',
+        'charge',
+        'jump',
+        'bighead',
         'turbo',
       ];
       const sc = id => (pref.length - pref.indexOf(id)) * L.counter + Math.random() * (12 - 10 * L.counter);
@@ -17979,6 +18116,7 @@ function resetView() {
   fx.swings.forEach(w => scene.remove(w.m));
   fx.swings.length = 0;
   swooshClear();
+  FEET.list.length = 0;
   V.markers.forEach(mk => scene.remove(mk.m));
   V.markers.length = 0;
   if (typeof EG !== 'undefined' && EG.sgRing) EG.sgRing.visible = false;
@@ -18211,7 +18349,7 @@ function processSnap(s) {
         });
         if (!u.arm && Math.random() < 0.14) SFX.play('grunt', { x: u.g.position.x, z: u.g.position.z, vol: 0.7, k: u.k });
       }
-      if (poss && pe[7] & 1 && e[8] !== pe[8]) onSpecial(u, cur);
+      if (((poss && pe[7] & 1) || (!poss && (u.k === 0 || u.k === 2))) && e[8] !== pe[8]) onSpecial(u, cur); // perk whirls and rages of ordinary units too
     }
     u.hpPct = e[4];
   }
@@ -18639,7 +18777,7 @@ function onSpecial(u, cur) {
   }
   if (u.k === 0) setTimeout(() => SFX.play('heave', { x: p.x, z: p.z, vol: 1 }), 60);
   if (u.k === 2) {
-    u.spin = 0.6 + [0, 5][tpk(u.team, 'spin')];
+    u.spin = 0.6 + (u.isPoss ? [0, 5][tpk(u.team, 'spin')] : 0);
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * TAU;
       puff(p.x + Math.cos(a) * 2.5, p.y + 0.6, p.z + Math.sin(a) * 2.5, 0xf6f1e7, 1, 0.8);
@@ -18697,6 +18835,7 @@ function shake(a) {
 const HL = { q: [], busy: 0, seen: undefined, last: {} };
 function hlText(ty, team, n) {
   const mine = team === V.myTeam;
+  if (ty === 'quake') return mine ? ['ERDBEBEN!', n + ' Gegner liegen am Boden'] : ['ERDBEBEN!', 'Die Erde bebt unter deinen Kriegern'];
   if (ty === 'ram')
     return mine
       ? [n >= 5 ? 'RAMMBOCK-FESTIVAL!' : n === 4 ? 'VIERFACH-RAMME!' : 'DREIFACH-RAMME!', n + ' Gegner mit einem Anlauf umgenietet']
@@ -18750,6 +18889,17 @@ function hlText(ty, team, n) {
   return null;
 }
 function hlPush(ty, team, n, x, z) {
+  if (ty === 'quake' && Number.isFinite(x)) {
+    // the earthquake itself: dust all around the spot, the screen shakes
+    shake(0.55);
+    for (let i = 0; i < 26; i++) {
+      const a = (i / 26) * TAU,
+        r = 2 + Math.random() * 7;
+      puff(x + Math.cos(a) * r, groundY(x + Math.cos(a) * r, z + Math.sin(a) * r) + 0.4, z + Math.sin(a) * r, 0xb8a27a, 2, 1.2);
+    }
+    SFX.play('boom', { x, z, vol: 1.3 });
+    SFX.play('rumble', { x, z, vol: 1.2 });
+  }
   const t = hlText(ty, team, n);
   if (!t) return;
   if (ty !== 'phase' && now() - (HL.last[ty + team] || -1e9) < 12000) return;
@@ -19204,7 +19354,8 @@ function perkUi() {
   $('#pauseTag').hidden = !paused || !box.hidden;
   if (!box.hidden) {
     $('#perkTimer').style.width = Math.min(1, s.pz / PERK_TIME) * 100 + '%';
-    $('#perkInfo').textContent = 'Runde ' + s.on + ' von ' + PERK_MAX + ' · ' + s.pz + ' s';
+    $('#perkInfo').textContent =
+      'Runde ' + s.on + ' von ' + PERK_MAX + ' · ' + s.pz + ' s' + (s.ou && s.ou[me] ? ' · Aufholjagd: bessere Karten' : '');
   }
   const html =
     Object.keys(mine)
@@ -24293,7 +24444,7 @@ async function openRoom(code, role) {
   return r;
 }
 /* open every available transport at once (direct P2P + Claude room), so devices that ended up on different ones still meet */
-const NET_VER = 42; // bump when snapshots, commands or presence change shape: two different versions refuse to play together
+const NET_VER = 43; // bump when snapshots, commands or presence change shape: two different versions refuse to play together
 async function openClaude(code, role) {
   const vr = await viewerRoom();
   if (!vr) return null;
@@ -29165,8 +29316,8 @@ function deathTick(u, dt) {
    Markers draw through the fog (fog: false) and over hills (depthTest: false). Called every frame from frame() (82-frame.js).
    Related: the small map in fog mode (drawMini, 50-input.js) and the faded map in the fog top (fogHintBuild, 70-world-view.js).
    Also here: the watch fires on your own flags (held flags light the fog, FOG_SIGHT.flag), the lanterns of steered warriors (they see
-   farther and are seen from farther: FOG_SIGHT.torch / lanternSeen) and tracks – where an enemy last vanished into the fog. ---------- */
-const FGD = { root: null, flags: [], bases: [], silh: [], fires: [], lamps: [], tracks: [], trackSp: [], mats: new Map() };
+   farther and are seen from farther: FOG_SIGHT.torch / lanternSeen). Footprints of enemies: see fogFeetTick below. ---------- */
+const FGD = { root: null, flags: [], bases: [], silh: [], fires: [], lamps: [], mats: new Map() };
 function fogGlowCanvas(inner, outer) {
   const c = cnv(64, 64),
     x = c.getContext('2d'),
@@ -29176,16 +29327,6 @@ function fogGlowCanvas(inner, outer) {
   g.addColorStop(1, 'rgba(0,0,0,0)');
   x.fillStyle = g;
   x.fillRect(0, 0, 64, 64);
-  return c;
-}
-function fogTrackCanvas() {
-  // a faint red figure with a question mark: "here someone disappeared"
-  const c = fogSilhouetteCanvas('rgba(255,90,74,0.85)'),
-    x = c.getContext('2d');
-  x.font = 'bold 30px sans-serif';
-  x.textAlign = 'center';
-  x.fillStyle = '#fff';
-  x.fillText('?', 32, 74);
   return c;
 }
 function fogGuideMat(key, draw) {
@@ -29319,34 +29460,135 @@ function fogGuidesTick() {
     sp.scale.set(2.2, 2.2, 1);
   }
   for (let i = nl; i < FGD.lamps.length; i++) FGD.lamps[i].visible = false;
-  // tracks: an enemy that slips into the fog leaves a faint marker where it was last seen (as long as the computer remembers, too)
-  const tn = now(),
-    life = FOG_SIGHT.memory * 1000;
-  for (const u of V.units.values()) {
-    if (u.team === V.myTeam) continue;
-    const hid = !!u.fogHid;
-    if (hid && u.fogWas === false && u.g.parent) {
-      const p = u.g.position,
-        near = FGD.tracks.find(t => Math.hypot(t.x - p.x, t.z - p.z) < 3);
-      if (near) Object.assign(near, { x: p.x, y: p.y, z: p.z, t: tn });
-      else FGD.tracks.push({ x: p.x, y: p.y, z: p.z, t: tn });
-      if (FGD.tracks.length > 30) FGD.tracks.shift();
+}
+/* ---------- Footprints in the fog: where an enemy walks within your sight (and a little beyond, in the fading edge), it leaves big dark
+   prints – feet, hooves, E-Mobil tyres – that stay for FEET.life seconds and show through the fog (fog: false). So you see where it went
+   after it vanished. Client only, three instanced meshes. Called every frame from frame() (82-frame.js). ---------- */
+const FEET = { cap: 260, life: 9, step: 1.25, kinds: null, list: [] };
+function feetCanvas(kind) {
+  const c = cnv(64, 96),
+    x = c.getContext('2d');
+  x.fillStyle = '#fff';
+  if (kind === 'foot') {
+    x.beginPath();
+    x.ellipse(32, 36, 17, 25, 0, 0, TAU); // ball of the foot
+    x.fill();
+    x.beginPath();
+    x.ellipse(33, 76, 12, 15, 0, 0, TAU); // heel
+    x.fill();
+  } else if (kind === 'hoof') {
+    for (const sx of [-1, 1]) {
+      x.beginPath();
+      x.ellipse(32 + sx * 11, 46, 9, 30, sx * 0.12, 0, TAU);
+      x.fill();
     }
-    u.fogWas = hid;
+  } else {
+    x.fillRect(14, 4, 36, 88); // a tyre: a band with a tread
+    x.globalCompositeOperation = 'destination-out';
+    for (let y = 10; y < 90; y += 13) x.fillRect(14, y, 36, 5);
   }
-  FGD.tracks = FGD.tracks.filter(t => tn - t.t < life);
-  let nt = 0;
-  for (const t of FGD.tracks) {
-    if (!hidden(t.x, t.z)) continue; // where you can see again, the track has done its job
-    const sp = fogGuideSprite(FGD.trackSp, nt++),
-      sc = size(t.x, t.y + 1.4, t.z, 0.65);
-    sp.visible = true;
-    sp.material = fogGuideMat('track', fogTrackCanvas);
-    sp.material.opacity = 0.6 * a * (1 - (tn - t.t) / life);
-    sp.position.set(t.x, t.y + 1.2 + sc * 0.5, t.z);
-    sp.scale.set(sc * 0.67, sc, 1);
+  return c;
+}
+function feetInit() {
+  FEET.kinds = {};
+  for (const kind of ['foot', 'hoof', 'tyre']) {
+    const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      mat = new THREE.MeshBasicMaterial({
+        map: ctex(feetCanvas(kind)),
+        color: lin(0x24180e),
+        transparent: true,
+        depthWrite: false,
+        fog: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -2,
+        polygonOffsetUnits: -2,
+      }),
+      alpha = new THREE.InstancedBufferAttribute(new Float32Array(FEET.cap), 1);
+    alpha.setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('instanceFade', alpha);
+    mat.onBeforeCompile = sh => {
+      // per-print fading, no fog (the prints are meant to be seen in it)
+      sh.vertexShader =
+        'attribute float instanceFade; varying float vFade;\n' +
+        sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvFade = instanceFade;');
+      sh.fragmentShader =
+        'varying float vFade;\n' +
+        sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.a *= vFade;');
+    };
+    mat.customProgramCacheKey = () => 'feet';
+    const im = new THREE.InstancedMesh(geo, mat, FEET.cap);
+    im.count = 0;
+    im.renderOrder = 3;
+    im.frustumCulled = false;
+    scene.add(im);
+    FEET.kinds[kind] = { im, alpha };
   }
-  for (let i = nt; i < FGD.trackSp.length; i++) FGD.trackSp[i].visible = false;
+}
+const feetKind = k => (k === 5 ? 'tyre' : k === 4 ? 'hoof' : 'foot');
+function fogFeetTick() {
+  const on = FOG.on && FOG.k > 0.05 && V.playing && !V.tut;
+  if (!on && !FEET.list.length) return;
+  if (!FEET.kinds) feetInit();
+  const tn = now();
+  if (on)
+    for (const u of V.units.values()) {
+      if (u.team === V.myTeam || !u.g.parent || KINDS[u.k].worm || KINDS[u.k].role === 'siege') continue;
+      const p = u.g.position;
+      if (u.fpX === undefined) {
+        u.fpX = p.x;
+        u.fpZ = p.z;
+        u.fpS = 1;
+        continue;
+      }
+      const dx = p.x - u.fpX,
+        dz = p.z - u.fpZ,
+        d = Math.hypot(dx, dz);
+      if (d < FEET.step) continue;
+      if (d > 6) {
+        // a jump, a pad flight or a teleport: no trail across the gap
+        u.fpX = p.x;
+        u.fpZ = p.z;
+        continue;
+      }
+      const seen = V.poss ? Math.hypot(p.x - camera.position.x, p.z - camera.position.z) < FOG_EGO.far : fogVis(p.x, p.z) > 0.02;
+      const yaw = Math.atan2(dx, dz),
+        kind = feetKind(u.k),
+        side = (u.fpS = -u.fpS) * (kind === 'tyre' ? 0.55 : 0.32);
+      u.fpX = p.x;
+      u.fpZ = p.z;
+      if (!seen) continue;
+      const x = p.x + Math.cos(yaw) * side,
+        z = p.z - Math.sin(yaw) * side;
+      FEET.list.push({ x, z, y: groundY(x, z) + 0.05, yaw, kind, t: tn });
+      if (FEET.list.length > FEET.cap * 2) FEET.list.splice(0, FEET.list.length - FEET.cap * 2);
+    }
+  const life = FEET.life * 1000;
+  FEET.list = FEET.list.filter(f => tn - f.t < life);
+  const n = { foot: 0, hoof: 0, tyre: 0 },
+    D = sandDummy;
+  for (const f of FEET.list) {
+    const K = FEET.kinds[f.kind],
+      i = n[f.kind];
+    if (i >= FEET.cap) continue;
+    D.position.set(f.x, f.y, f.z);
+    D.rotation.set(0, f.yaw, 0);
+    if (f.kind === 'tyre') D.scale.set(0.42, 1, 1.1);
+    else D.scale.set(0.62, 1, 0.92); // bigger than real feet: they must be seen from the commander's height
+    D.updateMatrix();
+    K.im.setMatrixAt(i, D.matrix);
+    const age = (tn - f.t) / life;
+    K.alpha.setX(i, (on ? 0.85 : 0.6) * Math.min(1, (1 - age) * 3));
+    n[f.kind] = i + 1;
+  }
+  for (const kind in FEET.kinds) {
+    const K = FEET.kinds[kind];
+    K.im.count = n[kind];
+    if (n[kind]) {
+      K.im.instanceMatrix.needsUpdate = true;
+      K.alpha.needsUpdate = true;
+    }
+  }
+  if (!on && FEET.list.length && FOG.k <= 0.05) FEET.list.length = 0;
 }
 
 // ---- src/js/80-animation.js ----
@@ -30684,6 +30926,7 @@ function frame() {
     grabTick(dt);
     heroTick();
     fogGuidesTick();
+    fogFeetTick();
     wormEgoRing(V.poss);
     padAnim(dt);
     clawTick(dt);
@@ -31326,6 +31569,14 @@ window.__wvr = {
   killFeed,
   goView,
   aiKnownFoes,
+  PERKS,
+  TIERS,
+  SI_D,
+  makeOffer,
+  hit,
+  perkStep,
+  buildTime,
+  bowlStep,
   FOG_SIGHT,
   get paused() {
     return paused;

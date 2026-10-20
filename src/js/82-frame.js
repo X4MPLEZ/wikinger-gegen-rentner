@@ -80,6 +80,7 @@ function frame() {
     grabTick(dt);
     heroTick();
     fogGuidesTick();
+    fogFeetTick();
     wormEgoRing(V.poss);
     padAnim(dt);
     clawTick(dt);

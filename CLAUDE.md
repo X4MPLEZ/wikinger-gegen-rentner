@@ -87,7 +87,7 @@ Every file starts with a short header comment saying what is in it.
 | 71-worm-view | wild sandworms on screen, sounds, victims | `wormWorldView`, `grabTick` |
 | 72-hero-view | the hero sequence on screen | `heroTick`, `heroCam` |
 | 73-deaths | death animations, ghosts | `startDeath`, `deathTick` |
-| 74-fog-guides | flag/base markers and own silhouettes in the fog | `fogGuidesTick` |
+| 74-fog-guides | flag/base markers, own silhouettes, watch fires, lanterns, enemy footprints in the sand | `fogGuidesTick`, `fogFeetTick` |
 | 80-animation | procedural poses | `humanRig`, `animateRig` |
 | 81-quality | graphics quality levels, auto-quality, profiler | `QS`, `perfTick`, `applyQuality` |
 | 82-frame | **the frame loop** | `frame`, `renderUnits` |
