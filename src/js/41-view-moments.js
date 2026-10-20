@@ -42,7 +42,11 @@ function hlText(ty, team, n) {
       : ['KATAPULT VERLOREN!', 'Der Gegner kassiert Beute'];
   if (ty === 'save') return mine ? ['IN LETZTER SEKUNDE!', 'Fahne gerade noch gehalten'] : null;
   if (ty === 'ev1') return ['NEBELWAND!', 'Du siehst nur noch um deine Krieger und deine Basis'];
-  if (ty === 'fogMode') return ['NEBEL-MODUS', 'Überall Nebel – du siehst nur, was nahe bei deinen Kriegern und deiner Basis ist'];
+  if (ty === 'fogMode')
+    return [
+      'NEBEL-MODUS',
+      'Du siehst nur rund um deine Krieger, deine Basis und deine Fahnen. Halte Fahnen – sie sind Wachtürme. Reiter sehen weiter.',
+    ];
   if (ty === 'ev2') return ['GOLDWAGEN!', 'Eskortiere den Wagen – wer dabei ist, kassiert'];
   if (ty === 'ev3') return ['KLEINE ARMEE, GROSSER SOLD!', '60 s lang: je weniger Krieger, desto mehr Gold'];
   if (ty === 'ev4') return ['FAHNENWANDERUNG!', 'Die Fahnen ziehen um – schnell hin!'];

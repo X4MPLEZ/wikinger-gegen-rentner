@@ -3825,6 +3825,20 @@ const TIERS = [
   { n: 'Episch', c: '#a865e0', w: 19 },
   { n: 'Legendär', c: '#f0a92e', w: 9 },
 ];
+// Fog (fog mode and the "Nebelwand" event): who sees how far, as [clear up to, fog complete at] in metres. The player's view
+// (FOG.own in 70-world-view.js) and the computer's knowledge (aiVision in 15-ai.js) use the same numbers: both sides see the same.
+const FOG_SIGHT = {
+  unit: [9, 16], // every warrior
+  scout: [14, 23], // riders scout ahead
+  torch: [13, 23], // the steered warrior carries a lantern ...
+  lanternSeen: 24, // ... and the lantern is seen from this far
+  base: [20, 29],
+  flag: [13, 22], // a held flag is a watchtower
+  siege: [17, 27], // warriors at the enemy base light it up
+  siegeNear: 18, // (that close to its centre)
+  memory: 6, // seconds the computer remembers where it last saw someone (the player gets tracks for as long, 74-fog-guides.js)
+};
+const fogSightOf = (role, poss) => (poss ? FOG_SIGHT.torch : role === 'cav' ? FOG_SIGHT.scout : FOG_SIGHT.unit);
 const PERK_IDS = Object.keys(PERKS),
   PERK_EVERY = 30,
   PERK_MAX = 7,
@@ -10069,12 +10083,52 @@ function aiHeroWorm(G, A, L, u, foes) {
   }
   return w;
 }
-const FOG_SEE = { unit2: 14 * 14, base: 26 }; // fog mode: how far warriors and the base see (like the player's clear view)
-function aiSees(G, team, mine, f) {
-  const B = BASES[team];
-  if (B && Math.hypot(f.x - B.x, f.z - B.z) < FOG_SEE.base) return true;
-  for (const u of mine) if ((u.x - f.x) ** 2 + (u.z - f.z) ** 2 < FOG_SEE.unit2) return true;
+// Fog: the computer only knows what its warriors, flags and base see (FOG_SIGHT, 02-data.js), like the player – a foe counts as seen
+// where the player's fog is mostly thin (3 m inside the outer edge). A steered foe's lantern is seen from farther.
+const aiFog = G => !!(G.fog || (G.ev && G.ev.cur === EV_FOG)) && !G.tut;
+function aiVision(G, team, mine) {
+  const C = [],
+    r2 = r => (r[1] - 3) ** 2,
+    B = BASES[team],
+    EB = BASES[1 - team];
+  if (B) C.push(B.x, B.z, r2(FOG_SIGHT.base));
+  G.flags.forEach((f, i) => f.owner === team && C.push(FLAGS[i].x, FLAGS[i].z, r2(FOG_SIGHT.flag)));
+  let siege = false;
+  for (const u of mine) {
+    C.push(u.x, u.z, r2(fogSightOf(KINDS[u.k].role, u.poss)));
+    if (EB && (u.x - EB.x) ** 2 + (u.z - EB.z) ** 2 < FOG_SIGHT.siegeNear ** 2) siege = true;
+  }
+  if (siege) C.push(EB.x, EB.z, r2(FOG_SIGHT.siege));
+  return { C, mine };
+}
+function aiVisible(Vn, f) {
+  const C = Vn.C;
+  for (let i = 0; i < C.length; i += 3) if ((f.x - C[i]) ** 2 + (f.z - C[i + 1]) ** 2 < C[i + 2]) return true;
+  if (f.poss) for (const u of Vn.mine) if ((u.x - f.x) ** 2 + (u.z - f.z) ** 2 < FOG_SIGHT.lanternSeen ** 2) return true;
   return false;
+}
+const aiSees = (G, team, mine, f) => aiVisible(aiVision(G, team, mine), f);
+// The foes the computer knows about: everyone it sees, plus for a few seconds those that vanished into the fog – at the spot where
+// it last saw them (a stand-in object: their own properties, but the remembered position).
+function aiKnownFoes(G, team, A, mine) {
+  const all = G.units.filter(u => u.team !== team);
+  if (!aiFog(G)) return all;
+  const Vn = aiVision(G, team, mine),
+    M = A.mem || (A.mem = new Map()),
+    out = [];
+  for (const u of all)
+    if (aiVisible(Vn, u)) {
+      M.set(u.id, { x: u.x, z: u.z, t: G.t });
+      out.push(u);
+    } else {
+      const m = M.get(u.id);
+      if (m && G.t - m.t < FOG_SIGHT.memory) out.push(Object.assign(Object.create(u), { x: m.x, z: m.z }));
+    }
+  if ((A.memT = (A.memT || 0) - DT) <= 0) {
+    A.memT = 2;
+    for (const [id, m] of M) if (G.t - m.t > FOG_SIGHT.memory) M.delete(id);
+  }
+  return out;
 }
 function aiThink(G, team) {
   const A = G.ai,
@@ -10119,7 +10173,7 @@ function aiThink(G, team) {
   }
   if (G.pz > 0) return;
   const mine = G.units.filter(u => u.team === team),
-    foes = G.units.filter(u => u.team !== team && (!G.fog || aiSees(G, team, mine, u)));
+    foes = aiKnownFoes(G, team, A, mine);
   aiPossess(G, team, A, L, mine, foes);
   A.tick -= DT;
   if (A.tick > 0) return;
@@ -18678,7 +18732,11 @@ function hlText(ty, team, n) {
       : ['KATAPULT VERLOREN!', 'Der Gegner kassiert Beute'];
   if (ty === 'save') return mine ? ['IN LETZTER SEKUNDE!', 'Fahne gerade noch gehalten'] : null;
   if (ty === 'ev1') return ['NEBELWAND!', 'Du siehst nur noch um deine Krieger und deine Basis'];
-  if (ty === 'fogMode') return ['NEBEL-MODUS', 'Überall Nebel – du siehst nur, was nahe bei deinen Kriegern und deiner Basis ist'];
+  if (ty === 'fogMode')
+    return [
+      'NEBEL-MODUS',
+      'Du siehst nur rund um deine Krieger, deine Basis und deine Fahnen. Halte Fahnen – sie sind Wachtürme. Reiter sehen weiter.',
+    ];
   if (ty === 'ev2') return ['GOLDWAGEN!', 'Eskortiere den Wagen – wer dabei ist, kassiert'];
   if (ty === 'ev3') return ['KLEINE ARMEE, GROSSER SOLD!', '60 s lang: je weniger Krieger, desto mehr Gold'];
   if (ty === 'ev4') return ['FAHNENWANDERUNG!', 'Die Fahnen ziehen um – schnell hin!'];
@@ -26914,21 +26972,40 @@ function itemMesh(ty) {
 }
 /* ---------- map events on the client: fog of war, gold wagon, flag migration ---------- */
 const FOG = { on: false, own: [], k: 0 };
-const FOG_R = { unit: [9, 16], base: [20, 29] }; // clear radius / where the fog is complete, in metres
+// The clearings: FOG.own holds x, z, clear-up-to, fog-complete-at for every source (own warriors, base, held flags, the siege at the
+// enemy base – FOG_SIGHT in 02-data.js), rebuilt every frame in updateWorld. The ego view sees by distance (FOG_EGO): the lantern.
+const FOG_EGO = { near: 4, far: 32, seen: 25, guide: 21 };
 function fogVis(x, z) {
   // 1 = clear, 0 = deep in the fog (same falloff as the map the shaders read)
-  const B = BASES[V.myTeam],
-    lin2 = (d, r) => clamp((r[1] - d) / (r[1] - r[0]), 0, 1);
-  let v = B ? lin2(Math.hypot(x - B.x, z - B.z), FOG_R.base) : 0;
   const o = FOG.own;
-  for (let i = 0; i < o.length && v < 1; i += 2) v = Math.max(v, lin2(Math.hypot(x - o[i], z - o[i + 1]), FOG_R.unit));
+  let v = 0;
+  for (let i = 0; i < o.length && v < 1; i += 4)
+    v = Math.max(v, clamp((o[i + 3] - Math.hypot(x - o[i], z - o[i + 1])) / (o[i + 3] - o[i + 2]), 0, 1));
   return v;
 }
 function fogSeen(x, z) {
   // UI that is not drawn through the fog (words, markers): shown only where the fog lets you see
   if (!FOG.on) return true;
-  if (V.poss) return Math.hypot(x - camera.position.x, z - camera.position.z) < 19;
+  if (V.poss) return Math.hypot(x - camera.position.x, z - camera.position.z) < FOG_EGO.seen;
   return fogVis(x, z) > 0.4;
+}
+function fogSources(s) {
+  const o = FOG.own,
+    add = (x, z, r) => o.push(x, z, r[0], r[1]),
+    B = BASES[V.myTeam],
+    EB = BASES[1 - V.myTeam];
+  o.length = 0;
+  if (B) add(B.x, B.z, FOG_SIGHT.base);
+  if (s && s.f) s.f.forEach((f, i) => f[0] === V.myTeam && FLAGS[i] && add(FLAGS[i].x, FLAGS[i].z, FOG_SIGHT.flag));
+  let siege = false;
+  for (const u of V.units.values()) {
+    if (u.team !== V.myTeam || (u.worm && u.wP && (u.wP.ws === 'under' || u.wP.ws === 'warn'))) continue;
+    const p = u.g.position;
+    add(p.x, p.z, fogSightOf(KINDS[u.k].role, V.poss && V.poss.id === u.id));
+    if (EB && Math.hypot(p.x - EB.x, p.z - EB.z) < FOG_SIGHT.siegeNear) siege = true;
+  }
+  if (V.poss) add(V.poss.x, V.poss.z, FOG_SIGHT.torch);
+  if (siege) add(EB.x, EB.z, FOG_SIGHT.siege);
 }
 function fogWallMapDraw() {
   if (!FOGW.cv) {
@@ -26960,10 +27037,8 @@ function fogWallMapDraw() {
     x.arc(cx, cz, r[1], 0, TAU);
     x.fill();
   };
-  const B = BASES[V.myTeam];
-  if (B) blob(B.x, B.z, FOG_R.base);
   const o = FOG.own;
-  for (let i = 0; i < o.length; i += 2) blob(o[i], o[i + 1], FOG_R.unit);
+  for (let i = 0; i < o.length; i += 4) blob(o[i], o[i + 1], [o[i + 2], o[i + 3]]);
   x.globalCompositeOperation = 'source-over';
   FOGW.tex.needsUpdate = true;
 }
@@ -27078,8 +27153,8 @@ function fogWallTick(dt) {
     const vg = $('#vignette');
     if (vg) vg.style.opacity = String(1 - 0.7 * k * e);
   }
-  scene.fog.near = lerp(B.near, lerp(70, 2.5, e), k);
-  scene.fog.far = lerp(B.far, lerp(190, 24, e), k);
+  scene.fog.near = lerp(B.near, lerp(70, FOG_EGO.near, e), k);
+  scene.fog.far = lerp(B.far, lerp(190, FOG_EGO.far, e), k);
   scene.fog.color.copy(B.col).lerp(FOGW.col, k);
   FOGW.k.value = k * (1 - e); // the wall itself only in the commander view; in the ego view the dense camera fog does the hiding
   FOGW.hk.value = 0.32 * k * (1 - e); // the faded map in the fog top: orientation in the commander view
@@ -27163,13 +27238,7 @@ function eventView(s, dt) {
     }
   }
   FOG.k = FOG.on ? Math.min(1, FOG.k + dt / 2.5) : Math.max(0, FOG.k - dt / 2.5);
-  if (FOG.on || FOG.k > 0) {
-    const o = FOG.own;
-    o.length = 0;
-    for (const u of V.units.values())
-      if (u.team === V.myTeam && !(u.worm && u.wP && (u.wP.ws === 'under' || u.wP.ws === 'warn'))) o.push(u.g.position.x, u.g.position.z);
-    if (V.poss) o.push(V.poss.x, V.poss.z);
-  }
+  if (FOG.on || FOG.k > 0) fogSources(s);
   fogWallTick(dt);
   // gold wagon
   if (s.wg) {
@@ -27567,13 +27636,13 @@ function updateWorld(dt) {
       v.g.position.set(x, groundY(x, z) + 1.1, z);
       puff(x, groundY(x, z) + 0.5, z, it[1] === 1 ? 0xff6bd5 : 0xf0bf4c, 5, 0.6);
     }
-    // in the fog a pickup is only there where you can see: no glowing columns or icons floating in the grey (ego: fade out towards 19 m)
+    // in the fog a pickup is only there where you can see: no glowing columns or icons floating in the grey (ego: fade out at the lantern's reach)
     const ix = v.g.position.x,
       iz = v.g.position.z,
       fv = !FOG.on
         ? 1
         : V.poss
-          ? clamp((19 - Math.hypot(ix - camera.position.x, iz - camera.position.z)) / 5, 0, 1)
+          ? clamp((FOG_EGO.seen - Math.hypot(ix - camera.position.x, iz - camera.position.z)) / 5, 0, 1)
           : fogSeen(ix, iz)
             ? 1
             : 0;
@@ -29094,8 +29163,31 @@ function deathTick(u, dt) {
    giving away a single enemy: the flags (in their owner's colour), both bases, and in the ego view your own warriors as faint
    silhouettes. A marker only shows where the fog really hides the thing (commander: outside the clearings; ego: beyond ~15 m).
    Markers draw through the fog (fog: false) and over hills (depthTest: false). Called every frame from frame() (82-frame.js).
-   Related: the small map in fog mode (drawMini, 50-input.js) and the faded map in the fog top (fogHintBuild, 70-world-view.js). ---------- */
-const FGD = { root: null, flags: [], bases: [], silh: [], mats: new Map() };
+   Related: the small map in fog mode (drawMini, 50-input.js) and the faded map in the fog top (fogHintBuild, 70-world-view.js).
+   Also here: the watch fires on your own flags (held flags light the fog, FOG_SIGHT.flag), the lanterns of steered warriors (they see
+   farther and are seen from farther: FOG_SIGHT.torch / lanternSeen) and tracks – where an enemy last vanished into the fog. ---------- */
+const FGD = { root: null, flags: [], bases: [], silh: [], fires: [], lamps: [], tracks: [], trackSp: [], mats: new Map() };
+function fogGlowCanvas(inner, outer) {
+  const c = cnv(64, 64),
+    x = c.getContext('2d'),
+    g = x.createRadialGradient(32, 32, 2, 32, 32, 31);
+  g.addColorStop(0, inner);
+  g.addColorStop(0.35, outer);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 64, 64);
+  return c;
+}
+function fogTrackCanvas() {
+  // a faint red figure with a question mark: "here someone disappeared"
+  const c = fogSilhouetteCanvas('rgba(255,90,74,0.85)'),
+    x = c.getContext('2d');
+  x.font = 'bold 30px sans-serif';
+  x.textAlign = 'center';
+  x.fillStyle = '#fff';
+  x.fillText('?', 32, 74);
+  return c;
+}
 function fogGuideMat(key, draw) {
   let m = FGD.mats.get(key);
   if (!m) {
@@ -29147,7 +29239,7 @@ function fogGuidesTick() {
     s = V.latest,
     a = Math.min(1, FOG.k);
   // hidden = the fog really covers it from where you look; size = about the same on screen at any distance
-  const hidden = (x, z) => (ego ? Math.hypot(x - cam.x, z - cam.z) > 15 : fogVis(x, z) < 0.45),
+  const hidden = (x, z) => (ego ? Math.hypot(x - cam.x, z - cam.z) > FOG_EGO.guide : fogVis(x, z) < 0.45),
     size = (x, y, z, k) =>
       ego ? clamp(Math.hypot(x - cam.x, y - cam.y, z - cam.z) * 0.06 * k, 1.2, 6) : clamp(camS.dist * 0.075 * k, 2.2, 6);
   FLAGS.forEach((F, i) => {
@@ -29192,6 +29284,69 @@ function fogGuidesTick() {
       sp.scale.set(sc * 0.67, sc, 1);
     }
   for (let i = n; i < FGD.silh.length; i++) FGD.silh[i].visible = false;
+  // watch fires on the flags you hold: they light the fog around them
+  let nf = 0;
+  if (s && s.f)
+    FLAGS.forEach((F, i) => {
+      if (!s.f[i] || s.f[i][0] !== V.myTeam) return;
+      const sp = fogGuideSprite(FGD.fires, nf++),
+        fl = 0.85 + 0.15 * Math.sin(clock * 9 + i * 1.7) * Math.sin(clock * 5.3 + i);
+      sp.visible = true;
+      sp.material = fogGuideMat('fire', () => fogGlowCanvas('rgba(255,236,170,1)', 'rgba(255,140,40,0.55)'));
+      sp.material.blending = THREE.AdditiveBlending;
+      sp.material.depthTest = true; // a real fire: hidden behind hills, unlike the markers
+      sp.material.opacity = 0.85 * a;
+      sp.position.set(F.x, groundY(F.x, F.z) + 4.6, F.z);
+      sp.scale.set(2.6 * fl, 2.6 * fl, 1);
+    });
+  for (let i = nf; i < FGD.fires.length; i++) FGD.fires[i].visible = false;
+  // lanterns of steered warriors (yours in the commander view, enemies' when they are within the lantern's reach of your warriors)
+  let nl = 0;
+  const mine = [];
+  for (const u of V.units.values()) if (u.team === V.myTeam) mine.push(u.g.position);
+  if (V.poss) mine.push({ x: V.poss.x, z: V.poss.z });
+  for (const u of V.units.values()) {
+    if (!u.isPoss || !u.g.parent || (V.poss && u.id === V.poss.id)) continue;
+    const p = u.g.position;
+    if (u.team !== V.myTeam && !mine.some(q => Math.hypot(q.x - p.x, q.z - p.z) < FOG_SIGHT.lanternSeen)) continue;
+    const sp = fogGuideSprite(FGD.lamps, nl++);
+    sp.visible = true;
+    sp.material = fogGuideMat('lamp', () => fogGlowCanvas('rgba(255,248,210,1)', 'rgba(255,190,90,0.5)'));
+    sp.material.blending = THREE.AdditiveBlending;
+    sp.material.depthTest = true;
+    sp.material.opacity = 0.9 * a;
+    sp.position.set(p.x, p.y + 2.3, p.z);
+    sp.scale.set(2.2, 2.2, 1);
+  }
+  for (let i = nl; i < FGD.lamps.length; i++) FGD.lamps[i].visible = false;
+  // tracks: an enemy that slips into the fog leaves a faint marker where it was last seen (as long as the computer remembers, too)
+  const tn = now(),
+    life = FOG_SIGHT.memory * 1000;
+  for (const u of V.units.values()) {
+    if (u.team === V.myTeam) continue;
+    const hid = !!u.fogHid;
+    if (hid && u.fogWas === false && u.g.parent) {
+      const p = u.g.position,
+        near = FGD.tracks.find(t => Math.hypot(t.x - p.x, t.z - p.z) < 3);
+      if (near) Object.assign(near, { x: p.x, y: p.y, z: p.z, t: tn });
+      else FGD.tracks.push({ x: p.x, y: p.y, z: p.z, t: tn });
+      if (FGD.tracks.length > 30) FGD.tracks.shift();
+    }
+    u.fogWas = hid;
+  }
+  FGD.tracks = FGD.tracks.filter(t => tn - t.t < life);
+  let nt = 0;
+  for (const t of FGD.tracks) {
+    if (!hidden(t.x, t.z)) continue; // where you can see again, the track has done its job
+    const sp = fogGuideSprite(FGD.trackSp, nt++),
+      sc = size(t.x, t.y + 1.4, t.z, 0.65);
+    sp.visible = true;
+    sp.material = fogGuideMat('track', fogTrackCanvas);
+    sp.material.opacity = 0.6 * a * (1 - (tn - t.t) / life);
+    sp.position.set(t.x, t.y + 1.2 + sc * 0.5, t.z);
+    sp.scale.set(sc * 0.67, sc, 1);
+  }
+  for (let i = nt; i < FGD.trackSp.length; i++) FGD.trackSp[i].visible = false;
 }
 
 // ---- src/js/80-animation.js ----
@@ -31170,6 +31325,8 @@ window.__wvr = {
   egoSwitch,
   killFeed,
   goView,
+  aiKnownFoes,
+  FOG_SIGHT,
   get paused() {
     return paused;
   },

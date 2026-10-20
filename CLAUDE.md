@@ -29,6 +29,7 @@ and steered in third person ("Ego-Modus"). Phone and PC, against the computer or
 | Format | `npx prettier --write src/js/*.js src/style.css` |
 | Play locally | open `index.html` in a browser (three.js comes from cdnjs) |
 | Profiler overlay | `index.html?perf=1` or F9 |
+| Balance check (computer vs computer, ~1 h for 240 matches) | `python3 tools/balance.py 240 tests/out/balance.json` then `python3 tools/balance_report.py tests/out/balance.json` |
 
 Setup once: `npm install`, `pip install playwright`, `playwright install chromium`.
 
@@ -121,7 +122,9 @@ Every file starts with a short header comment saying what is in it.
 - **Materials:** `lam(color)` is cached and shared – never dispose it. Throw-away objects (pickups, grenades, puddles) are freed with
   `disposeTree()` (40-view), which skips shared things; mark your own shared materials/geometries `userData.shared = true`.
 - **Fog:** every material gets the fog shader automatically (`Material.prototype.onBeforeCompile` in 21-scene). Markers that must show
-  through the fog use `fog: false`. In fog mode hide enemy info unless `fogSeen(x, z)`.
+  through the fog use `fog: false`. In fog mode hide enemy info unless `fogSeen(x, z)`. Who sees how far is `FOG_SIGHT` (02-data):
+  the player's clearings (`fogSources`, 70-world-view) and the computer's knowledge (`aiVision` / `aiKnownFoes`, 15-ai) both read it,
+  so a change there changes both sides alike.
 - **HUD writes:** use `txt()`, `hid()`, `sty()` (52-hud) – they only touch the DOM when the value changes (weak phones).
 - **Client randomness:** visuals both players should see the same (e.g. puddle decoration) use `rng(seed)` from snapshot data.
 - **Mobile first:** check portrait 390×844 and landscape 844×390 (`tests/t_hud_layout.py` asserts that HUD parts do not overlap).

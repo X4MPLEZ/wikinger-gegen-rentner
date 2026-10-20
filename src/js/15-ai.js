@@ -776,12 +776,52 @@ function aiHeroWorm(G, A, L, u, foes) {
   }
   return w;
 }
-const FOG_SEE = { unit2: 14 * 14, base: 26 }; // fog mode: how far warriors and the base see (like the player's clear view)
-function aiSees(G, team, mine, f) {
-  const B = BASES[team];
-  if (B && Math.hypot(f.x - B.x, f.z - B.z) < FOG_SEE.base) return true;
-  for (const u of mine) if ((u.x - f.x) ** 2 + (u.z - f.z) ** 2 < FOG_SEE.unit2) return true;
+// Fog: the computer only knows what its warriors, flags and base see (FOG_SIGHT, 02-data.js), like the player – a foe counts as seen
+// where the player's fog is mostly thin (3 m inside the outer edge). A steered foe's lantern is seen from farther.
+const aiFog = G => !!(G.fog || (G.ev && G.ev.cur === EV_FOG)) && !G.tut;
+function aiVision(G, team, mine) {
+  const C = [],
+    r2 = r => (r[1] - 3) ** 2,
+    B = BASES[team],
+    EB = BASES[1 - team];
+  if (B) C.push(B.x, B.z, r2(FOG_SIGHT.base));
+  G.flags.forEach((f, i) => f.owner === team && C.push(FLAGS[i].x, FLAGS[i].z, r2(FOG_SIGHT.flag)));
+  let siege = false;
+  for (const u of mine) {
+    C.push(u.x, u.z, r2(fogSightOf(KINDS[u.k].role, u.poss)));
+    if (EB && (u.x - EB.x) ** 2 + (u.z - EB.z) ** 2 < FOG_SIGHT.siegeNear ** 2) siege = true;
+  }
+  if (siege) C.push(EB.x, EB.z, r2(FOG_SIGHT.siege));
+  return { C, mine };
+}
+function aiVisible(Vn, f) {
+  const C = Vn.C;
+  for (let i = 0; i < C.length; i += 3) if ((f.x - C[i]) ** 2 + (f.z - C[i + 1]) ** 2 < C[i + 2]) return true;
+  if (f.poss) for (const u of Vn.mine) if ((u.x - f.x) ** 2 + (u.z - f.z) ** 2 < FOG_SIGHT.lanternSeen ** 2) return true;
   return false;
+}
+const aiSees = (G, team, mine, f) => aiVisible(aiVision(G, team, mine), f);
+// The foes the computer knows about: everyone it sees, plus for a few seconds those that vanished into the fog – at the spot where
+// it last saw them (a stand-in object: their own properties, but the remembered position).
+function aiKnownFoes(G, team, A, mine) {
+  const all = G.units.filter(u => u.team !== team);
+  if (!aiFog(G)) return all;
+  const Vn = aiVision(G, team, mine),
+    M = A.mem || (A.mem = new Map()),
+    out = [];
+  for (const u of all)
+    if (aiVisible(Vn, u)) {
+      M.set(u.id, { x: u.x, z: u.z, t: G.t });
+      out.push(u);
+    } else {
+      const m = M.get(u.id);
+      if (m && G.t - m.t < FOG_SIGHT.memory) out.push(Object.assign(Object.create(u), { x: m.x, z: m.z }));
+    }
+  if ((A.memT = (A.memT || 0) - DT) <= 0) {
+    A.memT = 2;
+    for (const [id, m] of M) if (G.t - m.t > FOG_SIGHT.memory) M.delete(id);
+  }
+  return out;
 }
 function aiThink(G, team) {
   const A = G.ai,
@@ -826,7 +866,7 @@ function aiThink(G, team) {
   }
   if (G.pz > 0) return;
   const mine = G.units.filter(u => u.team === team),
-    foes = G.units.filter(u => u.team !== team && (!G.fog || aiSees(G, team, mine, u)));
+    foes = aiKnownFoes(G, team, A, mine);
   aiPossess(G, team, A, L, mine, foes);
   A.tick -= DT;
   if (A.tick > 0) return;

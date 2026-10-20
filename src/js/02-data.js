@@ -348,6 +348,20 @@ const TIERS = [
   { n: 'Episch', c: '#a865e0', w: 19 },
   { n: 'Legendär', c: '#f0a92e', w: 9 },
 ];
+// Fog (fog mode and the "Nebelwand" event): who sees how far, as [clear up to, fog complete at] in metres. The player's view
+// (FOG.own in 70-world-view.js) and the computer's knowledge (aiVision in 15-ai.js) use the same numbers: both sides see the same.
+const FOG_SIGHT = {
+  unit: [9, 16], // every warrior
+  scout: [14, 23], // riders scout ahead
+  torch: [13, 23], // the steered warrior carries a lantern ...
+  lanternSeen: 24, // ... and the lantern is seen from this far
+  base: [20, 29],
+  flag: [13, 22], // a held flag is a watchtower
+  siege: [17, 27], // warriors at the enemy base light it up
+  siegeNear: 18, // (that close to its centre)
+  memory: 6, // seconds the computer remembers where it last saw someone (the player gets tracks for as long, 74-fog-guides.js)
+};
+const fogSightOf = (role, poss) => (poss ? FOG_SIGHT.torch : role === 'cav' ? FOG_SIGHT.scout : FOG_SIGHT.unit);
 const PERK_IDS = Object.keys(PERKS),
   PERK_EVERY = 30,
   PERK_MAX = 7,

@@ -390,21 +390,40 @@ function itemMesh(ty) {
 }
 /* ---------- map events on the client: fog of war, gold wagon, flag migration ---------- */
 const FOG = { on: false, own: [], k: 0 };
-const FOG_R = { unit: [9, 16], base: [20, 29] }; // clear radius / where the fog is complete, in metres
+// The clearings: FOG.own holds x, z, clear-up-to, fog-complete-at for every source (own warriors, base, held flags, the siege at the
+// enemy base – FOG_SIGHT in 02-data.js), rebuilt every frame in updateWorld. The ego view sees by distance (FOG_EGO): the lantern.
+const FOG_EGO = { near: 4, far: 32, seen: 25, guide: 21 };
 function fogVis(x, z) {
   // 1 = clear, 0 = deep in the fog (same falloff as the map the shaders read)
-  const B = BASES[V.myTeam],
-    lin2 = (d, r) => clamp((r[1] - d) / (r[1] - r[0]), 0, 1);
-  let v = B ? lin2(Math.hypot(x - B.x, z - B.z), FOG_R.base) : 0;
   const o = FOG.own;
-  for (let i = 0; i < o.length && v < 1; i += 2) v = Math.max(v, lin2(Math.hypot(x - o[i], z - o[i + 1]), FOG_R.unit));
+  let v = 0;
+  for (let i = 0; i < o.length && v < 1; i += 4)
+    v = Math.max(v, clamp((o[i + 3] - Math.hypot(x - o[i], z - o[i + 1])) / (o[i + 3] - o[i + 2]), 0, 1));
   return v;
 }
 function fogSeen(x, z) {
   // UI that is not drawn through the fog (words, markers): shown only where the fog lets you see
   if (!FOG.on) return true;
-  if (V.poss) return Math.hypot(x - camera.position.x, z - camera.position.z) < 19;
+  if (V.poss) return Math.hypot(x - camera.position.x, z - camera.position.z) < FOG_EGO.seen;
   return fogVis(x, z) > 0.4;
+}
+function fogSources(s) {
+  const o = FOG.own,
+    add = (x, z, r) => o.push(x, z, r[0], r[1]),
+    B = BASES[V.myTeam],
+    EB = BASES[1 - V.myTeam];
+  o.length = 0;
+  if (B) add(B.x, B.z, FOG_SIGHT.base);
+  if (s && s.f) s.f.forEach((f, i) => f[0] === V.myTeam && FLAGS[i] && add(FLAGS[i].x, FLAGS[i].z, FOG_SIGHT.flag));
+  let siege = false;
+  for (const u of V.units.values()) {
+    if (u.team !== V.myTeam || (u.worm && u.wP && (u.wP.ws === 'under' || u.wP.ws === 'warn'))) continue;
+    const p = u.g.position;
+    add(p.x, p.z, fogSightOf(KINDS[u.k].role, V.poss && V.poss.id === u.id));
+    if (EB && Math.hypot(p.x - EB.x, p.z - EB.z) < FOG_SIGHT.siegeNear) siege = true;
+  }
+  if (V.poss) add(V.poss.x, V.poss.z, FOG_SIGHT.torch);
+  if (siege) add(EB.x, EB.z, FOG_SIGHT.siege);
 }
 function fogWallMapDraw() {
   if (!FOGW.cv) {
@@ -436,10 +455,8 @@ function fogWallMapDraw() {
     x.arc(cx, cz, r[1], 0, TAU);
     x.fill();
   };
-  const B = BASES[V.myTeam];
-  if (B) blob(B.x, B.z, FOG_R.base);
   const o = FOG.own;
-  for (let i = 0; i < o.length; i += 2) blob(o[i], o[i + 1], FOG_R.unit);
+  for (let i = 0; i < o.length; i += 4) blob(o[i], o[i + 1], [o[i + 2], o[i + 3]]);
   x.globalCompositeOperation = 'source-over';
   FOGW.tex.needsUpdate = true;
 }
@@ -554,8 +571,8 @@ function fogWallTick(dt) {
     const vg = $('#vignette');
     if (vg) vg.style.opacity = String(1 - 0.7 * k * e);
   }
-  scene.fog.near = lerp(B.near, lerp(70, 2.5, e), k);
-  scene.fog.far = lerp(B.far, lerp(190, 24, e), k);
+  scene.fog.near = lerp(B.near, lerp(70, FOG_EGO.near, e), k);
+  scene.fog.far = lerp(B.far, lerp(190, FOG_EGO.far, e), k);
   scene.fog.color.copy(B.col).lerp(FOGW.col, k);
   FOGW.k.value = k * (1 - e); // the wall itself only in the commander view; in the ego view the dense camera fog does the hiding
   FOGW.hk.value = 0.32 * k * (1 - e); // the faded map in the fog top: orientation in the commander view
@@ -639,13 +656,7 @@ function eventView(s, dt) {
     }
   }
   FOG.k = FOG.on ? Math.min(1, FOG.k + dt / 2.5) : Math.max(0, FOG.k - dt / 2.5);
-  if (FOG.on || FOG.k > 0) {
-    const o = FOG.own;
-    o.length = 0;
-    for (const u of V.units.values())
-      if (u.team === V.myTeam && !(u.worm && u.wP && (u.wP.ws === 'under' || u.wP.ws === 'warn'))) o.push(u.g.position.x, u.g.position.z);
-    if (V.poss) o.push(V.poss.x, V.poss.z);
-  }
+  if (FOG.on || FOG.k > 0) fogSources(s);
   fogWallTick(dt);
   // gold wagon
   if (s.wg) {
@@ -1043,13 +1054,13 @@ function updateWorld(dt) {
       v.g.position.set(x, groundY(x, z) + 1.1, z);
       puff(x, groundY(x, z) + 0.5, z, it[1] === 1 ? 0xff6bd5 : 0xf0bf4c, 5, 0.6);
     }
-    // in the fog a pickup is only there where you can see: no glowing columns or icons floating in the grey (ego: fade out towards 19 m)
+    // in the fog a pickup is only there where you can see: no glowing columns or icons floating in the grey (ego: fade out at the lantern's reach)
     const ix = v.g.position.x,
       iz = v.g.position.z,
       fv = !FOG.on
         ? 1
         : V.poss
-          ? clamp((19 - Math.hypot(ix - camera.position.x, iz - camera.position.z)) / 5, 0, 1)
+          ? clamp((FOG_EGO.seen - Math.hypot(ix - camera.position.x, iz - camera.position.z)) / 5, 0, 1)
           : fogSeen(ix, iz)
             ? 1
             : 0;

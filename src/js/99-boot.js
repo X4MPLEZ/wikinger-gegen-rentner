@@ -52,6 +52,8 @@ window.__wvr = {
   egoSwitch,
   killFeed,
   goView,
+  aiKnownFoes,
+  FOG_SIGHT,
   get paused() {
     return paused;
   },

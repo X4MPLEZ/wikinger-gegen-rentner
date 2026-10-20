@@ -2,8 +2,31 @@
    giving away a single enemy: the flags (in their owner's colour), both bases, and in the ego view your own warriors as faint
    silhouettes. A marker only shows where the fog really hides the thing (commander: outside the clearings; ego: beyond ~15 m).
    Markers draw through the fog (fog: false) and over hills (depthTest: false). Called every frame from frame() (82-frame.js).
-   Related: the small map in fog mode (drawMini, 50-input.js) and the faded map in the fog top (fogHintBuild, 70-world-view.js). ---------- */
-const FGD = { root: null, flags: [], bases: [], silh: [], mats: new Map() };
+   Related: the small map in fog mode (drawMini, 50-input.js) and the faded map in the fog top (fogHintBuild, 70-world-view.js).
+   Also here: the watch fires on your own flags (held flags light the fog, FOG_SIGHT.flag), the lanterns of steered warriors (they see
+   farther and are seen from farther: FOG_SIGHT.torch / lanternSeen) and tracks – where an enemy last vanished into the fog. ---------- */
+const FGD = { root: null, flags: [], bases: [], silh: [], fires: [], lamps: [], tracks: [], trackSp: [], mats: new Map() };
+function fogGlowCanvas(inner, outer) {
+  const c = cnv(64, 64),
+    x = c.getContext('2d'),
+    g = x.createRadialGradient(32, 32, 2, 32, 32, 31);
+  g.addColorStop(0, inner);
+  g.addColorStop(0.35, outer);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 64, 64);
+  return c;
+}
+function fogTrackCanvas() {
+  // a faint red figure with a question mark: "here someone disappeared"
+  const c = fogSilhouetteCanvas('rgba(255,90,74,0.85)'),
+    x = c.getContext('2d');
+  x.font = 'bold 30px sans-serif';
+  x.textAlign = 'center';
+  x.fillStyle = '#fff';
+  x.fillText('?', 32, 74);
+  return c;
+}
 function fogGuideMat(key, draw) {
   let m = FGD.mats.get(key);
   if (!m) {
@@ -55,7 +78,7 @@ function fogGuidesTick() {
     s = V.latest,
     a = Math.min(1, FOG.k);
   // hidden = the fog really covers it from where you look; size = about the same on screen at any distance
-  const hidden = (x, z) => (ego ? Math.hypot(x - cam.x, z - cam.z) > 15 : fogVis(x, z) < 0.45),
+  const hidden = (x, z) => (ego ? Math.hypot(x - cam.x, z - cam.z) > FOG_EGO.guide : fogVis(x, z) < 0.45),
     size = (x, y, z, k) =>
       ego ? clamp(Math.hypot(x - cam.x, y - cam.y, z - cam.z) * 0.06 * k, 1.2, 6) : clamp(camS.dist * 0.075 * k, 2.2, 6);
   FLAGS.forEach((F, i) => {
@@ -100,4 +123,67 @@ function fogGuidesTick() {
       sp.scale.set(sc * 0.67, sc, 1);
     }
   for (let i = n; i < FGD.silh.length; i++) FGD.silh[i].visible = false;
+  // watch fires on the flags you hold: they light the fog around them
+  let nf = 0;
+  if (s && s.f)
+    FLAGS.forEach((F, i) => {
+      if (!s.f[i] || s.f[i][0] !== V.myTeam) return;
+      const sp = fogGuideSprite(FGD.fires, nf++),
+        fl = 0.85 + 0.15 * Math.sin(clock * 9 + i * 1.7) * Math.sin(clock * 5.3 + i);
+      sp.visible = true;
+      sp.material = fogGuideMat('fire', () => fogGlowCanvas('rgba(255,236,170,1)', 'rgba(255,140,40,0.55)'));
+      sp.material.blending = THREE.AdditiveBlending;
+      sp.material.depthTest = true; // a real fire: hidden behind hills, unlike the markers
+      sp.material.opacity = 0.85 * a;
+      sp.position.set(F.x, groundY(F.x, F.z) + 4.6, F.z);
+      sp.scale.set(2.6 * fl, 2.6 * fl, 1);
+    });
+  for (let i = nf; i < FGD.fires.length; i++) FGD.fires[i].visible = false;
+  // lanterns of steered warriors (yours in the commander view, enemies' when they are within the lantern's reach of your warriors)
+  let nl = 0;
+  const mine = [];
+  for (const u of V.units.values()) if (u.team === V.myTeam) mine.push(u.g.position);
+  if (V.poss) mine.push({ x: V.poss.x, z: V.poss.z });
+  for (const u of V.units.values()) {
+    if (!u.isPoss || !u.g.parent || (V.poss && u.id === V.poss.id)) continue;
+    const p = u.g.position;
+    if (u.team !== V.myTeam && !mine.some(q => Math.hypot(q.x - p.x, q.z - p.z) < FOG_SIGHT.lanternSeen)) continue;
+    const sp = fogGuideSprite(FGD.lamps, nl++);
+    sp.visible = true;
+    sp.material = fogGuideMat('lamp', () => fogGlowCanvas('rgba(255,248,210,1)', 'rgba(255,190,90,0.5)'));
+    sp.material.blending = THREE.AdditiveBlending;
+    sp.material.depthTest = true;
+    sp.material.opacity = 0.9 * a;
+    sp.position.set(p.x, p.y + 2.3, p.z);
+    sp.scale.set(2.2, 2.2, 1);
+  }
+  for (let i = nl; i < FGD.lamps.length; i++) FGD.lamps[i].visible = false;
+  // tracks: an enemy that slips into the fog leaves a faint marker where it was last seen (as long as the computer remembers, too)
+  const tn = now(),
+    life = FOG_SIGHT.memory * 1000;
+  for (const u of V.units.values()) {
+    if (u.team === V.myTeam) continue;
+    const hid = !!u.fogHid;
+    if (hid && u.fogWas === false && u.g.parent) {
+      const p = u.g.position,
+        near = FGD.tracks.find(t => Math.hypot(t.x - p.x, t.z - p.z) < 3);
+      if (near) Object.assign(near, { x: p.x, y: p.y, z: p.z, t: tn });
+      else FGD.tracks.push({ x: p.x, y: p.y, z: p.z, t: tn });
+      if (FGD.tracks.length > 30) FGD.tracks.shift();
+    }
+    u.fogWas = hid;
+  }
+  FGD.tracks = FGD.tracks.filter(t => tn - t.t < life);
+  let nt = 0;
+  for (const t of FGD.tracks) {
+    if (!hidden(t.x, t.z)) continue; // where you can see again, the track has done its job
+    const sp = fogGuideSprite(FGD.trackSp, nt++),
+      sc = size(t.x, t.y + 1.4, t.z, 0.65);
+    sp.visible = true;
+    sp.material = fogGuideMat('track', fogTrackCanvas);
+    sp.material.opacity = 0.6 * a * (1 - (tn - t.t) / life);
+    sp.position.set(t.x, t.y + 1.2 + sc * 0.5, t.z);
+    sp.scale.set(sc * 0.67, sc, 1);
+  }
+  for (let i = nt; i < FGD.trackSp.length; i++) FGD.trackSp[i].visible = false;
 }
