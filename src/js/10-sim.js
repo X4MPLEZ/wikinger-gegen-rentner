@@ -1234,6 +1234,7 @@ function ramTick(G, u, byId) {
     u.ramQ = null;
   }
 }
+const EGO_MAX_V = 34; // m/s: how fast the host lets a steered warrior move after the client's position (dash is 27)
 function possStep(G, u, byId) {
   const T = G.teams[u.team],
     In = T.posIn,
@@ -1329,6 +1330,7 @@ function possStep(G, u, byId) {
     u.tgt = -1;
     return;
   }
+  if (In && In.id === u.id && Number.isFinite(In.n)) T.inN = In.n; // acknowledged in the snapshot (ia): "I have seen packet n"
   if (K.worm && u.ws) {
     if (In && In.id === u.id) {
       if (u.ls === undefined) u.ls = In.s;
@@ -1388,17 +1390,30 @@ function possStep(G, u, byId) {
       (!u.airAck || In.air === u.airAck) &&
       !In.flying
     ) {
+      // The warrior goes where the client says, at most EGO_MAX_V fast: an honest client never exceeds 27 m/s (dash), so late packets
+      // after a stall are caught up within a few ticks, while a client that claims more is held to that speed. Whatever the host does
+      // not follow shows up in the client's reconciliation (51-ego.js) and pulls the client back.
       const d = Math.hypot(In.x - u.x, In.z - u.z);
       if (d > 0.02) {
         const old = { x: u.x, z: u.z };
         if (
-          d < 6 &&
-          (walkable(In.x, In.z) ||
-            (edgeSlide(In.x, In.z) && (G.t < (u.dashUntil || 0) || groundY(In.x, In.z) <= groundY(u.x, u.z) + 0.03)) ||
-            fallZone(In.x, In.z))
+          walkable(In.x, In.z) ||
+          (edgeSlide(In.x, In.z) && (G.t < (u.dashUntil || 0) || groundY(In.x, In.z) <= groundY(u.x, u.z) + 0.03)) ||
+          fallZone(In.x, In.z)
         ) {
-          const scale = Math.min(45 / Math.max(0.01, d / DT), 1);
-          advanceGround(u, In.x, In.z, ((In.x - u.x) / DT) * scale, ((In.z - u.z) / DT) * scale, DT, G.t < (u.dashUntil || 0), true);
+          // in steps of at most half a metre, like the client walks: one big stride over a dune would count as a fall
+          const mv = Math.min(d, EGO_MAX_V * DT),
+            n = Math.max(1, Math.ceil(mv / 0.45)),
+            vx = ((In.x - u.x) / d) * (mv / DT),
+            vz = ((In.z - u.z) / d) * (mv / DT),
+            dashing = G.t < (u.dashUntil || 0);
+          for (let i = 1; i <= n; i++) {
+            const k = (mv / d) * (i / n),
+              bx = u.x,
+              bz = u.z;
+            if (advanceGround(u, old.x + (In.x - old.x) * k, old.z + (In.z - old.z) * k, vx, vz, DT / n, dashing, true)) break; // airborne now
+            if (u.x === bx && u.z === bz) break; // blocked
+          }
         } else {
           const s = Math.min(d, K.speed * 3 * DT);
           const nx = u.x + ((In.x - u.x) / d) * s,

@@ -285,6 +285,7 @@ function processSnap(s) {
       if (!os || Math.abs(os.x - sx) + Math.abs(os.z - sz) > 0.05) V.poss.srvT = now();
       V.poss.srvS = now();
       V.poss.srv = { x: sx, z: sz };
+      V.poss.srvN = s.ia ? s.ia[V.myTeam] : undefined; // which of our input packets this position answers
     }
     if (pe && e[7] >> 8 !== pe[7] >> 8 && e[7] & 2) startRagdoll(u, pe[2] / 10, pe[3] / 10);
     u.frenzy = (e[7] & 64) === 64;

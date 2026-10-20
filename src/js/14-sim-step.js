@@ -1299,6 +1299,7 @@ function snapOf(G) {
       : null,
     fl: G.flagMv ? [G.flagMv, FLAGS.map(F => [Math.round(F.x * 10), Math.round(F.z * 10)])] : null,
     hq: [T0.hq.slice(), T1.hq.slice()],
+    ia: [T0.inN | 0, T1.inN | 0], // last ego input packet the host applied per team (reconciliation, 51-ego.js)
     dz: G.dz ? G.dz.slice() : [],
     ge: G.ge ? G.ge.slice() : [],
     it: (G.items || []).map(i => [i.id, i.ty, Math.round(i.x * 10), Math.round(i.z * 10)]),

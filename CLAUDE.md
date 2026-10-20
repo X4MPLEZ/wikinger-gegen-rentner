@@ -100,8 +100,10 @@ Every file starts with a short header comment saying what is in it.
   once per new snapshot (one-shot events: hits, deaths, banners) → the view ticks (world, worms, hero, fog, HUD, sound) → render.
 - **Commands:** commander input (50-input) → `sendCmd({t: 'order' | 'spawn' | 'auto' | 'rally' | 'perk' | 'poss' | 'unposs', ...})`
   → `applyCmd(G, team, c)` (10-sim). Online the guest numbers its commands (`s`) and resends them until the host acks them.
-- **Ego mode:** `egoUpdate()` (51-ego) predicts the movement locally and sends an input packet every frame (`{id, x, z, y, a, s, j, g, h, ...}`;
-  `a s j g h` are press counters for attack, special, jump, grenade, hero) → host `possStep()` (10-sim) validates and applies it.
+- **Ego mode:** `egoUpdate()` (51-ego) predicts the movement locally and sends an input packet every frame (`{id, n, x, z, y, a, s, j, g, h, ...}`;
+  `n` is the packet number, `a s j g h` are press counters for attack, special, jump, grenade, hero) → host `possStep()` (10-sim) validates
+  and applies it (position taken as sent, at most `EGO_MAX_V`). The snapshot answers with the last applied packet number (`ia`); the
+  guest compares the host's position with what it sent in that packet and only corrects itself for a real disagreement (never for lag).
 - **The AI** plays through the same `applyCmd` and posIn input packets as a human.
 
 ## Key state
@@ -145,7 +147,8 @@ Every file starts with a short header comment saying what is in it.
   Pattern: copy a small one (`t_chaos.py` for pure simulation checks with `__wvr.newGame` + `__wvr.step`, `t_ux.py` for UI flows).
 - Simulation tests do not need rendering: build a state with `W.newGame([...], seed, chaos, {squad: false})`, place units, call `W.step(G)`.
 - Screenshots and logs land in `tests/out/`. Look at screenshots for visual changes (and at both phone orientations).
-- `tests/mp/mp_net.py` plays two pages against each other over local PeerJS/MQTT servers (quit, line drop, rejoin).
+- `tests/mp/mp_net.py` plays two pages against each other over local PeerJS/MQTT servers (quit, line drop, rejoin);
+  `tests/mp/mp_recon.py` checks the ego movement online (no pull-backs on a clear walk or after a lag burst, knock-downs, a speed cheat).
 
 ## Release (maintainer's workflow)
 

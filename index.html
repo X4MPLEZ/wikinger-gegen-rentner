@@ -6358,6 +6358,7 @@ function ramTick(G, u, byId) {
     u.ramQ = null;
   }
 }
+const EGO_MAX_V = 34; // m/s: how fast the host lets a steered warrior move after the client's position (dash is 27)
 function possStep(G, u, byId) {
   const T = G.teams[u.team],
     In = T.posIn,
@@ -6453,6 +6454,7 @@ function possStep(G, u, byId) {
     u.tgt = -1;
     return;
   }
+  if (In && In.id === u.id && Number.isFinite(In.n)) T.inN = In.n; // acknowledged in the snapshot (ia): "I have seen packet n"
   if (K.worm && u.ws) {
     if (In && In.id === u.id) {
       if (u.ls === undefined) u.ls = In.s;
@@ -6512,17 +6514,30 @@ function possStep(G, u, byId) {
       (!u.airAck || In.air === u.airAck) &&
       !In.flying
     ) {
+      // The warrior goes where the client says, at most EGO_MAX_V fast: an honest client never exceeds 27 m/s (dash), so late packets
+      // after a stall are caught up within a few ticks, while a client that claims more is held to that speed. Whatever the host does
+      // not follow shows up in the client's reconciliation (51-ego.js) and pulls the client back.
       const d = Math.hypot(In.x - u.x, In.z - u.z);
       if (d > 0.02) {
         const old = { x: u.x, z: u.z };
         if (
-          d < 6 &&
-          (walkable(In.x, In.z) ||
-            (edgeSlide(In.x, In.z) && (G.t < (u.dashUntil || 0) || groundY(In.x, In.z) <= groundY(u.x, u.z) + 0.03)) ||
-            fallZone(In.x, In.z))
+          walkable(In.x, In.z) ||
+          (edgeSlide(In.x, In.z) && (G.t < (u.dashUntil || 0) || groundY(In.x, In.z) <= groundY(u.x, u.z) + 0.03)) ||
+          fallZone(In.x, In.z)
         ) {
-          const scale = Math.min(45 / Math.max(0.01, d / DT), 1);
-          advanceGround(u, In.x, In.z, ((In.x - u.x) / DT) * scale, ((In.z - u.z) / DT) * scale, DT, G.t < (u.dashUntil || 0), true);
+          // in steps of at most half a metre, like the client walks: one big stride over a dune would count as a fall
+          const mv = Math.min(d, EGO_MAX_V * DT),
+            n = Math.max(1, Math.ceil(mv / 0.45)),
+            vx = ((In.x - u.x) / d) * (mv / DT),
+            vz = ((In.z - u.z) / d) * (mv / DT),
+            dashing = G.t < (u.dashUntil || 0);
+          for (let i = 1; i <= n; i++) {
+            const k = (mv / d) * (i / n),
+              bx = u.x,
+              bz = u.z;
+            if (advanceGround(u, old.x + (In.x - old.x) * k, old.z + (In.z - old.z) * k, vx, vz, DT / n, dashing, true)) break; // airborne now
+            if (u.x === bx && u.z === bz) break; // blocked
+          }
         } else {
           const s = Math.min(d, K.speed * 3 * DT);
           const nx = u.x + ((In.x - u.x) / d) * s,
@@ -9151,6 +9166,7 @@ function snapOf(G) {
       : null,
     fl: G.flagMv ? [G.flagMv, FLAGS.map(F => [Math.round(F.x * 10), Math.round(F.z * 10)])] : null,
     hq: [T0.hq.slice(), T1.hq.slice()],
+    ia: [T0.inN | 0, T1.inN | 0], // last ego input packet the host applied per team (reconciliation, 51-ego.js)
     dz: G.dz ? G.dz.slice() : [],
     ge: G.ge ? G.ge.slice() : [],
     it: (G.items || []).map(i => [i.id, i.ty, Math.round(i.x * 10), Math.round(i.z * 10)]),
@@ -18121,6 +18137,7 @@ function processSnap(s) {
       if (!os || Math.abs(os.x - sx) + Math.abs(os.z - sz) > 0.05) V.poss.srvT = now();
       V.poss.srvS = now();
       V.poss.srv = { x: sx, z: sz };
+      V.poss.srvN = s.ia ? s.ia[V.myTeam] : undefined; // which of our input packets this position answers
     }
     if (pe && e[7] >> 8 !== pe[7] >> 8 && e[7] & 2) startRagdoll(u, pe[2] / 10, pe[3] / 10);
     u.frenzy = (e[7] & 64) === 64;
@@ -22638,18 +22655,49 @@ function egoUpdate(dt) {
   P.x = clampX(P.x);
   P.z = clampZ(P.z);
   egoSound(P, dt, Math.hypot(P.x - sx0, P.z - sz0));
-  // Safety net: fresh snapshots keep showing the host's ego standing still while we are well away from it (it could not follow
-  // us there): drift back, so our blows never come from a spot the host does not know about.
-  if (P.srv && !frozen && !P.air && !P.pj && !(P.dashT > 0) && !KINDS[P.k].worm) {
-    const t = now(),
-      gap = Math.hypot(P.x - P.srv.x, P.z - P.srv.z);
-    if (gap <= 0.9 || P.gapS === undefined) P.gapS = t;
-    else if (t - P.gapS > 700 && t - (P.srvT || t) > 700 && t - (P.srvS || 0) < 250) {
-      const k = 1 - Math.exp(-dt * 5);
-      P.x = lerp(P.x, P.srv.x, k);
-      P.z = lerp(P.z, P.srv.z, k);
+  // Reconciliation with the host. The host takes the position we send (within its limits) and tells us in every snapshot which
+  // input packet it last applied (ia). We compare its position with what we had sent in that very packet: a difference means the host
+  // could not follow us there (an edge or obstacle it sees differently, its speed limit, a shove) – only then we drift over by that
+  // offset. Latency alone never pulls us back: a late answer is compared with the old packet it answers, not with where we are now.
+  if (P.srv && P.srvN !== undefined && !frozen && !P.air && !P.pj && !(P.dashT > 0) && !KINDS[P.k].worm) {
+    if (P.srvS !== P.recS) {
+      // a new snapshot
+      P.recS = P.srvS;
+      let h = null;
+      for (let i = (P.hist || []).length - 1; i >= 0 && !h; i--) if (P.hist[i][0] === P.srvN) h = P.hist[i];
+      if (h) {
+        const ex = P.srv.x - h[1],
+          ez = P.srv.z - h[2],
+          err = Math.hypot(ex, ez);
+        if (err < 0.35) {
+          P.errC = 0;
+          P.errL = undefined;
+          P.pend = null;
+        } else {
+          // right after a stall the host is still on its way (it follows at EGO_MAX_V): no verdict while the gap keeps closing.
+          // A steady offset (the host follows us, but displaced) is taken back quickly; a growing one (the host cannot keep up with
+          // the speed we claim) only gently, so the delayed feedback cannot swing.
+          const closing = P.errL !== undefined && err < P.errL - 0.2,
+            gain = P.errL !== undefined && err > P.errL + 0.2 ? 0.2 : 0.5;
+          if (!closing) P.errC = (P.errC || 0) + 1;
+          if (P.errC >= 2) P.pend = { x: ex * gain, z: ez * gain };
+          P.errL = err;
+        }
+      }
     }
-  } else P.gapS = now();
+    if (P.pend) {
+      const k = 1 - Math.exp(-dt * 10),
+        mx = P.pend.x * k,
+        mz = P.pend.z * k;
+      P.x += mx;
+      P.z += mz;
+      P.pend.x -= mx;
+      P.pend.z -= mz;
+      P.pullN = (P.pullN || 0) + 1; // diagnostics (tests): how often and how far the host corrected us
+      P.pullD = (P.pullD || 0) + Math.hypot(mx, mz);
+      if (Math.hypot(P.pend.x, P.pend.z) < 0.02) P.pend = null;
+    }
+  } else P.pend = null;
   P.yaw = P.camYaw;
   P.moving = !frozen && (jl > 0.15 || P.dashT > 0);
   {
@@ -22670,8 +22718,10 @@ function egoUpdate(dt) {
     }
     P.wasJump = (P.jumpT || 0) > 0;
   }
+  P.n = ((P.n || 0) + 1) % 100000; // packet number; the host answers with it (snapshot ia), see the reconciliation above
   const input = {
     id: P.id,
+    n: P.n,
     x: +P.x.toFixed(2),
     z: +P.z.toFixed(2),
     y: +P.yaw.toFixed(3),
@@ -22714,6 +22764,8 @@ function egoUpdate(dt) {
       cnt.hidden = !nc;
     }
   }
+  (P.hist || (P.hist = [])).push([P.n, input.x, input.z]); // what we sent, by packet number (about ten seconds of it)
+  if (P.hist.length > 600) P.hist.splice(0, 100);
   if (V.mode === 'ai' || V.mode === 'host') G.teams[V.myTeam].posIn = input;
   else if (NET.r && now() - EG.sendT > 66) {
     EG.sendT = now();
@@ -24183,7 +24235,7 @@ async function openRoom(code, role) {
   return r;
 }
 /* open every available transport at once (direct P2P + Claude room), so devices that ended up on different ones still meet */
-const NET_VER = 41; // bump when snapshots, commands or presence change shape: two different versions refuse to play together
+const NET_VER = 42; // bump when snapshots, commands or presence change shape: two different versions refuse to play together
 async function openClaude(code, role) {
   const vr = await viewerRoom();
   if (!vr) return null;

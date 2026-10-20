@@ -1261,18 +1261,49 @@ function egoUpdate(dt) {
   P.x = clampX(P.x);
   P.z = clampZ(P.z);
   egoSound(P, dt, Math.hypot(P.x - sx0, P.z - sz0));
-  // Safety net: fresh snapshots keep showing the host's ego standing still while we are well away from it (it could not follow
-  // us there): drift back, so our blows never come from a spot the host does not know about.
-  if (P.srv && !frozen && !P.air && !P.pj && !(P.dashT > 0) && !KINDS[P.k].worm) {
-    const t = now(),
-      gap = Math.hypot(P.x - P.srv.x, P.z - P.srv.z);
-    if (gap <= 0.9 || P.gapS === undefined) P.gapS = t;
-    else if (t - P.gapS > 700 && t - (P.srvT || t) > 700 && t - (P.srvS || 0) < 250) {
-      const k = 1 - Math.exp(-dt * 5);
-      P.x = lerp(P.x, P.srv.x, k);
-      P.z = lerp(P.z, P.srv.z, k);
+  // Reconciliation with the host. The host takes the position we send (within its limits) and tells us in every snapshot which
+  // input packet it last applied (ia). We compare its position with what we had sent in that very packet: a difference means the host
+  // could not follow us there (an edge or obstacle it sees differently, its speed limit, a shove) – only then we drift over by that
+  // offset. Latency alone never pulls us back: a late answer is compared with the old packet it answers, not with where we are now.
+  if (P.srv && P.srvN !== undefined && !frozen && !P.air && !P.pj && !(P.dashT > 0) && !KINDS[P.k].worm) {
+    if (P.srvS !== P.recS) {
+      // a new snapshot
+      P.recS = P.srvS;
+      let h = null;
+      for (let i = (P.hist || []).length - 1; i >= 0 && !h; i--) if (P.hist[i][0] === P.srvN) h = P.hist[i];
+      if (h) {
+        const ex = P.srv.x - h[1],
+          ez = P.srv.z - h[2],
+          err = Math.hypot(ex, ez);
+        if (err < 0.35) {
+          P.errC = 0;
+          P.errL = undefined;
+          P.pend = null;
+        } else {
+          // right after a stall the host is still on its way (it follows at EGO_MAX_V): no verdict while the gap keeps closing.
+          // A steady offset (the host follows us, but displaced) is taken back quickly; a growing one (the host cannot keep up with
+          // the speed we claim) only gently, so the delayed feedback cannot swing.
+          const closing = P.errL !== undefined && err < P.errL - 0.2,
+            gain = P.errL !== undefined && err > P.errL + 0.2 ? 0.2 : 0.5;
+          if (!closing) P.errC = (P.errC || 0) + 1;
+          if (P.errC >= 2) P.pend = { x: ex * gain, z: ez * gain };
+          P.errL = err;
+        }
+      }
     }
-  } else P.gapS = now();
+    if (P.pend) {
+      const k = 1 - Math.exp(-dt * 10),
+        mx = P.pend.x * k,
+        mz = P.pend.z * k;
+      P.x += mx;
+      P.z += mz;
+      P.pend.x -= mx;
+      P.pend.z -= mz;
+      P.pullN = (P.pullN || 0) + 1; // diagnostics (tests): how often and how far the host corrected us
+      P.pullD = (P.pullD || 0) + Math.hypot(mx, mz);
+      if (Math.hypot(P.pend.x, P.pend.z) < 0.02) P.pend = null;
+    }
+  } else P.pend = null;
   P.yaw = P.camYaw;
   P.moving = !frozen && (jl > 0.15 || P.dashT > 0);
   {
@@ -1293,8 +1324,10 @@ function egoUpdate(dt) {
     }
     P.wasJump = (P.jumpT || 0) > 0;
   }
+  P.n = ((P.n || 0) + 1) % 100000; // packet number; the host answers with it (snapshot ia), see the reconciliation above
   const input = {
     id: P.id,
+    n: P.n,
     x: +P.x.toFixed(2),
     z: +P.z.toFixed(2),
     y: +P.yaw.toFixed(3),
@@ -1337,6 +1370,8 @@ function egoUpdate(dt) {
       cnt.hidden = !nc;
     }
   }
+  (P.hist || (P.hist = [])).push([P.n, input.x, input.z]); // what we sent, by packet number (about ten seconds of it)
+  if (P.hist.length > 600) P.hist.splice(0, 100);
   if (V.mode === 'ai' || V.mode === 'host') G.teams[V.myTeam].posIn = input;
   else if (NET.r && now() - EG.sendT > 66) {
     EG.sendT = now();
