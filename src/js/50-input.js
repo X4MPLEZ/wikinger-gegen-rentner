@@ -7,6 +7,15 @@ const tmpV = new THREE.Vector3(),
   ray = new THREE.Raycaster(),
   ndc = new THREE.Vector2();
 function applyCam() {
+  if (camS.fix) {
+    // test/screenshot hook: a fixed camera { p: [x, y, z], t: [x, y, z] } (tools set it through __wvr.camS)
+    camera.position.fromArray(camS.fix.p);
+    camera.lookAt(...camS.fix.t);
+    camera.updateMatrixWorld();
+    sun.target.position.set(camS.fix.t[0], 0, camS.fix.t[2]);
+    sun.position.copy(sun.target.position).add(SUN_OFF);
+    return;
+  }
   camS.x = clamp(camS.x, -HALF_W, HALF_W);
   camS.z = clamp(camS.z, -HALF_H - 4, HALF_H + 4);
   camS.dist = clamp(camS.dist, 14, CAM_MAX);

@@ -999,5 +999,8 @@
   "Alle Tagesaufgaben geschafft · +{0} Juwelen": "일일 미션 모두 완료 · 보석 +{0}",
   "Tagesaufgabe: {0} · +{1} Juwelen": "일일 미션: {0} · 보석 +{1}",
   "Zum Hauptmenü": "메인 메뉴로",
-  "Aufgaben": "미션"
+  "Aufgaben": "미션",
+  "Sehr hoch": "울트라",
+  "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "부드러운 음영, 피사계 심도, 빛 번짐 효과 – 고성능 기기용.",
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "효과에는 WebGL 2가 필요합니다 – 이 기기에서는 효과 없이 울트라로 표시됩니다."
 }

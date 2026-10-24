@@ -138,7 +138,7 @@ function makeUG() {
         [0.07, 0.81],
         [0, 0.82],
       ],
-      18
+      24
     ),
     dress: lathe(
       [
@@ -153,52 +153,52 @@ function makeUG() {
         [0.09, 0.88],
         [0, 0.9],
       ],
-      18
+      24
     ),
-    leg: new THREE.CylinderGeometry(0.058, 0.05, 0.46, 8).translate(0, -0.23, 0),
+    leg: new THREE.CylinderGeometry(0.058, 0.05, 0.46, 12).translate(0, -0.23, 0),
     boot: rbox(0.13, 0.1, 0.215, 0.042, 4).translate(0, -0.48, 0.035),
-    arm: new THREE.CylinderGeometry(0.047, 0.04, 0.44, 8).translate(0, -0.22, 0),
-    upArm: new THREE.CylinderGeometry(0.047, 0.044, 0.23, 8).translate(0, -0.115, 0),
-    foreArm: new THREE.CylinderGeometry(0.044, 0.04, 0.24, 8).translate(0, -0.12, 0),
-    elbow: new THREE.SphereGeometry(0.046, 6, 4),
-    thigh: new THREE.CylinderGeometry(0.058, 0.054, 0.24, 8).translate(0, -0.12, 0),
-    shin: new THREE.CylinderGeometry(0.054, 0.05, 0.25, 8).translate(0, -0.125, 0),
-    knee: new THREE.SphereGeometry(0.055, 6, 4),
-    shoulder: new THREE.SphereGeometry(0.065, 8, 6),
-    hand: new THREE.SphereGeometry(0.055, 8, 6).translate(0, -0.46, 0),
-    belt: new THREE.TorusGeometry(0.195, 0.03, 6, 18).rotateX(Math.PI / 2),
-    head: new THREE.SphereGeometry(0.58, 24, 16),
+    arm: new THREE.CylinderGeometry(0.047, 0.04, 0.44, 12).translate(0, -0.22, 0),
+    upArm: new THREE.CylinderGeometry(0.047, 0.044, 0.23, 12).translate(0, -0.115, 0),
+    foreArm: new THREE.CylinderGeometry(0.044, 0.04, 0.24, 12).translate(0, -0.12, 0),
+    elbow: new THREE.SphereGeometry(0.046, 10, 7),
+    thigh: new THREE.CylinderGeometry(0.058, 0.054, 0.24, 12).translate(0, -0.12, 0),
+    shin: new THREE.CylinderGeometry(0.054, 0.05, 0.25, 12).translate(0, -0.125, 0),
+    knee: new THREE.SphereGeometry(0.055, 10, 7),
+    shoulder: new THREE.SphereGeometry(0.065, 12, 9),
+    hand: new THREE.SphereGeometry(0.055, 12, 9).translate(0, -0.46, 0),
+    belt: new THREE.TorusGeometry(0.195, 0.03, 8, 26).rotateX(Math.PI / 2),
+    head: new THREE.SphereGeometry(0.58, 32, 24),
     blob: new THREE.CircleGeometry(0.5, 18).rotateX(-Math.PI / 2),
     ring: new THREE.RingGeometry(0.78, 0.94, 32).rotateX(-Math.PI / 2),
     hpbg: new THREE.PlaneGeometry(1.14, 0.18),
     hpfg: new THREE.PlaneGeometry(1, 0.1).translate(0.5, 0, 0),
     wheel: new THREE.CylinderGeometry(0.17, 0.17, 0.08, 14).rotateZ(Math.PI / 2),
-    ear: new THREE.SphereGeometry(0.13, 10, 8).scale(0.55, 1, 0.8),
+    ear: new THREE.SphereGeometry(0.13, 14, 10).scale(0.55, 1, 0.8),
     sole: new THREE.BoxGeometry(0.142, 0.032, 0.232).translate(0, -0.53, 0.04),
-    thumb: new THREE.SphereGeometry(0.026, 6, 5).translate(0.035, -0.43, 0.03),
-    trim: new THREE.TorusGeometry(0.212, 0.022, 5, 20).rotateX(Math.PI / 2),
-    collar: new THREE.TorusGeometry(0.1, 0.028, 6, 16).rotateX(Math.PI / 2),
+    thumb: new THREE.SphereGeometry(0.026, 8, 6).translate(0.035, -0.43, 0.03),
+    trim: new THREE.TorusGeometry(0.212, 0.022, 7, 28).rotateX(Math.PI / 2),
+    collar: new THREE.TorusGeometry(0.1, 0.028, 8, 22).rotateX(Math.PI / 2),
     button: new THREE.SphereGeometry(0.022, 6, 5),
-    bracer: new THREE.CylinderGeometry(0.056, 0.052, 0.12, 10),
-    mantle: new THREE.TorusGeometry(0.2, 0.075, 7, 16, Math.PI).rotateX(Math.PI / 2).rotateY(Math.PI),
-    beard: new THREE.ConeGeometry(0.34, 0.62, 10).rotateX(Math.PI),
-    braid: new THREE.SphereGeometry(0.075, 8, 6),
+    bracer: new THREE.CylinderGeometry(0.056, 0.052, 0.12, 14),
+    mantle: new THREE.TorusGeometry(0.2, 0.075, 10, 22, Math.PI).rotateX(Math.PI / 2).rotateY(Math.PI),
+    beard: new THREE.ConeGeometry(0.34, 0.62, 16).rotateX(Math.PI),
+    braid: new THREE.SphereGeometry(0.075, 12, 8),
     buckle: new THREE.BoxGeometry(0.08, 0.065, 0.03),
-    cuff: new THREE.TorusGeometry(0.066, 0.03, 5, 12).rotateX(Math.PI / 2),
+    cuff: new THREE.TorusGeometry(0.066, 0.03, 7, 16).rotateX(Math.PI / 2),
     wrap: new THREE.TorusGeometry(0.056, 0.012, 3, 10).rotateX(Math.PI / 2),
-    hem: new THREE.CylinderGeometry(0.063, 0.063, 0.05, 10),
-    sleeve: new THREE.TorusGeometry(0.046, 0.016, 5, 12).rotateX(Math.PI / 2),
-    tuft: new THREE.SphereGeometry(0.06, 6, 4),
-    pouch: new THREE.SphereGeometry(0.06, 6, 4).scale(0.8, 0.9, 0.45),
+    hem: new THREE.CylinderGeometry(0.063, 0.063, 0.05, 14),
+    sleeve: new THREE.TorusGeometry(0.046, 0.016, 6, 16).rotateX(Math.PI / 2),
+    tuft: new THREE.SphereGeometry(0.06, 9, 6),
+    pouch: new THREE.SphereGeometry(0.06, 9, 6).scale(0.8, 0.9, 0.45),
     armring: new THREE.TorusGeometry(0.05, 0.012, 4, 12).rotateX(Math.PI / 2),
-    bead: new THREE.SphereGeometry(0.045, 8, 6),
-    band: new THREE.TorusGeometry(0.545, 0.045, 6, 26).rotateX(Math.PI / 2).rotateX(0.18),
+    bead: new THREE.SphereGeometry(0.045, 10, 8),
+    band: new THREE.TorusGeometry(0.545, 0.045, 8, 36).rotateX(Math.PI / 2).rotateX(0.18),
     pocket: rbox(0.09, 0.08, 0.02, 0.008, 4),
     shirtTip: new THREE.ConeGeometry(0.035, 0.08, 3),
     pearl: new THREE.SphereGeometry(0.026, 7, 5),
-    apron: new THREE.CylinderGeometry(0.247, 0.33, 0.36, 12, 1, true, -0.6, 1.2),
+    apron: new THREE.CylinderGeometry(0.247, 0.33, 0.36, 16, 1, true, -0.6, 1.2),
     lace: new THREE.CylinderGeometry(0.335, 0.338, 0.035, 12, 1, true, -0.62, 1.24),
-    rivet: new THREE.SphereGeometry(0.045, 5, 3),
+    rivet: new THREE.SphereGeometry(0.045, 7, 5),
   };
 }
 const UG = makeUG();
@@ -210,7 +210,7 @@ const blobMat = basic(0x000000, 0.25),
 const hpMats = [new THREE.MeshBasicMaterial({ color: lin(0x71c271) }), new THREE.MeshBasicMaterial({ color: lin(0xe3604c) })];
 const headMats = [];
 function headMat(k) {
-  return headMats[k] || (headMats[k] = new THREE.MeshLambertMaterial({ map: ctex(FACE_CANVAS[k] || drawFace(k)) }));
+  return headMats[k] || (headMats[k] = figMat(new THREE.MeshLambertMaterial({ map: ctex(FACE_CANVAS[k] || drawFace(k)) })));
 }
 const hpGroup = new THREE.Group();
 hpGroup.visible = false;
@@ -237,35 +237,53 @@ const HPB = (() => {
 /* Low-detail unit models (LOD): every kind is built once more with roughly half the segments on spheres, cylinders,
    cones, tori and lathes (about 40 % of the triangles). Light tiers draw all units with them, the other tiers only
    distant units. Same parts, same materials, so the instanced drawing just swaps the geometry. */
-function withLowPoly(fn) {
-  const caps = {
-      SphereGeometry: [
-        [1, 6],
-        [2, 4],
-      ],
-      CylinderGeometry: [[3, 5]],
-      ConeGeometry: [[2, 4]],
-      TorusGeometry: [
-        [2, 3],
-        [3, 6],
-      ],
-      LatheGeometry: [[1, 6]],
-      CircleGeometry: [[1, 6]],
-    },
-    saved = {};
-  for (const name in caps) {
+// Segment counts of the standard geometries are scaled while a unit model is built: halved for the low-detail models (far away, light
+// tiers), raised for the full models so round shapes (helmets, bodies, wheels) look smooth up close. Only the vertex count changes: the
+// low model is still paired with the full one part by part.
+const SEG_ARGS = {
+  SphereGeometry: [
+    [1, 6, 40],
+    [2, 4, 28],
+  ],
+  CylinderGeometry: [[3, 5, 28]],
+  ConeGeometry: [[2, 4, 28]],
+  TorusGeometry: [
+    [2, 3, 14],
+    [3, 6, 48],
+  ],
+  LatheGeometry: [[1, 6, 32]],
+  CircleGeometry: [[1, 6, 40]],
+};
+function withSegments(mul, lo, fn) {
+  const saved = {};
+  for (const name in SEG_ARGS) {
     const C = (saved[name] = THREE[name]);
     THREE[name] = function (...a) {
-      for (const [i, min] of caps[name]) if (typeof a[i] === 'number' && a[i] > min) a[i] = Math.max(min, Math.round(a[i] * 0.5));
+      for (const [i, min, max] of SEG_ARGS[name])
+        if (typeof a[i] === 'number') {
+          if (lo && a[i] > min) a[i] = Math.max(min, Math.round(a[i] * mul));
+          else if (!lo && a[i] < max) a[i] = Math.min(max, Math.round(a[i] * mul));
+        }
       return new C(...a);
     };
   }
-  RB_LO = true;
+  if (lo) RB_LO = true;
   try {
     return fn();
   } finally {
     Object.assign(THREE, saved);
-    RB_LO = false;
+    if (lo) RB_LO = false;
+  }
+}
+const withLowPoly = fn => withSegments(0.5, true, fn);
+let SEG_HI = false;
+function withHiPoly(fn) {
+  if (RB_LO || SEG_HI) return fn();
+  SEG_HI = true;
+  try {
+    return withSegments(COARSE ? 1.25 : 1.5, false, fn); // phones: a little less (many units on screen, weaker GPUs)
+  } finally {
+    SEG_HI = false;
   }
 }
 let UG_LO = null;
@@ -619,7 +637,7 @@ const detailGeometryCache = new Map(),
    plain opaque Lambert colours are moved into vertex colours so differently coloured details can share one mesh
    and one material (unitVCMat). Animated/referenced nodes keep their identity; their static children are baked in.
    Merged geometries are cached by content, so all units of one kind share them (no per-spawn geometry uploads). */
-const unitVCMat = new THREE.MeshLambertMaterial({ vertexColors: true }),
+const unitVCMat = figMat(new THREE.MeshLambertMaterial({ vertexColors: true })),
   vcMat = unitVCMat;
 const vcOK = m =>
   !!m &&

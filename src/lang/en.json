@@ -999,5 +999,8 @@
   "Alle Tagesaufgaben geschafft · +{0} Juwelen": "All daily quests done · +{0} Gems",
   "Tagesaufgabe: {0} · +{1} Juwelen": "Daily quest: {0} · +{1} Gems",
   "Zum Hauptmenü": "Back to main menu",
-  "Aufgaben": "Quests"
+  "Aufgaben": "Quests",
+  "Sehr hoch": "Ultra",
+  "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "With soft shading, depth of field and glow – for powerful devices.",
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "The effects need WebGL 2 – this device shows Ultra without them."
 }

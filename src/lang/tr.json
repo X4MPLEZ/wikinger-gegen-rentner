@@ -999,5 +999,8 @@
   "Alle Tagesaufgaben geschafft · +{0} Juwelen": "Tüm günlük görevler tamamlandı · +{0} Elmas",
   "Tagesaufgabe: {0} · +{1} Juwelen": "Günlük görev: {0} · +{1} Elmas",
   "Zum Hauptmenü": "Ana menüye dön",
-  "Aufgaben": "Görevler"
+  "Aufgaben": "Görevler",
+  "Sehr hoch": "Ultra",
+  "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "Yumuşak gölgelendirme, alan derinliği ve parıltı ile – güçlü cihazlar için.",
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "Efektler WebGL 2 gerektirir – bu cihaz Ultra'yı efektsiz gösterir."
 }

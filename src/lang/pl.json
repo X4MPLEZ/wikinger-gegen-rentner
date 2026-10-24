@@ -999,5 +999,8 @@
   "Alle Tagesaufgaben geschafft · +{0} Juwelen": "Wszystkie zadania dnia zaliczone · +{0} klejnotów",
   "Tagesaufgabe: {0} · +{1} Juwelen": "Zadanie dnia: {0} · +{1} klejnotów",
   "Zum Hauptmenü": "Do menu głównego",
-  "Aufgaben": "Zadania"
+  "Aufgaben": "Zadania",
+  "Sehr hoch": "Ultra",
+  "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "Z miękkim cieniowaniem, głębią ostrości i poświatą – dla mocnych urządzeń.",
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "Efekty wymagają WebGL 2 – to urządzenie pokazuje Ultra bez nich."
 }

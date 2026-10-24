@@ -999,5 +999,8 @@
   "Alle Tagesaufgaben geschafft · +{0} Juwelen": "デイリーミッションをすべて達成 · +{0}ジェム",
   "Tagesaufgabe: {0} · +{1} Juwelen": "デイリーミッション：{0} · +{1}ジェム",
   "Zum Hauptmenü": "メインメニューへ",
-  "Aufgaben": "ミッション"
+  "Aufgaben": "ミッション",
+  "Sehr hoch": "ウルトラ",
+  "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "柔らかな陰影、被写界深度、グロー付き – 高性能な端末向け。",
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "エフェクトにはWebGL 2が必要です – この端末ではエフェクトなしのウルトラになります。"
 }

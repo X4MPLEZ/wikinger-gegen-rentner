@@ -8,7 +8,8 @@ const QSTART = (() => {
   try {
     const st = JSON.parse(localStorage.getItem('wvr-set') || 'null') || {},
       m = st.gfx || 'auto',
-      l = m === 'auto' ? parseInt(localStorage.getItem('wvr-qauto') ?? '-1', 10) : ({ high: 0, mid: 2, low: 4, vlow: 6 }[m] ?? -1);
+      l =
+        m === 'auto' ? parseInt(localStorage.getItem('wvr-qauto') ?? '-1', 10) : ({ ultra: 0, high: 0, mid: 2, low: 4, vlow: 6 }[m] ?? -1);
     if (l >= 0) return l;
   } catch (_) {}
   try {
@@ -35,7 +36,7 @@ if (COARSE) document.body.classList.add('touchUi');
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, COARSE ? 1.6 : 1.75));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.06;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap; // soft edges; tier changes only resize the map, never recompile shaders
 const scene = new THREE.Scene();
@@ -105,13 +106,19 @@ const clouds = (() => {
   return list;
 })();
 const matCache = {};
-/* ART STYLE: "Kinderbuch-Diorama". Flat, saturated colours, cel shading with a soft 4-step ramp, warm sun + cool sky fill,
-   dark ink outlines on figures, hand-drawn-style textures. Every lit surface uses the same toon ramp so units,
-   terrain and props read as one world. */
+/* ART STYLE: "soft toy diorama" (since v51; before: cel shading in 4 hard steps). Every lit surface still uses the toon material, but its
+   ramp is a smooth, wrapped light curve: round shapes shade softly like painted plastic toys, the shadow side stays bright and friendly.
+   Figures (units, faces) also get a sky-tinted rim light and a soft sheen from the sun (figMat below). The ramp is redrawn in place
+   (drawRamp), so changing it never recompiles a shader. */
 const TOON_RAMP = (() => {
-  // four tones with soft steps between them (the old 8-pixel ramp had unlit gaps that drew dark stripes across round shapes)
+  const t = new THREE.CanvasTexture(cnv(64, 1));
+  t.minFilter = t.magFilter = THREE.LinearFilter;
+  t.generateMipmaps = false;
+  return t;
+})();
+function drawRamp(soft) {
   const N = 64,
-    c = cnv(N, 1),
+    c = TOON_RAMP.image,
     x = c.getContext('2d'),
     img = x.createImageData(N, 1),
     bands = [
@@ -121,19 +128,22 @@ const TOON_RAMP = (() => {
       [0.74, 1],
     ];
   for (let i = 0; i < N; i++) {
-    const t = (i + 0.5) / N;
-    let v = bands[0][1];
-    for (let j = 1; j < bands.length; j++) v = lerp(v, bands[j][1], sstep(bands[j][0] - 0.03, bands[j][0] + 0.03, t));
+    const t = (i + 0.5) / N; // half-Lambert: 0.5 = the terminator
+    let v;
+    if (soft)
+      v = 0.36 + 0.64 * Math.pow(sstep(0.18, 0.97, t), 1.1); // wrapped soft light: no bands, a bright shadow side
+    else {
+      v = bands[0][1]; // the old cel look (four tones with soft steps)
+      for (let j = 1; j < bands.length; j++) v = lerp(v, bands[j][1], sstep(bands[j][0] - 0.03, bands[j][0] + 0.03, t));
+    }
     const b = Math.round(v * 255);
     img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = b;
     img.data[i * 4 + 3] = 255;
   }
   x.putImageData(img, 0, 0);
-  const t = new THREE.CanvasTexture(c);
-  t.minFilter = t.magFilter = THREE.LinearFilter;
-  t.generateMipmaps = false;
-  return t;
-})();
+  TOON_RAMP.needsUpdate = true;
+}
+drawRamp(true);
 const TOON = true;
 THREE.MeshLambertMaterial = (Lam =>
   function (o = {}) {
@@ -141,7 +151,45 @@ THREE.MeshLambertMaterial = (Lam =>
     const m = new THREE.MeshToonMaterial(Object.assign({ gradientMap: TOON_RAMP }, o));
     m.isLitFlat = true;
     return m;
-  })(THREE.MeshLambertMaterial); // every Lambert in the file becomes cel-shaded
+  })(THREE.MeshLambertMaterial); // every Lambert in the file becomes toon-lit (smooth ramp)
+/* Figure shading (units and their faces): a soft sheen where the sun hits (respects shadows: it is summed inside the light loop) and a
+   cool rim light on the silhouette, brighter on top. Strength comes from uniforms, so the graphics tiers switch it without recompiling. */
+const FIG = { k: { value: 1 }, rim: { value: 0.55 }, shine: { value: 0.24 } };
+function figInject(sh) {
+  sh.uniforms.figK = FIG.k;
+  sh.uniforms.figRim = FIG.rim;
+  sh.uniforms.figShine = FIG.shine;
+  sh.fragmentShader = sh.fragmentShader
+    .replace(
+      '#include <lights_toon_pars_fragment>',
+      THREE.ShaderChunk.lights_toon_pars_fragment
+        .replace(
+          'struct ToonMaterial',
+          'uniform float figK; uniform float figRim; uniform float figShine;\nvec3 figSpec = vec3( 0.0 );\nstruct ToonMaterial'
+        )
+        .replace(
+          'reflectedLight.directDiffuse += irradiance',
+          'figSpec += directLight.color * pow( max( dot( geometry.normal, normalize( directLight.direction + geometry.viewDir ) ), 0.0 ), 22.0 );\n\treflectedLight.directDiffuse += irradiance'
+        )
+    )
+    .replace(
+      'vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;',
+      `vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse + totalEmissiveRadiance;
+	if ( figK > 0.001 ) {
+		float figFr = pow( 1.0 - clamp( dot( geometry.normal, geometry.viewDir ), 0.0, 1.0 ), 3.0 );
+		float figUp = clamp( geometry.normal.y * 0.5 + 0.62, 0.0, 1.0 );
+		outgoingLight += figK * ( figFr * figRim * figUp * ( diffuseColor.rgb * 0.45 + vec3( 0.42, 0.48, 0.56 ) ) + figSpec * figShine );
+	}`
+    );
+}
+function figMat(m) {
+  m.onBeforeCompile = sh => {
+    figInject(sh);
+    fogInject(sh);
+  };
+  m.customProgramCacheKey = () => 'fig';
+  return m;
+}
 let LAM_MAP = null; // a skin's colour swaps, set only while a unit model is built (buildUnit in 25-worm-model.js)
 let SKIN_NOW = null; // the id of that skin: its extra pieces (skinExtras in 25-worm-model.js)
 const lam = c => {
@@ -229,11 +277,13 @@ THREE.Material.prototype.onBeforeCompile = function (sh) {
   fogInject(sh);
 }; // materials with their own hook call fogInject themselves
 // Ink outline: the same instances drawn once more, back faces only, pushed out along the normals (shares the matrix buffer)
+const INK_W = { value: 0.02 }; // outline width (tiers: thinner with the soft look)
 const INK = new THREE.MeshBasicMaterial({ color: lin(0x1c1526), side: THREE.BackSide });
 INK.onBeforeCompile = sh => {
+  sh.uniforms.inkW = INK_W;
   sh.vertexShader = sh.vertexShader
-    .replace('#include <common>', '#include <common>\nvarying float vInkD;')
-    .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(normal) * 0.028;')
+    .replace('#include <common>', '#include <common>\nvarying float vInkD;\nuniform float inkW;')
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(normal) * inkW;')
     .replace('#include <project_vertex>', '#include <project_vertex>\nvInkD = -mvPosition.z;');
   sh.fragmentShader = sh.fragmentShader
     .replace('#include <common>', '#include <common>\nvarying float vInkD;')

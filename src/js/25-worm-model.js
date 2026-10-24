@@ -602,6 +602,9 @@ function buildSkinned(k, id) {
   }
 }
 function buildUnitRaw(k) {
+  return withHiPoly(() => buildUnitRaw0(k)); // full models get rounder shapes (more segments), low-detail ones fewer
+}
+function buildUnitRaw0(k) {
   if (KINDS[k].worm) return buildWorm(k);
   if (KINDS[k].bear) return buildBear(k);
   if (KINDS[k].role === 'siege') return buildCatapult(k);

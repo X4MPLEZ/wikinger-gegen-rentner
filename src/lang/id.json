@@ -999,5 +999,8 @@
   "Alle Tagesaufgaben geschafft · +{0} Juwelen": "Semua misi harian selesai · +{0} Permata",
   "Tagesaufgabe: {0} · +{1} Juwelen": "Misi harian: {0} · +{1} Permata",
   "Zum Hauptmenü": "Ke menu utama",
-  "Aufgaben": "Misi"
+  "Aufgaben": "Misi",
+  "Sehr hoch": "Ultra",
+  "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "Dengan bayangan lembut, kedalaman bidang, dan cahaya – untuk perangkat kuat.",
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "Efek memerlukan WebGL 2 – perangkat ini menampilkan Ultra tanpa efek."
 }

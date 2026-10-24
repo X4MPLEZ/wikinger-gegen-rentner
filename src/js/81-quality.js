@@ -177,6 +177,22 @@ const GTIERS = [
     lod: [20, 38],
   },
 ];
+// "Sehr hoch": only by choice (AUTO never picks it). Everything of 'Hoch' plus full resolution, a big sharp shadow map in which every part
+// of a figure casts, more particles, details further away, and the post effects (83-post.js: ambient occlusion, depth of field, glow).
+const ULTRA = Object.assign({}, GTIERS[0], {
+  id: 'ultra',
+  name: TR('Sehr hoch'),
+  pr: 2,
+  mp: 9,
+  sh: 4096,
+  shR: 2,
+  unitSh: 0.1,
+  shDist: 110,
+  fx: 1.2,
+  fxCap: 256,
+  ripples: 56,
+  lod: [80, 150],
+});
 // AUTO walks this ladder. Odd rungs only lower the render resolution (helps a GPU limit); a CPU limit skips them.
 const LADDER = [
   { t: 0, m: 1 },
@@ -190,7 +206,7 @@ const LADDER = [
   { t: 3, m: 0.66, res: 1 },
 ]; // the last two: AUTO only, for very weak GPUs
 const LMAX = LADDER.length - 1;
-const MANUAL_LVL = { high: 0, mid: 2, low: 4, vlow: 6 };
+const MANUAL_LVL = { ultra: 0, high: 0, mid: 2, low: 4, vlow: 6 };
 function guessQuality() {
   // first-start estimate only; measured frame times take over during play
   let gpu = '';
@@ -253,7 +269,7 @@ const QS = {
     return SET.gfx || 'auto';
   },
   tier() {
-    return GTIERS[LADDER[this.lvl].t];
+    return this.ultra ? ULTRA : GTIERS[LADDER[this.lvl].t];
   },
   name() {
     const n = this.tier().name + (LADDER[this.lvl].m < 1 ? ' ' + TR('(−Auflösung)') : '');
@@ -262,6 +278,7 @@ const QS = {
 };
 function initQuality() {
   const m = QS.mode();
+  QS.ultra = m === 'ultra';
   if (m !== 'auto') QS.lvl = MANUAL_LVL[m] ?? 2;
   else {
     const g = guessQuality(),
@@ -275,6 +292,7 @@ function initQuality() {
 }
 function setGfx(mode) {
   SET.gfx = mode;
+  QS.ultra = mode === 'ultra';
   saveBinds();
   if (mode !== 'auto') QS.lvl = MANUAL_LVL[mode];
   else {
@@ -291,15 +309,16 @@ function setGfx(mode) {
 }
 function applyQuality() {
   const L = LADDER[QS.lvl],
-    T = GTIERS[L.t],
+    T = QS.ultra ? ULTRA : GTIERS[L.t],
     ov = (key, map) => {
       const v = SET[key];
       return v && v !== 'auto' && map[v] !== undefined ? map[v] : null;
     };
-  const shT = GTIERS[ov('gfxSh', { high: 0, low: 2, off: 3 }) ?? L.t],
-    fxT = GTIERS[ov('gfxFx', { high: 0, mid: 1, low: 2 }) ?? L.t],
+  const tierOr = i => (i === null ? T : GTIERS[i]),
+    shT = tierOr(ov('gfxSh', { high: 0, low: 2, off: 3 })),
+    fxT = tierOr(ov('gfxFx', { high: 0, mid: 1, low: 2 })),
     resO = ov('gfxRes', { high: 0, mid: 1, low: 2 }),
-    resT = GTIERS[resO ?? L.t],
+    resT = tierOr(resO),
     resM = resO === null ? L.m : 1;
   // render resolution: never full retina on a weak GPU, never more megapixels than the tier allows
   const dpr = devicePixelRatio || 1,
@@ -331,7 +350,7 @@ function applyQuality() {
   QS.fx = fxT.fx;
   QS.fxCap = fxT.fxCap;
   QS.ripples = fxT.ripples;
-  QS.waterFx = fxT === GTIERS[0] || fxT === GTIERS[1] ? 1 : 1.8;
+  QS.waterFx = fxT === ULTRA || fxT === GTIERS[0] || fxT === GTIERS[1] ? 1 : 1.8;
   QS.lod = T.lod;
   windStrength.value = T.wind;
   QS.deco = T.deco;
@@ -348,6 +367,9 @@ function applyQuality() {
   AUDIO.lite = lt >= 2;
   QS.ink = lt <= 1;
   INK.visible = QS.ink; // ink outlines on Hoch and Mittel
+  // soft figure shading (rim light and sheen) from Niedrig up; Sehr hoch adds the post effects
+  FIG.k.value = lt <= 2 ? 1 : 0;
+  postSet(QS.ultra);
   applyMapQuality();
 }
 function applyMapQuality() {

@@ -999,5 +999,8 @@
   "Alle Tagesaufgaben geschafft · +{0} Juwelen": "Все задания дня выполнены · самоцветы +{0}",
   "Tagesaufgabe: {0} · +{1} Juwelen": "Задание дня: {0} · самоцветы +{1}",
   "Zum Hauptmenü": "В главное меню",
-  "Aufgaben": "Задания"
+  "Aufgaben": "Задания",
+  "Sehr hoch": "Ультра",
+  "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "С мягким затенением, глубиной резкости и свечением – для мощных устройств.",
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "Эффектам нужен WebGL 2 – это устройство показывает «Ультра» без них."
 }

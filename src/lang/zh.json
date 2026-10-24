@@ -999,5 +999,8 @@
   "Alle Tagesaufgaben geschafft · +{0} Juwelen": "每日任务全部完成 · +{0} 宝石",
   "Tagesaufgabe: {0} · +{1} Juwelen": "每日任务：{0} · +{1} 宝石",
   "Zum Hauptmenü": "返回主菜单",
-  "Aufgaben": "任务"
+  "Aufgaben": "任务",
+  "Sehr hoch": "超高",
+  "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "柔和阴影、景深和辉光——适合高性能设备。",
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "这些效果需要 WebGL 2——此设备将以无效果的超高画质显示。"
 }

@@ -24,6 +24,11 @@ function gfxUi() {
         ? TR('Passt sich laufend an dein Gerät an. Zurzeit: {0} mit etwas geringerer Auflösung.', T.name)
         : TR('Passt sich laufend an dein Gerät an. Zurzeit: {0}.', T.name)
       : TR('Feste Stufe: {0}.', T.name),
+    QS.ultra
+      ? POST.on
+        ? TR('Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.')
+        : TR('Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.')
+      : '',
     TR('Bild: {0} × {1} Pixel', px.x, px.y),
     sun.castShadow ? TR('Schatten {0}', sun.shadow.mapSize.x) : TR('ohne Echtzeit-Schatten'),
     QS.cap ? TR('Bildrate auf {0} begrenzt', QS.cap) : '',

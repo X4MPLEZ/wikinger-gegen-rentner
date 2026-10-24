@@ -999,5 +999,8 @@
   "Alle Tagesaufgaben geschafft · +{0} Juwelen": "Alle dagopdrachten gelukt · +{0} juwelen",
   "Tagesaufgabe: {0} · +{1} Juwelen": "Dagopdracht: {0} · +{1} juwelen",
   "Zum Hauptmenü": "Naar hoofdmenu",
-  "Aufgaben": "Opdrachten"
+  "Aufgaben": "Opdrachten",
+  "Sehr hoch": "Ultra",
+  "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "Met zachte schaduwen, scherptediepte en gloed – voor krachtige apparaten.",
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "De effecten hebben WebGL 2 nodig – dit apparaat toont Ultra zonder."
 }

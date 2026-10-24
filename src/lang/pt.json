@@ -999,5 +999,8 @@
   "Alle Tagesaufgaben geschafft · +{0} Juwelen": "Todas as missões diárias concluídas · +{0} gemas",
   "Tagesaufgabe: {0} · +{1} Juwelen": "Missão diária: {0} · +{1} gemas",
   "Zum Hauptmenü": "Ir para o menu principal",
-  "Aufgaben": "Missões"
+  "Aufgaben": "Missões",
+  "Sehr hoch": "Ultra",
+  "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "Com sombreamento suave, profundidade de campo e brilho – para dispositivos potentes.",
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "Os efeitos precisam de WebGL 2 – este dispositivo mostra Ultra sem eles."
 }

@@ -295,7 +295,8 @@ function frame() {
   unitBatch();
   if (pf) pm('contact');
   if (QS.shEvery > 1 && ++QS.fc % QS.shEvery === 0) renderer.shadowMap.needsUpdate = true;
-  renderer.render(scene, camera);
+  if (POST.on) postRender(dt);
+  else renderer.render(scene, camera);
   showTick(dt); // the 3D showcase in the profile (own small renderer)
   QS.cpuLast = performance.now() - QS.frameT0 + QS.simMs;
   QS.simMs = 0; // main-thread work this frame (render + logic + simulation)
