@@ -296,6 +296,7 @@ function frame() {
   if (pf) pm('contact');
   if (QS.shEvery > 1 && ++QS.fc % QS.shEvery === 0) renderer.shadowMap.needsUpdate = true;
   renderer.render(scene, camera);
+  showTick(dt); // the 3D showcase in the profile (own small renderer)
   QS.cpuLast = performance.now() - QS.frameT0 + QS.simMs;
   QS.simMs = 0; // main-thread work this frame (render + logic + simulation)
   if (pf) {
@@ -436,7 +437,7 @@ function renderUnits(t, dt) {
     } else u.g.position.set(x, y + jh, z);
     u.fogHid = FOG.on && u.team !== V.myTeam && !fogSeen(x, z); // the mesh fades in the fog by itself; its overlays (badge, rings, bars, contact shadow) are switched off
     {
-      const bm = u.isPoss && !mine && u.team !== V.myTeam && !u.fogHid ? FACE.badge[u.team] : null;
+      const bm = u.isPoss && !mine && u.team !== V.myTeam && !u.fogHid ? FACE.badge[u.team] || oppBadge(u.team) : null;
       if (bm) {
         if (!u.faceSp || u.faceSp.material !== bm) {
           if (u.faceSp) u.g.remove(u.faceSp);

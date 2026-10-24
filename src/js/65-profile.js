@@ -61,21 +61,30 @@ const AVATARS = [
   { id: 'opaCrown', k: 2, bg: ['#ffe89a', '#a8771a'], deco: 'crown', u: { ach: 'winExtreme' } },
   { id: 'goatCrown', k: 4, bg: ['#ffe89a', '#7a4f12'], deco: 'crown', u: { lv: 30 } },
 ];
-/* Army skins: colour swaps for the models of one faction (old colour -> new colour; no chains). Klassisch is free; the others come with
-   Ruhmespfad levels 10/20/30 or earlier from the shop. */
+/* Army skins: colour swaps for the models of one faction (old colour -> new colour; no chains) plus their own extra pieces (skinExtras in
+   25-worm-model.js). Klassisch is free; three come with Ruhmespfad levels 10/20/30 (only there, never in the shop), one per faction is
+   bought with Juwelen. */
 const SKINS = {
   v0: { fac: 'viking', n: TR('Klassisch'), u: { free: 1 }, sw: null, c: ['#326a9e', '#9aa3ad'] },
   v1: {
     fac: 'viking',
     n: TR('Rotbart'),
-    u: { lv: 10, gems: 300 },
+    u: { lv: 10 },
     c: ['#a8322a', '#9aa3ad'],
-    sw: { 0x326a9e: 0xa8322a, 0x58a0c8: 0xc4493b, 0x396f9e: 0x9e3a2e, 0xc0392b: 0x2f5f9e, 0x5a4330: 0x3a2a20 },
+    sw: {
+      0x326a9e: 0xa8322a,
+      0x58a0c8: 0xc4493b,
+      0x396f9e: 0x9e3a2e,
+      0xc0392b: 0x2f5f9e,
+      0x5a4330: 0x3a2a20,
+      0xe9c45a: 0xc0622f,
+      0x2f7f6f: 0xa8322a,
+    },
   },
   v2: {
     fac: 'viking',
     n: TR('Eiswolf'),
-    u: { lv: 20, gems: 450 },
+    u: { lv: 20 },
     c: ['#dfe8f0', '#7fa8c8'],
     sw: {
       0x326a9e: 0xdfe8f0,
@@ -90,7 +99,7 @@ const SKINS = {
   v3: {
     fac: 'viking',
     n: TR('Gold-Jarl'),
-    u: { lv: 30, gems: 600 },
+    u: { lv: 30 },
     c: ['#2a2a30', '#d9a441'],
     sw: {
       0x326a9e: 0x2a2a30,
@@ -106,7 +115,7 @@ const SKINS = {
   r1: {
     fac: 'rentner',
     n: TR('Trainingsanzug'),
-    u: { lv: 10, gems: 300 },
+    u: { lv: 10 },
     c: ['#2e8b6e', '#f3ead2'],
     sw: {
       0x995a8d: 0x2e8b6e,
@@ -116,12 +125,15 @@ const SKINS = {
       0x4e3250: 0xf3ead2,
       0xd94a3d: 0x2e8b6e,
       0xb53a30: 0x236f58,
+      0x4a3020: 0xf4f4f4,
+      0x5a3048: 0xf4f4f4,
+      0x3b2a20: 0xf4f4f4,
     },
   },
   r2: {
     fac: 'rentner',
     n: TR('Strandurlaub'),
-    u: { lv: 20, gems: 450 },
+    u: { lv: 20 },
     c: ['#e8913a', '#f2d06b'],
     sw: {
       0x995a8d: 0xe8913a,
@@ -136,7 +148,7 @@ const SKINS = {
   r3: {
     fac: 'rentner',
     n: TR('Disco-Rentner'),
-    u: { lv: 30, gems: 600 },
+    u: { lv: 30 },
     c: ['#6a3fb5', '#d9a441'],
     sw: {
       0x995a8d: 0x6a3fb5,
@@ -146,6 +158,40 @@ const SKINS = {
       0xd94a3d: 0xd9a441,
       0xb53a30: 0xa8771a,
       0x7a6e5f: 0x2a2a30,
+    },
+  },
+  v4: {
+    fac: 'viking',
+    n: TR('Drachenjäger'),
+    u: { gems: 500 },
+    c: ['#2f6b3a', '#c9a24a'],
+    sw: {
+      0x326a9e: 0x2f6b3a,
+      0x58a0c8: 0x3d8a4a,
+      0x396f9e: 0x2a5f34,
+      0x9aa3ad: 0xb08a4a,
+      0x6f7882: 0x7a5a2a,
+      0xd3d8de: 0xd9b46a,
+      0xc0392b: 0x1f4a26,
+      0x2f7f6f: 0xc9a24a,
+    },
+  },
+  r4: {
+    fac: 'rentner',
+    n: TR('Kegelclub'),
+    u: { gems: 500 },
+    c: ['#c8202a', '#1f1f24'],
+    sw: {
+      0x995a8d: 0xc8202a,
+      0xc47aa9: 0x1f1f24,
+      0x83517d: 0xc8202a,
+      0x5d3b58: 0x1f1f24,
+      0x4e3250: 0x1f1f24,
+      0x7a6e5f: 0x1f1f24,
+      0x5d544b: 0xc8202a,
+      0xd94a3d: 0x1f1f24,
+      0xb53a30: 0x111114,
+      0xd23a2e: 0xf6f6f6,
     },
   },
 };
@@ -300,6 +346,32 @@ const ACH = [
 const ACH_BY = Object.fromEntries(ACH.map(a => [a.id, a]));
 const AV_BY = Object.fromEntries(AVATARS.map(a => [a.id, a]));
 const AI_XP = { easy: 0.8, medium: 1, hard: 1.2, insane: 1.4, extreme: 1.6 };
+/* Daily quests: three a day from this list (picked by the date, the same for everyone), progress from every finished match (not the
+   tutorials). n = German text, g = goal, v(M, st) = what one match adds, gems = reward; all three done: DQ_BONUS more. */
+const DQ_POOL = [
+  { id: 'win2', n: TR('Gewinne 2 Partien'), g: 2, gems: 30, v: M => (M.won ? 1 : 0) },
+  { id: 'play3', n: TR('Spiele 3 Partien'), g: 3, gems: 20, v: () => 1 },
+  { id: 'kills40', n: TR('Besiege 40 Gegner'), g: 40, gems: 25, v: M => M.k | 0 },
+  { id: 'made25', n: TR('Bilde 25 Krieger aus'), g: 25, gems: 20, v: (M, st) => st[0] | 0 },
+  { id: 'ego3', n: TR('Besiege 3 gesteuerte Gegner mit deinem Ego-Krieger'), g: 3, gems: 35, v: (M, st) => st[10] | 0 },
+  { id: 'online1', n: TR('Spiele eine Online-Partie'), g: 1, gems: 30, v: M => (M.online ? 1 : 0) },
+  { id: 'base800', n: TR('Füge gegnerischen Basen 800 Schaden zu'), g: 800, gems: 25, v: (M, st) => st[2] | 0 },
+  { id: 'rams6', n: TR('Ramme 6 Gegner um'), g: 6, gems: 25, v: (M, st) => st[5] | 0 },
+  { id: 'cliff3', n: TR('Stoß 3 Gegner von Klippen'), g: 3, gems: 30, v: (M, st) => st[6] | 0 },
+  { id: 'chaos1', n: TR('Gewinne eine Partie im Chaos-Modus'), g: 1, gems: 30, v: M => (M.won && M.mode === 'chaos' ? 1 : 0) },
+  { id: 'fog1', n: TR('Gewinne eine Partie im Nebel-Modus'), g: 1, gems: 30, v: M => (M.won && M.mode === 'fog' ? 1 : 0) },
+  { id: 'vik1', n: TR('Gewinne mit den Wikingern'), g: 1, gems: 25, v: M => (M.won && M.fac === 'viking' ? 1 : 0) },
+  { id: 'ren1', n: TR('Gewinne mit den Rentnern'), g: 1, gems: 25, v: M => (M.won && M.fac === 'rentner' ? 1 : 0) },
+  {
+    id: 'hard1',
+    n: TR('Besiege den Computer auf „Schwer“ oder schwerer'),
+    g: 1,
+    gems: 40,
+    v: M => (M.won && M.ai && ['hard', 'insane', 'extreme'].includes(M.lvl) ? 1 : 0),
+  },
+];
+const DQ_BY = Object.fromEntries(DQ_POOL.map(q => [q.id, q]));
+const DQ_BONUS = 30;
 function profBlank() {
   return {
     v: 1,
@@ -315,6 +387,7 @@ function profBlank() {
     mC: 0,
     days: [],
     daily: '',
+    dq: null,
     st: profStatsBlank(),
   };
 }
@@ -360,6 +433,23 @@ function profClean(d) {
   if (AV_BY[d.av]) P.av = d.av;
   if (Array.isArray(d.days)) P.days = d.days.filter(x => typeof x === 'string' && /^\d{4}-\d\d-\d\d$/.test(x)).slice(-60);
   if (typeof d.daily === 'string' && /^\d{4}-\d\d-\d\d$/.test(d.daily)) P.daily = d.daily;
+  const q = d.dq;
+  if (
+    q &&
+    typeof q === 'object' &&
+    typeof q.d === 'string' &&
+    /^\d{4}-\d\d-\d\d$/.test(q.d) &&
+    Array.isArray(q.ids) &&
+    q.ids.length === 3 &&
+    q.ids.every(i => DQ_BY[i])
+  )
+    P.dq = {
+      d: q.d,
+      ids: q.ids.slice(),
+      p: [0, 1, 2].map(i => int((q.p || [])[i], 0, 1e6, 0)),
+      c: [0, 1, 2].map(i => ((q.c || [])[i] ? 1 : 0)),
+      b: q.b ? 1 : 0,
+    };
   const s = d.st && typeof d.st === 'object' ? d.st : {};
   for (const k in P.st) {
     if (typeof P.st[k] === 'number') P.st[k] = int(s[k], 0, 1e9, 0);
@@ -376,13 +466,40 @@ let PLAYER = (() => {
   }
 })();
 function profSave() {
+  if (GOD.on) return; // the god mode tries things out: nothing is kept
   store.set('wvr-prof', JSON.stringify(PLAYER));
+}
+/* God mode (for the game's maker): everything unlocked and free, the level can be set, nothing is saved. On with ?gott=1 or seven taps
+   on the level in the profile; leaving it brings the real profile back. */
+const GOD = { on: false, real: null };
+function godSet(on) {
+  if (on === GOD.on) return;
+  if (on) {
+    GOD.real = PLAYER;
+    PLAYER = profClean(JSON.parse(JSON.stringify(PLAYER)));
+    PLAYER.gems = 99999;
+    GOD.on = true;
+  } else {
+    GOD.on = false;
+    PLAYER = GOD.real || PLAYER;
+    GOD.real = null;
+  }
+}
+// sets the XP so the level is exactly L (god mode)
+function godLevel(L) {
+  L = clamp(L | 0, 1, LEVEL_MAX + 5);
+  let xp = 0;
+  for (let i = 1; i < Math.min(L, LEVEL_MAX); i++) xp += lvNeed(i);
+  if (L > LEVEL_MAX) xp += (L - LEVEL_MAX) * 500;
+  PLAYER.xp = xp;
+  PLAYER.lvC = Math.min(L, LEVEL_MAX);
 }
 const profLevel = () => lvOf(PLAYER.xp).L;
 // owned: free, reached by level, earned by an achievement, or bought
 function profOwns(id) {
   const it = AV_BY[id] || SKINS[id];
   if (!it) return false;
+  if (GOD.on) return true;
   const u = it.u;
   return !!(u.free || PLAYER.own[id] || (u.lv && profLevel() >= u.lv) || (u.ach && PLAYER.ach[u.ach]));
 }
@@ -425,6 +542,51 @@ function profClaimLevels(out) {
     PLAYER.gems += 30 * (lv.master - PLAYER.mC);
     PLAYER.mC = lv.master;
   }
+}
+// today's three quests (a new set every day, picked from the date)
+function dqToday() {
+  const d = profDay();
+  if (!PLAYER.dq || PLAYER.dq.d !== d) {
+    let h = 7;
+    for (const ch of d) h = (h * 31 + ch.charCodeAt(0)) | 0;
+    const r = rng(Math.abs(h)),
+      pool = DQ_POOL.map(q => q.id),
+      ids = [];
+    while (ids.length < 3) {
+      const id = pool.splice(Math.floor(r() * pool.length), 1)[0];
+      ids.push(id);
+    }
+    PLAYER.dq = { d, ids, p: [0, 0, 0], c: [0, 0, 0], b: 0 };
+  }
+  return PLAYER.dq;
+}
+// milliseconds until the next set
+function dqLeft() {
+  const n = new Date(),
+    m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1);
+  return m - n;
+}
+// one finished match counts for today's quests; finished ones pay out right away. Returns the quests finished now.
+function dqMatch(M) {
+  const Q = dqToday(),
+    st = M.st || [],
+    done = [];
+  Q.ids.forEach((id, i) => {
+    const q = DQ_BY[id];
+    if (Q.c[i]) return;
+    Q.p[i] = Math.min(q.g, Q.p[i] + Math.max(0, q.v(M, st) | 0));
+    if (Q.p[i] >= q.g) {
+      Q.c[i] = 1;
+      PLAYER.gems += q.gems;
+      done.push(id);
+    }
+  });
+  if (!Q.b && Q.c.every(Boolean)) {
+    Q.b = 1;
+    PLAYER.gems += DQ_BONUS;
+    done.push('bonus');
+  }
+  return done;
 }
 /* One finished match. M: { won, online, ai, tut, adv, lvl, fac, map, mode, t, k, st (own stats), ost (the opponent's), base, mhp }.
    Returns what the end screen shows: XP, levels before and after, Juwelen won, new achievements and level rewards. */
@@ -470,12 +632,13 @@ function profMatchEnd(M) {
       PLAYER.gems += 20; // the first win of the day
       M.daily = 20;
     }
+    M.dq = dqMatch(M);
   }
   PLAYER.xp += xp;
   profClaimLevels(lvUp);
   for (const a of ACH) if (a.t && !PLAYER.ach[a.id] && a.t(PLAYER, M)) profGrantAch(a.id, ach);
   profSave();
-  return { xp, lv0, lv1: lvOf(PLAYER.xp), gems: PLAYER.gems - g0, daily: M.daily || 0, ach, lvUp };
+  return { xp, lv0, lv1: lvOf(PLAYER.xp), gems: PLAYER.gems - g0, daily: M.daily || 0, ach, lvUp, dq: M.dq || [] };
 }
 // Giving up counts as a lost match for the statistics and ends a winning streak (no XP).
 function profQuit() {
@@ -547,6 +710,13 @@ function setSkins(facs, ids) {
 const AV_URL = {};
 function avatarURL(id) {
   if (AV_URL[id]) return AV_URL[id];
+  const [c, ok] = avatarCanvas(id),
+    url = c.toDataURL();
+  if (ok) AV_URL[id] = url;
+  return url;
+}
+// [canvas 128 px, rendered completely]
+function avatarCanvas(id) {
   const A = AV_BY[id] || AVATARS[0],
     c = cnv(128, 128),
     o = c.getContext('2d');
@@ -573,9 +743,7 @@ function avatarURL(id) {
   o.beginPath();
   o.arc(64, 64, 61, 0, TAU);
   o.stroke();
-  const url = c.toDataURL();
-  if (ok) AV_URL[id] = url;
-  return url;
+  return [c, ok];
 }
 function avDeco(o, d, back) {
   o.save();

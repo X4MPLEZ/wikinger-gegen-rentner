@@ -97,6 +97,29 @@ function setFaceMat(team, crop) {
     FACE.badge[team] = new THREE.SpriteMaterial({ map: ctex(c), depthTest: false, transparent: true });
   }
 }
+// online without a photo: the opponent's profile picture is the badge over his steered warrior (in the team colour ring)
+const AV_BADGE = { key: '', mat: null };
+function oppBadge(team) {
+  if (team === V.myTeam || (V.mode !== 'host' && V.mode !== 'guest') || !V.oppPf) return null;
+  const key = V.oppPf.av + '|' + team;
+  if (AV_BADGE.key !== key) {
+    const [a, ok] = avatarCanvas(V.oppPf.av);
+    if (!ok) return null;
+    const S = 256,
+      c = cnv(S, S),
+      x = c.getContext('2d');
+    x.drawImage(a, 10, 10, S - 20, S - 20);
+    x.lineWidth = 14;
+    x.strokeStyle = V.facs && V.facs[team] ? FAC[V.facs[team]].css : '#f0bf4c';
+    x.beginPath();
+    x.arc(S / 2, S / 2, S / 2 - 9, 0, TAU);
+    x.stroke();
+    if (AV_BADGE.mat) AV_BADGE.mat.map.dispose();
+    AV_BADGE.mat = new THREE.SpriteMaterial({ map: ctex(c), depthTest: false, transparent: true });
+    AV_BADGE.key = key;
+  }
+  return AV_BADGE.mat;
+}
 function imgToCanvas(img, size) {
   const c = cnv(size, size);
   c.getContext('2d').drawImage(img, 0, 0, size, size);

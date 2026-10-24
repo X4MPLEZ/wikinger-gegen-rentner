@@ -94,8 +94,9 @@ Every file starts with a short header comment saying what is in it.
 | 62-screens | menus, pause, settings, quit | `showScreen`, `toMenu`, `quitMatch`, `menuScene` |
 | 63-tutorial | tutorial and Profi tutorial | `tutSteps`, `startTutorial`, `tutBlock` |
 | 64-lobby | public games: list „Offene Spiele“, „Schnelles Spiel“, practising while waiting | `LOBBY`, `lobbyWatch`, `lobbyValid`, `lobbyHostStart`, `quickMatch` |
-| 65-profile | the player's profile: levels (Ruhmespfad), achievements, Juwelen, pictures, skins, statistics, transfer code | `PLAYER`, `ACH`, `AVATARS`, `SKINS`, `LEVEL_REWARDS`, `profMatchEnd`, `profEvent`, `setSkins`, `avatarURL` |
-| 66-profile-ui | profile on screen: menu chip, profile screen, end-screen rewards, VS card | `profChipUi`, `profUi`, `profEndUi`, `vsCard` |
+| 65-profile | the player's profile: levels (Ruhmespfad), achievements, daily quests, Juwelen, pictures, skins, statistics, transfer code, god mode | `PLAYER`, `ACH`, `DQ_POOL`, `AVATARS`, `SKINS`, `LEVEL_REWARDS`, `profMatchEnd`, `profEvent`, `setSkins`, `avatarURL`, `godSet` |
+| 66-profile-ui | profile page (home button, Ruhmespfad track, daily quests, collection with preview sheet), menu chip, end-screen rewards, VS card | `profOpen`, `profUi`, `profSheet`, `profEndUi`, `vsCard` |
+| 67-showcase | 3D showcase in the profile: a second small renderer drawing a squad in a skin, still pictures of skins | `showMount`, `showSet`, `showTick`, `skinThumb` |
 | 70-world-view | bears, holes, pads, pickups, fog of war (client) | `updateWorld`, `itemMesh`, `fogVis`, `fogSeen`, `fogWallTick` |
 | 71-worm-view | wild sandworms on screen, sounds, victims | `wormWorldView`, `grabTick` |
 | 72-hero-view | the hero sequence on screen | `heroTick`, `heroCam` |
@@ -146,8 +147,11 @@ Every file starts with a short header comment saying what is in it.
 - **Client randomness:** visuals both players should see the same (e.g. puddle decoration) use `rng(seed)` from snapshot data.
 - **Mobile first:** check portrait 390×844 and landscape 844×390 (`tests/t_hud_layout.py` asserts that HUD parts do not overlap).
 - **German wording:** "Discogranate", "Sammelfahne", "Basisschaden", "Ego-Krieger", "Den Helden spielen", "Aufgeben".
-- **Skins** are colour swaps applied while a unit model is built: `setSkins()` fills `UNIT_SKIN[k]`, `buildUnit` sets `LAM_MAP` so
-  `lam(color)` returns the swapped colour; caches of built models key on the skin. Both players see each other's skins.
+- **Skins** are colour swaps plus extra pieces applied while a unit model is built: `setSkins()` fills `UNIT_SKIN[k]`, `buildUnit` →
+  `buildSkinned(k, id)` sets `LAM_MAP` (so `lam(color)` returns the swapped colour) and `SKIN_NOW` (so `skinExtras()` in 25-worm-model
+  adds capes, crowns, glasses …); caches of built models key on the skin. Extras must not use randomness (the low-detail model is built
+  the same way and its parts are paired by order). Both players see each other's skins.
+- **God mode** (`GOD.on`, 65-profile): everything owned, `profSave()` does nothing; for trying out skins, not for players.
 - **Strangers:** nothing typed by a player and no photos ever reach another player in a public match; everything received from the
   lobby or a peer is validated (`lobbyValid`, `profPeer`).
 - **Portal build:** `window.WVR_PORTAL` (set by tools/portal.mjs) hides the own fullscreen button and photo sending; `window.WVR_LIBS`
@@ -166,7 +170,9 @@ Every file starts with a short header comment saying what is in it.
 - **New HUD element:** markup in src/body.html, style in src/style.css (+ landscape/portrait rules), update in `updateHud()`.
 - **New setting kept per device:** `store.get('wvr-…')` / `store.set('wvr-…', v)`.
 - **New achievement:** entry in `ACH` (65-profile: id, icon, gems, German name/description, a test on the match-end record or a live
-  event from `profEvent`) + translations. **New picture / skin:** `AVATARS` / `SKINS` + `SKIN_MAPS` (optionally a `LEVEL_REWARDS` step).
+  event from `profEvent`) + translations. **New daily quest:** entry in `DQ_POOL` (goal, gems, what one match adds).
+- **New picture / skin:** `AVATARS` / `SKINS` (colour swaps `sw`, unlock `u`: `lv` or `gems`, never both) + its pieces in `skinExtras`
+  (25-worm-model); look at it with `?gott=1` in the profile's collection.
 - **New language:** add it to `LANGS` (00-i18n), create `src/lang/<code>.json` from `python3 tools/i18n.py --keys keys.json`, look at
   the menu, HUD and profile in both phone orientations.
 

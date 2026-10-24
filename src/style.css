@@ -3638,3 +3638,618 @@ body.touchUi .hud-orders {
   color: var(--gold);
   font-size: 1.1rem;
 }
+
+/* ---------- profile page: a page of its own (home button on top, only the body scrolls) ---------- */
+.screen.pscreen {
+  padding: 0;
+  align-items: stretch;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(79, 134, 196, 0.35), transparent 60%),
+    linear-gradient(180deg, rgba(13, 21, 38, 0.82), rgba(13, 21, 38, 0.96));
+}
+.ppage {
+  position: relative;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom))
+    max(14px, env(safe-area-inset-left));
+}
+.ppage > * {
+  flex-shrink: 0;
+}
+.ptop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.iconbtn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--panel-2);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.iconbtn .si {
+  width: 22px;
+  height: 22px;
+}
+.iconbtn:active {
+  transform: scale(0.94);
+}
+.ptitle {
+  flex: 1;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.45rem;
+  letter-spacing: 0.02em;
+}
+.pscreen .phead {
+  grid-template-columns: auto 1fr;
+  padding: 12px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(79, 134, 196, 0.3), rgba(192, 122, 168, 0.3));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.pscreen .ptabs {
+  grid-template-columns: repeat(5, 1fr);
+}
+.pscreen .ptabs button[aria-selected='true'] {
+  background: linear-gradient(180deg, rgba(240, 191, 76, 0.22), rgba(240, 191, 76, 0.08));
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+.pscreen .pbody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 2px 12px;
+  gap: 10px;
+}
+.pfoot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pfoot .note {
+  flex: 1;
+  margin: 0;
+  font-size: 0.7rem;
+  text-align: left;
+}
+.gemn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #b8f0ff;
+  font-weight: 700;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.gemn i {
+  font-style: normal;
+}
+.gemn .si {
+  width: 1.1em;
+  height: 1.1em;
+}
+.godbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(240, 191, 76, 0.28), rgba(240, 191, 76, 0.08));
+  border: 1px solid rgba(240, 191, 76, 0.55);
+  font-size: 0.8rem;
+}
+.godbar b {
+  color: var(--gold);
+}
+.godbar .gd {
+  flex: 1;
+  min-width: 120px;
+  color: var(--dim);
+}
+.godbar .gl {
+  font-weight: 700;
+  min-width: 3.2em;
+  text-align: center;
+}
+/* Ruhmespfad: the stage and the track */
+.bp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bpshow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  min-height: 240px;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(70% 60% at 35% 78%, rgba(240, 191, 76, 0.28), transparent 70%),
+    linear-gradient(160deg, rgba(36, 54, 92, 0.95), rgba(14, 22, 40, 0.95));
+  border: 1px solid rgba(240, 191, 76, 0.35);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+.bpstage {
+  position: relative;
+  height: 240px;
+}
+.bpstage.flat {
+  display: grid;
+  place-items: center;
+}
+.bpinfo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  padding: 14px 14px 14px 4px;
+  min-width: 0;
+}
+.bplv {
+  color: var(--gold);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+.bpname {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.3rem;
+  line-height: 1.1;
+}
+.bpstate {
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.bpstate.ok {
+  color: var(--ok);
+  font-weight: 600;
+}
+.bpfac {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.bpfac button {
+  border: 1px solid var(--line);
+  background: rgba(8, 14, 27, 0.5);
+  color: var(--dim);
+  border-radius: 99px;
+  padding: 5px 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+.bpfac button.on {
+  color: #2a1c04;
+  background: var(--gold);
+  border-color: transparent;
+}
+.bptag {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: rgba(8, 14, 27, 0.7);
+  font-size: 0.72rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+.bpav {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 4px rgba(240, 191, 76, 0.55),
+    0 12px 30px rgba(0, 0, 0, 0.45);
+}
+.bpgem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.bpgem .si {
+  width: 96px;
+  height: 96px;
+  filter: drop-shadow(0 8px 18px rgba(95, 211, 243, 0.45));
+}
+.bpgem b {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 2rem;
+  color: #b8f0ff;
+}
+.bptrack {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 12px 6px 10px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+.bpnode {
+  position: relative;
+  flex: none;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 8px;
+  border-radius: 14px;
+  background: rgba(8, 14, 27, 0.6);
+  border: 1px solid var(--line);
+  color: var(--text);
+  scroll-snap-align: center;
+  transition: transform 0.15s;
+}
+.bpnode::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: 10px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.bpnode:first-child::before {
+  display: none;
+}
+.bpnode.done::before {
+  background: var(--gold);
+}
+.bpnode.big {
+  width: 78px;
+}
+.bpn {
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: var(--dim);
+}
+.bpic {
+  height: 46px;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  color: var(--gold);
+}
+.bpic img {
+  height: 46px;
+}
+.bpic img.round {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.bpnode:not(.done) .bpic img {
+  filter: grayscale(0.55) brightness(0.8);
+}
+.bpnode.done {
+  border-color: rgba(113, 194, 113, 0.45);
+}
+.bpnode.done .bpn {
+  color: var(--ok);
+}
+.bpnode.cur {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(240, 191, 76, 0.35);
+}
+.bpnode.sel {
+  background: rgba(240, 191, 76, 0.2);
+  transform: translateY(-4px);
+}
+.bpok {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ok);
+  color: #0d1526;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+}
+/* daily quests */
+.quests {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quest {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(8, 14, 27, 0.6);
+  border: 1px solid var(--line);
+}
+.quest.done {
+  border-color: rgba(113, 194, 113, 0.55);
+  background: linear-gradient(135deg, rgba(113, 194, 113, 0.18), rgba(8, 14, 27, 0.6));
+}
+.quest.bonus {
+  border-style: dashed;
+}
+.qtop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.qn {
+  font-size: 0.9rem;
+}
+.qp {
+  font-size: 0.74rem;
+  color: var(--dim);
+}
+.quest.done .qp {
+  color: var(--ok);
+  font-weight: 600;
+}
+.quest.done .pbar > i {
+  background: linear-gradient(90deg, #8be08b, #5fbf5f);
+}
+/* achievements and statistics */
+.achhead {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+.ach .ag {
+  grid-column: 2;
+}
+.pkpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.pkpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  text-align: center;
+  background: rgba(8, 14, 27, 0.6);
+  border: 1px solid var(--line);
+}
+.pkpi b {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.25rem;
+  color: var(--gold);
+}
+.pkpi small {
+  font-size: 0.68rem;
+  color: var(--dim);
+}
+/* collection: skins as 3D pictures */
+.cgrid.sk {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+.ctile.sk img {
+  width: 76px;
+  height: 86px;
+  border-radius: 10px;
+  object-fit: contain;
+  background: radial-gradient(circle at 50% 75%, rgba(255, 255, 255, 0.14), transparent 70%);
+}
+.ctile.sk:not(.own) img {
+  filter: grayscale(0.5) brightness(0.8);
+}
+.ctile .cs .gemn {
+  font-size: 0.72rem;
+}
+/* the preview sheet */
+.psheet {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(5, 9, 18, 0.72);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.pscard {
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 20px;
+  text-align: center;
+  background: var(--panel-2);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+.psstage {
+  position: relative;
+  flex: none;
+  height: min(46vh, 340px);
+  border-radius: 14px;
+  background:
+    radial-gradient(70% 60% at 50% 80%, rgba(240, 191, 76, 0.26), transparent 70%),
+    linear-gradient(160deg, rgba(36, 54, 92, 0.95), rgba(14, 22, 40, 0.95));
+}
+.psstage.flat {
+  display: grid;
+  place-items: center;
+  height: 220px;
+}
+.pshint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  font-size: 0.7rem;
+  color: var(--dim);
+  pointer-events: none;
+}
+.psname {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.4rem;
+}
+.psfac {
+  color: var(--dim);
+  margin-top: -6px;
+}
+.pssub {
+  margin: 0;
+  min-height: 1em;
+  font-size: 0.82rem;
+  color: var(--dim);
+}
+.pscard .btn .gemn {
+  color: inherit;
+}
+.showcv {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: pan-y;
+  cursor: grab;
+}
+/* the quest count on the menu chip */
+.pcav {
+  position: relative;
+  display: block;
+}
+.pcq {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #e3604c;
+  color: #fff;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+@media (max-width: 460px) {
+  .bpshow {
+    grid-template-columns: 1fr;
+  }
+  .bpstage {
+    height: 210px;
+  }
+  .pfoot .note {
+    display: none;
+  }
+  .bpinfo {
+    padding: 0 14px 14px;
+  }
+  .pkpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .ppage {
+    gap: 6px;
+  }
+  .pscreen .phead {
+    padding: 6px 10px;
+  }
+  .pscreen .pav img {
+    width: 44px;
+    height: 44px;
+  }
+  .iconbtn {
+    width: 36px;
+    height: 36px;
+  }
+  .bpshow {
+    min-height: 0;
+  }
+  .bpstage {
+    height: 190px;
+  }
+  .psstage {
+    height: 55vh;
+  }
+  .pfoot .note {
+    display: none;
+  }
+  /* landscape phone: a side column (title, profile, tabs, buttons) and the body beside it */
+  .ppage {
+    display: grid;
+    max-width: none;
+    grid-template-columns: minmax(220px, 260px) 1fr;
+    grid-template-rows: auto auto auto 1fr auto;
+    column-gap: 14px;
+    row-gap: 8px;
+  }
+  .ppage > .ptop {
+    grid-area: 1 / 1;
+  }
+  .ppage > .phead {
+    grid-area: 2 / 1;
+  }
+  .pscreen .ptabs {
+    grid-area: 3 / 1;
+    grid-template-columns: 1fr 1fr;
+  }
+  .ppage > .godbar {
+    grid-area: 4 / 1;
+    align-self: start;
+  }
+  .ppage > .pfoot {
+    grid-area: 5 / 1;
+  }
+  .ppage > .pbody {
+    grid-area: 1 / 2 / 6 / 3;
+  }
+  .ppage > .pmsg {
+    position: absolute;
+    left: 50%;
+    top: 8px;
+    transform: translateX(-50%);
+    z-index: 3;
+    padding: 6px 12px;
+    border-radius: 99px;
+    background: var(--panel-2);
+  }
+  .pscreen .plv small {
+    display: none;
+  }
+}

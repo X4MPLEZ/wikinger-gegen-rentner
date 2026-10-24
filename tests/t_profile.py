@@ -9,6 +9,7 @@ with sync_playwright() as p:
     r = pg.evaluate("""() => {
       const W = __wvr, out = {};
       W.PLAYER = W.profClean(null);
+      const Q = W.dqToday(); Q.ids = ['online1', 'cliff3', 'rams6']; // daily quests that these matches never finish (checked below)
       const M = o => Object.assign({ won: true, online: false, ai: true, tut: false, adv: false, lvl: 'medium', fac: 'viking', map: 'wiesen',
         mode: 'classic', t: 500, k: 20, st: [10, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0], ost: [8, 9, 300, 0, 0, 0, 0, 0, 0, 0, 0], base: 900, mhp: 1500, ru: 0 }, o);
       // first win: 40 + 40 + 20 kills = 100 XP -> level 2 (needs 100), first-win and daily bonus Juwelen
@@ -45,6 +46,24 @@ with sync_playwright() as p:
       // skins on the battlefield: only the matching faction
       W.setSkins(['viking', 'rentner'], ['v1', 'v2']);
       out.skins = Object.fromEntries(Object.entries(W.UNIT_SKIN).map(([k, v]) => [k, v.id]));
+      // level skins are never sold; the shop skins are
+      W.PLAYER = W.profClean(null); W.PLAYER.gems = 9999;
+      out.shop = [W.profBuy('v2'), W.profBuy('r3'), W.profBuy('v4'), W.PLAYER.gems, W.profOwns('v4')];
+      // daily quests: progress over matches, pay out once, the bonus for all three
+      const D = W.dqToday(); D.ids = ['win2', 'play3', 'kills40']; D.p = [0, 0, 0]; D.c = [0, 0, 0]; D.b = 0;
+      const g0 = W.PLAYER.gems, Mq = { won: true, online: false, ai: true, tut: false, adv: false, lvl: 'easy', fac: 'rentner', map: 'wiesen', mode: 'classic', t: 500, k: 20, st: [3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], ost: [1, 3, 50, 0, 0, 0, 0, 0, 0, 0, 0], base: 900, mhp: 1500 };
+      const q1 = W.profMatchEnd({ ...Mq }).dq, q2 = W.profMatchEnd({ ...Mq }).dq, q3 = W.profMatchEnd({ ...Mq, won: false }).dq;
+      out.quests = [q1, q2, q3, D.p, D.c, D.b];
+      out.questGems = W.PLAYER.gems - g0; // + the Juwelen of the first win, daily win and level ups of these matches
+      out.questOnly = 30 + 25 + 20 + W.DQ_BONUS;
+      // god mode: everything owned and free, nothing saved, the real profile back afterwards
+      W.profSave(); const before = localStorage.getItem('wvr-prof');
+      W.godSet(true); W.godLevel(25);
+      out.god = [W.profOwns('v3'), W.profOwns('opaCrown'), W.PLAYER.gems, W.profLevel()];
+      W.profEquip('v3'); W.profSave();
+      out.godSaved = localStorage.getItem('wvr-prof') === before;
+      W.godSet(false);
+      out.godBack = [W.GOD.on, W.profOwns('v3'), W.PLAYER.sk.viking];
       return out;
     }""")
     print(json.dumps(r))
@@ -56,7 +75,11 @@ with sync_playwright() as p:
           and r['equipSkin'] == [True, 'v1', False, 'v1'] and r['pub'] == [10, 10, 'goat', 'v1', 'r0']
           and r['badPeer'][0] is None and peer['lv'] == 30 and peer['av'] == 'opa' and peer['sk']['viking'] == 'v0' and peer['sk']['rentner'] == 'r0'
           and r['clean'][:5] == [0, 0, 23, r['clean'][3], 'v0'] and r['clean'][5] == ['goat'] and r['clean'][6] == ['firstWin'] and r['clean'][7] == 1e9
-          and r['skins'] == {'0': 'v1', '1': 'v1', '4': 'v1', '6': 'v1'} and not errs)
+          and r['skins'] == {'0': 'v1', '1': 'v1', '4': 'v1', '6': 'v1'}
+          and r['shop'][:3] == [False, False, True] and r['shop'][3] == 9499 and r['shop'][4]
+          and r['quests'][0] == [] and r['quests'][1] == ['win2', 'kills40'] and r['quests'][2] == ['play3', 'bonus'] and r['quests'][4] == [1, 1, 1] and r['quests'][5] == 1
+          and r['questGems'] >= r['questOnly']
+          and r['god'][:3] == [True, True, 99999] and r['god'][3] == 25 and r['godSaved'] and r['godBack'] == [False, False, 'v0'] and not errs)
     print('ERRS', errs[:3])
     print('PROFILE', 'OK' if ok else 'FAIL')
     b.close()

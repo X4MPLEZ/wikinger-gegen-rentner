@@ -143,6 +143,7 @@ THREE.MeshLambertMaterial = (Lam =>
     return m;
   })(THREE.MeshLambertMaterial); // every Lambert in the file becomes cel-shaded
 let LAM_MAP = null; // a skin's colour swaps, set only while a unit model is built (buildUnit in 25-worm-model.js)
+let SKIN_NOW = null; // the id of that skin: its extra pieces (skinExtras in 25-worm-model.js)
 const lam = c => {
   if (LAM_MAP && LAM_MAP.has(c)) c = LAM_MAP.get(c);
   return matCache[c] || (matCache[c] = new THREE.MeshLambertMaterial({ color: lin(c) }));

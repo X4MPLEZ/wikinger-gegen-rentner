@@ -92,7 +92,7 @@
   <div id="menu" class="screen">
     <div id="menuTR"><button class="ibtn panel fsBtn" aria-label="Vollbild"></button><button class="ibtn panel muteBtn" id="menuMute" aria-label="Ton an oder aus"></button></div>
     <div class="card">
-      <button id="profChip" class="profchip panel" aria-label="Profil"><img id="pcAv" alt=""><span class="pctx"><b id="pcName" data-nol></b><span class="pclv"><span id="pcLv" data-nol></span><i class="pbar"><i id="pcBar"></i></i></span></span><span class="gemtag"><span class="sic" data-si="gem"></span><b id="pcGems" data-nol>0</b></span></button>
+      <button id="profChip" class="profchip panel" aria-label="Profil"><span class="pcav"><img id="pcAv" alt=""><i id="pcQuest" class="pcq" hidden></i></span><span class="pctx"><b id="pcName" data-nol></b><span class="pclv"><span id="pcLv" data-nol></span><i class="pbar"><i id="pcBar"></i></i></span></span><span class="gemtag"><span class="sic" data-si="gem"></span><b id="pcGems" data-nol>0</b></span></button>
       <h1 class="logo"><span class="b">Rentner</span><span class="vs">GEGEN</span><span class="a">Wikinger</span></h1>
       <p class="sub">Erobere die Fahnen. Reiß die Basis ein.</p>
       <div class="label">Deine Seite</div>
@@ -215,24 +215,31 @@
     </div>
   </div>
 
-  <div id="profScr" class="screen" hidden>
-    <div class="card profcard">
+  <div id="profScr" class="screen pscreen" hidden>
+    <div class="ppage">
+      <div class="ptop">
+        <button class="iconbtn" id="pHome" aria-label="Zum Hauptmenü" title="Zum Hauptmenü"><span class="sic" data-si="home"></span></button>
+        <b class="ptitle">Profil</b>
+        <div class="gemtag big"><span class="sic" data-si="gem"></span><b id="pGems" data-nol>0</b></div>
+      </div>
       <div class="phead">
         <button class="pav" id="pAvBtn" aria-label="Profilbild wählen"><img id="pAv" alt=""></button>
         <div class="pinfo">
           <div class="pname"><b id="pName" data-nol></b><button class="btn small" id="pReroll" aria-label="Neuer Name"><span class="sic" data-si="dice"></span></button></div>
           <div class="plv"><b id="pLv" data-nol></b><i class="pbar"><i id="pBar"></i></i><small id="pXp" data-nol></small></div>
         </div>
-        <div class="gemtag big"><span class="sic" data-si="gem"></span><b id="pGems" data-nol>0</b></div>
       </div>
       <div class="ptabs" role="tablist" data-fit>
-        <button data-tab="path" role="tab">Ruhmespfad</button><button data-tab="ach" role="tab">Erfolge</button><button data-tab="coll" role="tab">Sammlung</button><button data-tab="stats" role="tab">Statistik</button>
+        <button data-tab="path" role="tab">Ruhmespfad</button><button data-tab="quests" role="tab">Aufgaben</button><button data-tab="ach" role="tab">Erfolge</button><button data-tab="coll" role="tab">Sammlung</button><button data-tab="stats" role="tab">Statistik</button>
       </div>
       <p class="status pmsg" id="pMsg" role="status" hidden></p>
       <div class="pbody" id="pBody" data-nol></div>
-      <p class="note">Du spielst als Gast: Dein Profil ist auf diesem Gerät gespeichert.</p>
-      <div class="row"><button class="btn" id="pXfer">Profil übertragen</button><button class="btn gold" id="pBack">Fertig</button></div>
+      <div class="pfoot">
+        <small class="note">Du spielst als Gast: Dein Profil ist auf diesem Gerät gespeichert.</small>
+        <button class="btn small" id="pXfer">Profil übertragen</button><button class="btn small gold" id="pBack">Fertig</button>
+      </div>
     </div>
+    <div class="psheet" id="pSheet" data-nol hidden></div>
   </div>
 
   <div id="privScr" class="screen" hidden>

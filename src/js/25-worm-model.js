@@ -585,12 +585,20 @@ const BOW_LIMB = (() => {
 // a unit model in its team's skin (UNIT_SKIN, set per match by setSkins in 65-profile.js): the skin swaps colours while it is built
 function buildUnit(k) {
   const sk = UNIT_SKIN[k];
-  if (!sk || LAM_MAP) return buildUnitRaw(k);
-  LAM_MAP = sk.map;
+  if (!sk || LAM_MAP || SKIN_NOW) return buildUnitRaw(k);
+  return buildSkinned(k, sk.id);
+}
+// a unit model in any skin (also for the previews in the profile): colour swaps plus the skin's extra pieces
+function buildSkinned(k, id) {
+  const m0 = LAM_MAP,
+    s0 = SKIN_NOW;
+  LAM_MAP = SKIN_MAPS[id] || null;
+  SKIN_NOW = SKINS[id] && SKINS[id].sw ? id : null;
   try {
     return buildUnitRaw(k);
   } finally {
-    LAM_MAP = null;
+    LAM_MAP = m0;
+    SKIN_NOW = s0;
   }
 }
 function buildUnitRaw(k) {
@@ -918,6 +926,7 @@ function buildUnitRaw(k) {
     vis.rotation.x = 0.12;
     vis.scale.set(1.1, 1, 0.9);
   }
+  if (SKIN_NOW) skinExtras(U, k, SKIN_NOW);
   if (k === 0 || k === 2 || k === 4 || k === 5) {
     const hat = new THREE.Group();
     H.children.slice(hatFrom).forEach(c => hat.add(c));
@@ -943,4 +952,160 @@ function buildUnitRaw(k) {
   hpGroup.add(hp);
   scene.add(g);
   return Object.assign(U, { ring, hp, hpf, blob, baseHeadMat: U.head.material });
+}
+/* What makes a skin more than a colour: capes, crowns, wolf pelts, sunglasses, flower garlands ... added while the model is built
+   (before the details are merged, so they cost no extra draw calls). Head pieces go into H (they fly off with a hat), face pieces onto
+   the neck (they stay on the face). Built the same way for the low-detail models (no randomness). */
+function skinExtras(U, k, id) {
+  const { torso, neck, H, armL, armR, foreL, foreR, legL, legR, shinL, shinR } = U;
+  if (!torso || !H) return;
+  const m = (geo, c, x, y, z, par) => mesh(geo, lam(c), x, y, z, par),
+    vik = k === 0 || k === 1 || k === 4,
+    ring = (n, r, y, par, geo, cols, sc = 1, z0 = 0) => {
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * TAU;
+        m(geo, cols[i % cols.length], Math.sin(a) * r, y, Math.cos(a) * r + z0, par).scale.setScalar(sc);
+      }
+    },
+    cape = (c, trim) => {
+      const cp = m(rbox(0.46, 0.8, 0.035, 0.015, 3), c, 0, 0.9, -0.225, torso);
+      cp.rotation.x = 0.13;
+      if (trim) m(new THREE.BoxGeometry(0.47, 0.05, 0.045), trim, 0, 0.52, -0.278, torso).rotation.x = 0.13;
+    },
+    shades = (lens, frame, round) => {
+      [-1, 1].forEach(s => {
+        if (round) {
+          const f = m(new THREE.TorusGeometry(0.12, 0.024, 6, 18), frame, s * 0.19, 0.58, 0.54, neck);
+          f.rotation.y = s * 0.32;
+          const l = m(new THREE.CircleGeometry(0.115, 16), lens, s * 0.19, 0.58, 0.535, neck);
+          l.rotation.y = s * 0.32;
+        } else {
+          const l = m(rbox(0.25, 0.15, 0.04, 0.05, 3), lens, s * 0.18, 0.6, 0.545, neck);
+          l.rotation.y = s * 0.32;
+        }
+        const t = m(new THREE.BoxGeometry(0.025, 0.025, 0.42), frame, s * 0.47, 0.62, 0.27, neck);
+        t.rotation.y = s * -0.12;
+      });
+      m(new THREE.BoxGeometry(0.12, 0.028, 0.03), frame, 0, 0.62, 0.585, neck);
+    };
+  if (id === 'v1') {
+    // Rotbart: a red clan cape with a fur edge, a gold torc
+    if (vik) {
+      cape(0x8e2a20, 0x5e3a22);
+      for (let i = 0; i < 5; i++) m(UG.tuft, 0x5e3a22, -0.18 + i * 0.09, 1.27, -0.19, torso).scale.set(1.3, 1, 1);
+      m(new THREE.TorusGeometry(0.115, 0.022, 6, 16).rotateX(Math.PI / 2), 0xd9a441, 0, 1.28, 0.01, torso);
+    }
+  } else if (id === 'v2') {
+    // Eiswolf: a white wolf pelt over the head with ears, a fur ruff, ice crystals on the shoulders, a white cape
+    if (vik) {
+      const pelt = m(new THREE.SphereGeometry(0.69, 18, 9, 0, TAU, 0, Math.PI * 0.5), 0xdfe7ee, 0, 0.02, -0.04, H);
+      pelt.rotation.x = -0.55;
+      [-1, 1].forEach(s => {
+        const e = m(new THREE.ConeGeometry(0.15, 0.36, 4), 0xdfe7ee, s * 0.34, 0.62, -0.12, H);
+        e.rotation.z = -s * 0.32;
+        const ei = m(new THREE.ConeGeometry(0.08, 0.22, 4), 0x9fb6c8, s * 0.33, 0.6, -0.04, H);
+        ei.rotation.z = -s * 0.32;
+        [0, 1].forEach(j => {
+          const c = m(new THREE.ConeGeometry(0.045, 0.2 - j * 0.06, 5), 0xbfe6ff, s * (0.24 + j * 0.06), 1.33, j * 0.05 - 0.02, torso);
+          c.rotation.z = -s * (0.25 + j * 0.3);
+        });
+      });
+      ring(10, 0.2, 1.27, torso, UG.tuft, [0xf2f6f9, 0xdfe7ee], 1.45);
+      cape(0xe8eef3, 0x9fb6c8);
+    }
+  } else if (id === 'v3') {
+    // Gold-Jarl: a golden crown, gold shoulder plates, a black cape with a gold hem
+    if (vik) {
+      const r = k === 1 ? 0.6 : 0.65,
+        y = k === 1 ? 0.3 : 0.27;
+      m(new THREE.TorusGeometry(r, 0.05, 5, 24).rotateX(Math.PI / 2), 0xd9a441, 0, y, 0, H);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * TAU;
+        m(new THREE.ConeGeometry(0.075, i % 2 ? 0.2 : 0.3, 4), 0xf3d27a, Math.sin(a) * r, y + (i % 2 ? 0.12 : 0.17), Math.cos(a) * r, H);
+      }
+      m(new THREE.SphereGeometry(0.06, 8, 6), 0xd0213a, 0, y + 0.02, r + 0.03, H);
+      [-1, 1].forEach(s => {
+        const p = m(new THREE.SphereGeometry(0.11, 10, 6, 0, TAU, 0, Math.PI / 2), 0xd9a441, s * 0.235, 1.25, 0, torso);
+        p.scale.set(1.1, 0.75, 1.1);
+        p.rotation.z = -s * 0.35;
+      });
+      cape(0x1c1c22, 0xd9a441);
+    }
+  } else if (id === 'v4') {
+    // Drachenjäger: dragon spikes down the back, a necklace of dragon teeth, a scaly green cape
+    if (vik) {
+      cape(0x23502b, 0x7a5a2a);
+      for (let i = 0; i < 4; i++) {
+        const c = m(new THREE.ConeGeometry(0.06 - i * 0.008, 0.2 - i * 0.025, 4), 0xc9a24a, 0, 1.22 - i * 0.15, -0.26, torso);
+        c.rotation.x = -1.1;
+      }
+      for (let i = 0; i < 7; i++) {
+        const a = Math.PI * (0.2 + (0.6 * i) / 6);
+        const t = m(new THREE.ConeGeometry(0.022, 0.09, 4), 0xf6f1e4, Math.cos(a) * 0.15, 1.2, Math.sin(a) * 0.13 + 0.03, torso);
+        t.rotation.x = Math.PI;
+      }
+    }
+  } else if (id === 'r1') {
+    // Trainingsanzug: stripes down the sleeves and trousers, a sweatband, wristbands
+    const st = (par, s, x, len) => par && m(new THREE.BoxGeometry(0.02, len, 0.02), 0xf6f6f6, s * x, -len / 2 - 0.01, 0, par);
+    st(armL, -1, 0.047, 0.2);
+    st(armR, 1, 0.047, 0.2);
+    st(foreL, -1, 0.044, 0.2);
+    st(foreR, 1, 0.044, 0.2);
+    if (k !== 3) {
+      st(legL, -1, 0.058, 0.22);
+      st(legR, 1, 0.058, 0.22);
+      st(shinL, -1, 0.054, 0.22);
+      st(shinR, 1, 0.054, 0.22);
+    }
+    [foreL, foreR].forEach(f => f && m(new THREE.TorusGeometry(0.05, 0.022, 5, 12).rotateX(Math.PI / 2), 0xf6f6f6, 0, -0.16, 0, f));
+    if (k !== 5) {
+      const y = k === 3 ? 0.22 : 0.13;
+      m(new THREE.TorusGeometry(0.6, 0.065, 5, 24).rotateX(Math.PI / 2), 0xf6f6f6, 0, y, 0, H);
+      m(new THREE.TorusGeometry(0.615, 0.02, 4, 24).rotateX(Math.PI / 2), 0xd23a2e, 0, y, 0, H);
+    }
+  } else if (id === 'r2') {
+    // Strandurlaub: sunglasses, a flower garland, a straw sun hat for Oma
+    if (k !== 5) shades(0x15161c, 0x2a2a30, false);
+    ring(12, 0.2, 1.25, torso, new THREE.SphereGeometry(0.045, 7, 5), [0xff5fa2, 0xffe066, 0xffffff, 0xff8a3d], 1, 0.01);
+    if (k === 3) {
+      m(new THREE.CylinderGeometry(0.98, 0.98, 0.04, 22), 0xe8cf8a, 0, 0.42, -0.06, H);
+      m(new THREE.CylinderGeometry(0.5, 0.6, 0.34, 18), 0xe8cf8a, 0, 0.6, -0.08, H);
+      m(new THREE.CylinderGeometry(0.61, 0.61, 0.08, 18), 0xff5fa2, 0, 0.48, -0.08, H);
+    }
+  } else if (id === 'r3') {
+    // Disco-Rentner: a gold medallion, big round disco glasses, a pink feather boa for Oma
+    const ch = m(new THREE.TorusGeometry(0.15, 0.012, 4, 18), 0xd9a441, 0, 1.17, 0.11, torso);
+    ch.rotation.x = 1.15;
+    m(new THREE.CylinderGeometry(0.065, 0.065, 0.016, 14).rotateX(Math.PI / 2), 0xf3d27a, 0, 1.03, 0.215, torso);
+    m(new THREE.OctahedronGeometry(0.035), 0xfff6c8, 0, 1.03, 0.23, torso);
+    if (k !== 5) shades(0x7a3fd0, 0xd9a441, true);
+    if (k === 3) ring(12, 0.25, 1.24, torso, UG.tuft, [0xff6fb5, 0xff9fd0], 1.6, -0.01);
+  } else if (id === 'r4') {
+    // Kegelclub: a bowling pin badge on the chest, white piping, a club cap star
+    const pin = m(
+      lathe(
+        [
+          [0, 0],
+          [0.03, 0.005],
+          [0.045, 0.04],
+          [0.035, 0.08],
+          [0.018, 0.11],
+          [0.026, 0.14],
+          [0.02, 0.165],
+          [0, 0.17],
+        ],
+        10
+      ),
+      0xf6f6f6,
+      0.1,
+      0.98,
+      0.2,
+      torso
+    );
+    pin.rotation.x = -0.15;
+    m(new THREE.TorusGeometry(0.019, 0.006, 4, 10).rotateX(Math.PI / 2), 0xd2302a, 0, 0.115, 0, pin);
+    m(new THREE.TorusGeometry(0.212, 0.012, 4, 20).rotateX(Math.PI / 2), 0xf6f6f6, 0, 1.18, 0, torso);
+    if (k === 2) m(new THREE.OctahedronGeometry(0.09), 0xf6f6f6, 0, 0.42, 0.5, H);
+  }
 }

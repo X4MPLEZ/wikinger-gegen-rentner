@@ -43,6 +43,7 @@ const SI_D = {
   mouse:
     '<rect x="6.5" y="3" width="11" height="18" rx="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 3v6.4M6.5 9.4h11" stroke="currentColor" stroke-width="1.4"/><rect x="11" y="5" width="2" height="3" rx="1" fill="currentColor"/>',
   warn: '<path d="M12 3l9.5 17h-19z" fill="#ffd34d" stroke="#7a4a00" stroke-width="1.3" stroke-linejoin="round"/><path d="M12 9v5.4" stroke="#3a2400" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="17.3" r="1.3" fill="#3a2400"/>',
+  home: '<path d="M3.5 11.2 12 4l8.5 7.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9.5h4.4v-5.6h3.2v5.6H18V10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>',
   close: '<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
   coins:
     '<ellipse cx="9" cy="17" rx="6" ry="2.6" fill="#d99a22" stroke="#7a5200" stroke-width="1"/><path d="M3 14v3c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v-3" fill="#f4c64f" stroke="#7a5200" stroke-width="1"/><ellipse cx="9" cy="14" rx="6" ry="2.6" fill="#f4c64f" stroke="#7a5200" stroke-width="1"/><path d="M9 7v3c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6V7" fill="#f4c64f" stroke="#7a5200" stroke-width="1"/><ellipse cx="15" cy="7" rx="6" ry="2.6" fill="#ffd968" stroke="#7a5200" stroke-width="1"/>',
