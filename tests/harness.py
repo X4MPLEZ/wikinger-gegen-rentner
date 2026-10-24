@@ -19,7 +19,9 @@ FAPI = _fapi.read_text() if _fapi.exists() else ''
 html = Path(os.environ.get('PAGE') or ROOT / 'dist/body.html').read_text()
 page_html = (
     '<!doctype html><html><head><meta charset=utf8>'
-    '<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>' + html + '</body></html>'
+    '<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">'
+    # the tests read German texts: pin the language (a test may override it with ?lang=xx)
+    '<script>window.WVR_LANG="de"</script></head><body>' + html + '</body></html>'
 )
 
 

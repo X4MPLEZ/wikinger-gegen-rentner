@@ -5,12 +5,14 @@ document.fonts &&
     .then(() => {
       spriteCache.clear();
       if (V.mode === 'menu') buildBases(V.facs);
+      fitText(); // (the display font changes the widths)
     })
     .catch(() => {});
 menuScene();
 applyCam();
 initQuality();
 requestAnimationFrame(frame);
+fitText();
 window.__wvr = {
   HERO,
   heroWormPose,
@@ -231,7 +233,36 @@ window.__wvr = {
   faceTexFromCrop,
   headBox,
   NET,
+  LANG,
+  I18N_DOM,
+  TR,
   LOBBY,
+  get PLAYER() {
+    return PLAYER;
+  },
+  set PLAYER(v) {
+    PLAYER = v;
+  },
+  profMatchEnd,
+  profEvent,
+  profOpen,
+  profEndUi,
+  profBuy,
+  profEquip,
+  profOwns,
+  profPublic,
+  profPeer,
+  profSend,
+  profFetch,
+  profClean,
+  avatarURL,
+  setSkins,
+  UNIT_SKIN,
+  SKINS,
+  AVATARS,
+  ACH,
+  lvOf,
+  LEVEL_REWARDS,
   quickMatch,
   lobbyFresh,
   hostOnline,

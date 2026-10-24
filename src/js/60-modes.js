@@ -42,7 +42,7 @@ function sendCmd(c) {
       if (i >= 0) NET.pending.splice(i, 1);
     }
     if (NET.pending.length >= 24) {
-      toast('Die Verbindung hängt – kurz warten …', 1500);
+      toast(TR('Die Verbindung hängt – kurz warten …'), 1500);
       return false;
     }
     c.s = ++NET.seq;
@@ -148,6 +148,12 @@ function beginMatch(mode, facs, myTeam, seed) {
   V.myTeam = myTeam;
   V.playing = true;
   V.delay = mode === 'guest' ? 0.2 : 0.06;
+  if (mode === 'ai') V.oppPf = null; // V.oppPf: the online opponent's public profile (set by hostOnline / joinOnline)
+  {
+    const mine = PLAYER.sk[facs[myTeam]],
+      opp = V.oppPf ? V.oppPf.sk[facs[1 - myTeam]] : null;
+    setSkins(facs, myTeam === 0 ? [mine, opp] : [opp, mine]);
+  }
   setFaceMat(myTeam, FACE.mine ? FACE.mine.crop : null);
   setFaceMat(1 - myTeam, FACE.other ? FACE.other.crop : null);
   if (!V.tut && MAP && MAP.type)
@@ -158,7 +164,14 @@ function beginMatch(mode, facs, myTeam, seed) {
       const T = MAPTYPES[MAP.type],
         d = document.createElement('div');
       d.id = 'mapCard';
-      d.innerHTML = `<div class="mi">${T.ic}</div><div class="mn">${T.n}</div><div class="ms">${FLAGS.length} Fahnen · ${{ wiesen: 'übersichtlich, Sprungpads über den Fluss', wueste: 'offen und weit: Fernkampf und Katapulte schießen weiter, Kakteen stechen, Sandwürmer lauern an den Flanken', arktis: 'Eis ist schnell und rutschig, Katapulte brechen Eis, Eisbären zähmen', klippen: 'Abgründe und Sprungpads: stoß Gegner in die Tiefe' }[MAP.type] || ''}</div>`;
+      d.innerHTML = `<div class="mi">${T.ic}</div><div class="mn">${T.n}</div><div class="ms">${TR('{0} Fahnen', FLAGS.length)} · ${
+        {
+          wiesen: TR('übersichtlich, Sprungpads über den Fluss'),
+          wueste: TR('offen und weit: Fernkampf und Katapulte schießen weiter, Kakteen stechen, Sandwürmer lauern an den Flanken'),
+          arktis: TR('Eis ist schnell und rutschig, Katapulte brechen Eis, Eisbären zähmen'),
+          klippen: TR('Abgründe und Sprungpads: stoß Gegner in die Tiefe'),
+        }[MAP.type] || ''
+      }</div>`;
       $('#game').appendChild(d);
       setTimeout(() => d.remove(), 2700);
     }, 300);
@@ -174,6 +187,7 @@ function beginMatch(mode, facs, myTeam, seed) {
   SHAKE.a = 0;
   showScreen(null);
   $('#hud').hidden = false;
+  requestAnimationFrame(fitText);
   $('#ego').hidden = true;
   $('#netwarn').hidden = true;
   hintState.done = new Set(hintsSaved());
@@ -183,6 +197,7 @@ function beginMatch(mode, facs, myTeam, seed) {
   V.siegeTip = false;
   if (!V.tut && !hintState.done.has('spawn')) setTimeout(() => toast(HINTS[0].text(), 4500), 1200);
   setTimeout(warmShaders, 60);
+  if (mode !== 'ai') setTimeout(() => V.playing && vsCard(V.oppPf), 200);
   // a back swipe (Android) or the browser's back button opens the menu instead of leaving the match (see popstate in 62-screens.js)
   try {
     if (!(history.state && history.state.wvr)) history.pushState({ wvr: 1 }, '');
@@ -363,11 +378,11 @@ function endGame(s) {
     me = V.myTeam,
     myF = V.facs[me];
   SFX.play(won ? 'win' : 'lose');
-  $('#endTitle').textContent = won ? 'Sieg!' : 'Niederlage';
+  $('#endTitle').textContent = won ? TR('Sieg!') : TR('Niederlage');
   $('#endTitle').className = 'endtitle ' + (won ? 'win' : 'lose');
   $('#endSub').textContent = {
-    viking: ['Walhalla jubelt. Das Altersheim ist geplündert!', 'Die Rentner haben euch mit Pantoffeln heimgeschickt.'],
-    rentner: ['Ruhe im Haus! Die Wikinger rudern zurück nach Hause.', 'Die Wikinger haben das Haus Abendrot geplündert.'],
+    viking: [TR('Walhalla jubelt. Das Altersheim ist geplündert!'), TR('Die Rentner haben euch mit Pantoffeln heimgeschickt.')],
+    rentner: [TR('Ruhe im Haus! Die Wikinger rudern zurück nach Hause.'), TR('Die Wikinger haben das Haus Abendrot geplündert.')],
   }[myF][won ? 0 : 1];
   $('#stTime').textContent = Math.floor(s.t / 60) + ':' + String(Math.floor(s.t % 60)).padStart(2, '0');
   $('#stKills').textContent = s.k[me];
@@ -382,19 +397,19 @@ function endGame(s) {
         T = Math.max(1, s.t),
         fmt = v => Math.floor(v / 60) + ':' + String(Math.round(v % 60)).padStart(2, '0');
       const rows = [
-        ['Ausgebildet', 0, 1, null, true],
-        ['Verloren', 1, -1, null, true],
-        ['Basis-Schaden', 2, 1, null, true],
-        ['Ø Fahnen', 3, 1, v => (v / T).toFixed(1).replace('.', ','), true],
-        ['Fahnen-Führung', 4, 1, fmt, true],
-        ['Helden besiegt', 10, 1],
-        ['Rammstöße', 5, 1],
-        ['Klippenstürze', 6, 1],
-        ['Katapulte zerstört', 8, 1],
-        [MAP && MAP.type === 'wueste' ? 'Sandwürmer gezähmt' : 'Eisbären gezähmt', 7, 1],
-        ['Eislöcher', 9, 1],
+        [TR('Ausgebildet'), 0, 1, null, true],
+        [TR('Verloren'), 1, -1, null, true],
+        [TR('Basis-Schaden'), 2, 1, null, true],
+        [TR('Ø Fahnen'), 3, 1, v => numL(Math.round((v / T) * 10) / 10), true],
+        [TR('Fahnen-Führung'), 4, 1, fmt, true],
+        [TR('Helden besiegt'), 10, 1],
+        [TR('Rammstöße'), 5, 1],
+        [TR('Klippenstürze'), 6, 1],
+        [TR('Katapulte zerstört'), 8, 1],
+        [MAP && MAP.type === 'wueste' ? TR('Sandwürmer gezähmt') : TR('Eisbären gezähmt'), 7, 1],
+        [TR('Eislöcher'), 9, 1],
       ];
-      let h = '<div class="l h">Du</div><div class="m h"></div><div class="r h">Gegner</div>';
+      let h = `<div class="l h">${TR('Du')}</div><div class="m h"></div><div class="r h">${TR('Gegner')}</div>`;
       for (const [nm, i, dir, f, always] of rows) {
         const a = st[me][i],
           b = st[op][i];
@@ -405,13 +420,37 @@ function endGame(s) {
       box.innerHTML = h;
     }
   }
-  if (V.mode === 'ai' && !V.tut) $('#endSub').textContent += ' (Computer: ' + AI_LVL[aiLvl].name + ')';
+  if (V.mode === 'ai' && !V.tut) $('#endSub').textContent += ' ' + TR('(Computer: {0})', AI_LVL[aiLvl].name);
+  {
+    // the profile: statistics, XP, Juwelen, achievements (65-profile.js); shown under the numbers (66-profile-ui.js)
+    let R = null;
+    try {
+      R = profMatchEnd({
+        won,
+        online: V.mode === 'host' || V.mode === 'guest',
+        ai: V.mode === 'ai' && !V.tut,
+        tut: !!V.tut,
+        adv: !!TUT.adv,
+        lvl: aiLvl,
+        fac: myF,
+        map: MAP && MAP.type,
+        mode: s.ch ? 'chaos' : s.fg ? 'fog' : 'classic',
+        t: s.t,
+        k: s.k ? s.k[me] : 0,
+        st: s.st ? s.st[me] : null,
+        ost: s.st ? s.st[1 - me] : null,
+        base: s.b ? s.b[me] : 0,
+        mhp: CFG.baseHp,
+      });
+    } catch (_) {}
+    profEndUi(R);
+  }
   $('#btnAgain').hidden = V.mode !== 'ai';
   if (V.tut) {
-    $('#endTitle').textContent = won ? 'Geschafft!' : 'Fast!';
+    $('#endTitle').textContent = won ? TR('Geschafft!') : TR('Fast!');
     $('#endSub').textContent = TUT.adv
-      ? 'Profi-Prüfung bestanden! Jetzt zeig es dem Computer auf „Schwer“.'
-      : 'Du kennst jetzt das Wichtigste. Ab gegen den Computer – oder ins Profi-Tutorial!';
+      ? TR('Profi-Prüfung bestanden! Jetzt zeig es dem Computer auf „Schwer“.')
+      : TR('Du kennst jetzt das Wichtigste. Ab gegen den Computer – oder ins Profi-Tutorial!');
     $('#btnAgain').hidden = true;
     store.set('wvr-tut', '1');
     $('#tutBadge').hidden = true;
@@ -426,8 +465,8 @@ function endGame(s) {
     NET.rmMiss = 0;
     NET.endSeed = V.mode === 'guest' ? V.latest && V.latest.sd : G && G.seed;
     if (on) {
-      $('#btnRematch').textContent = 'Noch eine Runde!';
-      $('#rematchNote').textContent = 'Gleicher Gegner, neue Karte. Sobald ihr beide tippt, geht es los.';
+      $('#btnRematch').textContent = TR('Noch eine Runde!');
+      $('#rematchNote').textContent = TR('Gleicher Gegner, neue Karte. Sobald ihr beide tippt, geht es los.');
       if (V.mode === 'host') hostBroadcast();
       NET.endPoll = setInterval(rematchTick, 300);
     } else if (V.mode === 'host') {

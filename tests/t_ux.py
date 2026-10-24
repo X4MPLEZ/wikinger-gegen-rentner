@@ -52,7 +52,8 @@ with sync_playwright() as p:
     R['chicken'] = pg.evaluate("""async()=>{const W=__wvr,G=W.G; const T=G.teams[0]; T.gold=999;
        for(let i=0;i<3;i++) W.applyCmd(G,0,{t:'spawn',k:W.FAC[T.fac].kinds[0]});
        await new Promise(r=>setTimeout(r,4500));
-       const u=G.units.find(u=>u.team===0); if(!u) return 'no unit';
+       const u=G.units.filter(u=>u.team===0).pop(); if(!u) return 'no unit';
+       W.camS.x=u.x; W.camS.z=u.z; W.applyCam(); // (the unit must be on screen to be counted in the batches)
        const cnt=()=>W.UB.list.reduce((a,e)=>a+e.n,0);
        await new Promise(r=>setTimeout(r,200)); const before=cnt();
        u.chick=8; await new Promise(r=>setTimeout(r,600)); const after=cnt();

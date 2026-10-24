@@ -3,7 +3,7 @@
 /* ---------- computer opponent ---------- */
 const AI_LVL = {
   easy: {
-    name: 'Einfach',
+    name: TR('Einfach'),
     think: 2.2,
     inc: 0.6,
     counter: 0.1,
@@ -16,7 +16,7 @@ const AI_LVL = {
     bonus: 0,
   },
   medium: {
-    name: 'Mittel',
+    name: TR('Mittel'),
     think: 1.0,
     inc: 0.9,
     counter: 0.4,
@@ -29,7 +29,7 @@ const AI_LVL = {
     bonus: 0,
   },
   hard: {
-    name: 'Schwer',
+    name: TR('Schwer'),
     think: 0.5,
     inc: 1.0,
     counter: 0.85,
@@ -42,7 +42,7 @@ const AI_LVL = {
     bonus: 0,
   },
   insane: {
-    name: 'Sehr schwer',
+    name: TR('Sehr schwer'),
     think: 0.25,
     inc: 1.35,
     counter: 1,
@@ -57,7 +57,7 @@ const AI_LVL = {
     rangedEgo: 0.3,
   },
   extreme: {
-    name: 'Extrem',
+    name: TR('Extrem'),
     think: 0.15,
     inc: 1.8,
     counter: 1,

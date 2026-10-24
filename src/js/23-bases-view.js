@@ -33,7 +33,7 @@ function houseFront(withDoor) {
     x.fillStyle = '#f6f1e7';
     x.textAlign = 'center';
     x.textBaseline = 'middle';
-    x.fillText('HAUS ABENDROT', 256, 113);
+    x.fillText(TR('HAUS ABENDROT'), 256, 113);
   }
   return c;
 }

@@ -5,19 +5,8 @@
    While waiting the host may practise against the computer (NET.practice); a player joining interrupts it after a short countdown. */
 const LOBBY = { on: false, clients: [], list: new Map(), subAt: 0, failed: false, host: null, offT: 0 };
 const LOBBY_FRESH = 50000; // an entry without a heartbeat for this long is gone
-const LOBBY_NAMES = {
-  rentner: ['Heinz', 'Erna', 'Gustav', 'Hilde', 'Kurt', 'Gerda', 'Horst', 'Trude', 'Willi', 'Inge', 'Egon', 'Lotte'],
-  viking: ['Björn', 'Olaf', 'Sven', 'Ragnar', 'Ingrid', 'Astrid', 'Thorvald', 'Sigrid', 'Leif', 'Freya', 'Harald', 'Gunnhild'],
-};
 const LOBBY_MODES = ['classic', 'chaos', 'fog'];
 const lobbyTopic = () => 'wvr7/lobby/v' + NET_VER + '/';
-const lobbyNameIdx = () => Math.floor(Math.random() * 12) * 100 + 10 + Math.floor(Math.random() * 90); // name index * 100 + a two-digit number
-function lobbyName(e) {
-  const nm = LOBBY_NAMES[e.f][Math.floor(e.n / 100) % 12],
-    nr = e.n % 100;
-  if (e.f === 'viking') return nm + ' ' + nr;
-  return (['Erna', 'Hilde', 'Gerda', 'Trude', 'Inge', 'Lotte'].includes(nm) ? 'Oma ' : 'Opa ') + nm + ' ' + nr;
-}
 // Entries come from anyone on a public broker: only well-formed ones are shown, and only through textContent.
 function lobbyValid(d, code) {
   return (
@@ -31,7 +20,14 @@ function lobbyValid(d, code) {
     d.p <= 3 &&
     Number.isInteger(d.n) &&
     d.n >= 0 &&
-    d.n < 1200 &&
+    d.n < PROF_NAMES.length * 100 &&
+    d.n % 100 >= 10 &&
+    Number.isInteger(d.a) &&
+    d.a >= 0 &&
+    d.a < AVATARS.length &&
+    Number.isInteger(d.l) &&
+    d.l >= 1 &&
+    d.l <= LEVEL_MAX &&
     Number.isFinite(d.h) &&
     Number.isFinite(d.t)
   );
@@ -153,7 +149,7 @@ function lobbyRender() {
   const key =
     (LOBBY.failed ? 'f' : LOBBY.subAt ? 's' : 'w') +
     (busy ? 'b' : '') +
-    list.map(e => e.c + e.f + e.m + e.p + e.n).join(',') +
+    list.map(e => [e.c, e.f, e.m, e.p, e.n, e.a, e.l].join(':')).join(',') +
     (NET.code || '');
   if (box.dataset.k === key) return;
   box.dataset.k = key;
@@ -163,14 +159,14 @@ function lobbyRender() {
     const p = document.createElement('p');
     p.className = 'note';
     p.textContent = LOBBY.failed
-      ? 'Die Liste der offenen Spiele ist gerade nicht erreichbar. Mit Code geht es trotzdem.'
+      ? TR('Die Liste der offenen Spiele ist gerade nicht erreichbar. Mit Code geht es trotzdem.')
       : !LOBBY.subAt
-        ? 'Suche offene Spiele …'
-        : 'Gerade wartet niemand. Tippe „Schnelles Spiel“: Dann steht dein Spiel hier, und du kannst solange gegen den Computer üben.';
+        ? TR('Suche offene Spiele …')
+        : TR('Gerade wartet niemand. Tippe „Schnelles Spiel“: Dann steht dein Spiel hier, und du kannst solange gegen den Computer üben.');
     box.appendChild(p);
     return;
   }
-  const modeN = { classic: 'Klassisch', chaos: 'Chaos', fog: 'Nebel' };
+  const modeN = { classic: TR('Klassisch'), chaos: TR('Chaos'), fog: TR('Nebel') };
   for (const e of list) {
     const row = document.createElement('div'),
       img = document.createElement('img'),
@@ -182,14 +178,19 @@ function lobbyRender() {
     row.className = 'lrow ' + e.f;
     img.alt = '';
     try {
-      img.src = unitHead(e.f === 'viking' ? 0 : 2) || PORTRAIT[e.f === 'viking' ? 0 : 2];
+      img.src = avatarURL(AVATARS[e.a].id);
     } catch (_) {}
     tx.className = 'ltx';
-    b.textContent = lobbyName(e);
-    sm.textContent = modeN[e.m] + ' · ' + MAPTYPES[MAPTYPE_KEYS[e.p]].n + ' · du: ' + (mine === 'viking' ? 'Wikinger' : 'Rentner');
+    b.textContent = profName(Math.floor(e.n / 100), e.n % 100) + ' · ' + TR('Lv {0}', e.l);
+    sm.textContent = TR(
+      '{0} · {1} · du: {2}',
+      modeN[e.m],
+      MAPTYPES[MAPTYPE_KEYS[e.p]].n,
+      mine === 'viking' ? TR('Wikinger') : TR('Rentner')
+    );
     tx.append(b, sm);
     btn.className = 'btn small quick';
-    btn.textContent = 'Spielen';
+    btn.textContent = TR('Spielen');
     btn.disabled = busy;
     btn.addEventListener('click', () => {
       SFX.play('click');
@@ -261,7 +262,7 @@ async function quickMatch(skip = []) {
   lobbyWatch(true);
   const s = $('#onlineStatus');
   s.hidden = false;
-  s.textContent = 'Suche einen Gegner';
+  s.textContent = TR('Suche einen Gegner');
   s.classList.add('dots');
   $('#btnQuick').disabled = true;
   for (let i = 0; i < 30 && (!LOBBY.subAt || now() - LOBBY.subAt < 1500) && !LOBBY.failed; i++) await new Promise(r => setTimeout(r, 100));
@@ -294,5 +295,5 @@ $('#foundNo').addEventListener('click', () => {
   lobbyHostStop();
   const a = NET.connectAttempt;
   setTimeout(() => a === NET.connectAttempt && leaveNet(), 1500);
-  toast('Du übst weiter. Dein Spiel steht nicht mehr in der Liste.', 2500);
+  toast(TR('Du übst weiter. Dein Spiel steht nicht mehr in der Liste.'), 2500);
 });

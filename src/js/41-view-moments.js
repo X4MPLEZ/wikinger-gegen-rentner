@@ -7,60 +7,69 @@ function shake(a) {
 const HL = { q: [], busy: 0, seen: undefined, last: {} };
 function hlText(ty, team, n) {
   const mine = team === V.myTeam;
-  if (ty === 'quake') return mine ? ['ERDBEBEN!', n + ' Gegner liegen am Boden'] : ['ERDBEBEN!', 'Die Erde bebt unter deinen Kriegern'];
+  if (ty === 'quake')
+    return mine ? [TR('ERDBEBEN!'), TR('{0} Gegner liegen am Boden', n)] : [TR('ERDBEBEN!'), TR('Die Erde bebt unter deinen Kriegern')];
   if (ty === 'ram')
     return mine
-      ? [n >= 5 ? 'RAMMBOCK-FESTIVAL!' : n === 4 ? 'VIERFACH-RAMME!' : 'DREIFACH-RAMME!', n + ' Gegner mit einem Anlauf umgenietet']
-      : [n + ' auf einmal umgerammt!', 'Achte auf seinen Reiter'];
+      ? [
+          n >= 5 ? TR('RAMMBOCK-FESTIVAL!') : n === 4 ? TR('VIERFACH-RAMME!') : TR('DREIFACH-RAMME!'),
+          TR('{0} Gegner mit einem Anlauf umgenietet', n),
+        ]
+      : [TR('{0} auf einmal umgerammt!', n), TR('Achte auf seinen Reiter')];
   if (ty === 'cliff')
     return mine
-      ? [n >= 4 ? 'MASSENSTURZ!' : 'AB IN DIE TIEFE!', n + ' Gegner über die Kante geschubst']
-      : ['KLIPPENSTURZ!', n + ' deiner Krieger sind abgestürzt'];
+      ? [n >= 4 ? TR('MASSENSTURZ!') : TR('AB IN DIE TIEFE!'), TR('{0} Gegner über die Kante geschubst', n)]
+      : [TR('KLIPPENSTURZ!'), TR('{0} deiner Krieger sind abgestürzt', n)];
   if (ty === 'ice')
-    return mine ? ['EINGEBROCHEN!', n + ' Gegner sind ins Eis gekracht'] : ['DAS EIS BRICHT!', n + ' deiner Krieger sind eingebrochen'];
+    return mine
+      ? [TR('EINGEBROCHEN!'), TR('{0} Gegner sind ins Eis gekracht', n)]
+      : [TR('DAS EIS BRICHT!'), TR('{0} deiner Krieger sind eingebrochen', n)];
   if (ty === 'strike')
     return mine
-      ? [n >= 5 ? 'ALLE NEUNE!' : 'STRIKE!', n + ' Gegner wie Kegel umgeworfen']
-      : ['UMGEKEGELT!', n + ' deiner Krieger liegen flach'];
-  if (ty === 'boulder') return mine ? ['STEINLAWINE!', 'Der Felsbrocken rollt und rollt'] : ['DER FELS ROLLT!', 'Weg von der Flugbahn!'];
+      ? [n >= 5 ? TR('ALLE NEUNE!') : TR('STRIKE!'), TR('{0} Gegner wie Kegel umgeworfen', n)]
+      : [TR('UMGEKEGELT!'), TR('{0} deiner Krieger liegen flach', n)];
+  if (ty === 'boulder')
+    return mine ? [TR('STEINLAWINE!'), TR('Der Felsbrocken rollt und rollt')] : [TR('DER FELS ROLLT!'), TR('Weg von der Flugbahn!')];
   if (ty === 'gulp')
     return team < 0
-      ? ['MAHLZEIT!', 'Der Sandwurm verschlingt ' + n + ' auf einmal']
+      ? [TR('MAHLZEIT!'), TR('Der Sandwurm verschlingt {0} auf einmal', n)]
       : mine
-        ? ['FESTMAHL!', n + ' Gegner auf einmal verschlungen']
-        : ['VERSCHLUNGEN!', n + ' deiner Krieger im Wurmbauch'];
+        ? [TR('FESTMAHL!'), TR('{0} Gegner auf einmal verschlungen', n)]
+        : [TR('VERSCHLUNGEN!'), TR('{0} deiner Krieger im Wurmbauch', n)];
   if (ty === 'hero')
     return mine
-      ? ['HELDENTOD!', 'Dein Held hat dem Sandwurm ' + n + ' Schaden verpasst']
-      : ['EIN HELD FÄLLT!', 'Ein Gegner hat sich dem Sandwurm geopfert'];
+      ? [TR('HELDENTOD!'), TR('Dein Held hat dem Sandwurm {0} Schaden verpasst', n)]
+      : [TR('EIN HELD FÄLLT!'), TR('Ein Gegner hat sich dem Sandwurm geopfert')];
   if (ty === 'heroWin')
     return mine
-      ? ['HELD DES TAGES!', 'Der Sandwurm ist bezwungen – und dein Held lebt!']
-      : ['DER WURM IST BEZWUNGEN!', 'Ein gegnerischer Held hat ihn besiegt'];
+      ? [TR('HELD DES TAGES!'), TR('Der Sandwurm ist bezwungen – und dein Held lebt!')]
+      : [TR('DER WURM IST BEZWUNGEN!'), TR('Ein gegnerischer Held hat ihn besiegt')];
   if (ty === 'cat')
     return mine
-      ? ['KATAPULT ZERLEGT!', '+' + CFG.siegeBounty + ' ' + FAC[V.facs[V.myTeam]].res + ' Beute']
-      : ['KATAPULT VERLOREN!', 'Der Gegner kassiert Beute'];
-  if (ty === 'save') return mine ? ['IN LETZTER SEKUNDE!', 'Fahne gerade noch gehalten'] : null;
-  if (ty === 'ev1') return ['NEBELWAND!', 'Du siehst nur noch um deine Krieger und deine Basis'];
+      ? [TR('KATAPULT ZERLEGT!'), TR('+{0} {1} Beute', CFG.siegeBounty, FAC[V.facs[V.myTeam]].res)]
+      : [TR('KATAPULT VERLOREN!'), TR('Der Gegner kassiert Beute')];
+  if (ty === 'save') return mine ? [TR('IN LETZTER SEKUNDE!'), TR('Fahne gerade noch gehalten')] : null;
+  if (ty === 'ev1') return [TR('NEBELWAND!'), TR('Du siehst nur noch um deine Krieger und deine Basis')];
   if (ty === 'fogMode')
     return [
-      'NEBEL-MODUS',
-      'Du siehst nur rund um deine Krieger, deine Basis und deine Fahnen. Halte Fahnen – sie sind Wachtürme. Reiter sehen weiter.',
+      TR('NEBEL-MODUS'),
+      TR('Du siehst nur rund um deine Krieger, deine Basis und deine Fahnen. Halte Fahnen – sie sind Wachtürme. Reiter sehen weiter.'),
     ];
-  if (ty === 'ev2') return ['GOLDWAGEN!', 'Eskortiere den Wagen – wer dabei ist, kassiert'];
-  if (ty === 'ev3') return ['KLEINE ARMEE, GROSSER SOLD!', '60 s lang: je weniger Krieger, desto mehr Gold'];
-  if (ty === 'ev4') return ['FAHNENWANDERUNG!', 'Die Fahnen ziehen um – schnell hin!'];
-  if (ty === 'evEnd') return n === 1 ? ['DER NEBEL LICHTET SICH', 'Freie Sicht'] : ['SOLD-BONUS VORBEI', 'Das Gold fließt wieder normal'];
+  if (ty === 'ev2') return [TR('GOLDWAGEN!'), TR('Eskortiere den Wagen – wer dabei ist, kassiert')];
+  if (ty === 'ev3') return [TR('KLEINE ARMEE, GROSSER SOLD!'), TR('60 s lang: je weniger Krieger, desto mehr Gold')];
+  if (ty === 'ev4') return [TR('FAHNENWANDERUNG!'), TR('Die Fahnen ziehen um – schnell hin!')];
+  if (ty === 'evEnd')
+    return n === 1 ? [TR('DER NEBEL LICHTET SICH'), TR('Freie Sicht')] : [TR('SOLD-BONUS VORBEI'), TR('Das Gold fließt wieder normal')];
   if (ty === 'phase')
     return n === 1
-      ? ['STURM!', 'Basen nehmen 50 % mehr Schaden, kein Heimvorteil mehr']
+      ? [TR('STURM!'), TR('Basen nehmen 50 % mehr Schaden, kein Heimvorteil mehr')]
       : n === 2
-        ? ['ENDKAMPF!', 'Die Mauern brechen: Basisschaden ×2,2, keine Panzerung mehr']
-        : ['DIE BASEN BRÖCKELN!', 'Beide Basen verlieren jetzt ständig Leben'];
+        ? [TR('ENDKAMPF!'), TR('Die Mauern brechen: Basisschaden ×2,2, keine Panzerung mehr')]
+        : [TR('DIE BASEN BRÖCKELN!'), TR('Beide Basen verlieren jetzt ständig Leben')];
   return null;
 }
 function hlPush(ty, team, n, x, z) {
+  profEvent('hl', { ty, mine: team === V.myTeam, n });
   if (ty === 'quake' && Number.isFinite(x)) {
     // the earthquake itself: dust all around the spot, the screen shakes
     shake(0.55);
@@ -235,7 +244,7 @@ function hitFx(team, h) {
     prio: true,
   });
   if (head) {
-    word('KOPFTREFFER!', x, y + 2.8, z, { color: '#ffd34d', scale: 1.5, prio: true });
+    word(TR('KOPFTREFFER!'), x, y + 2.8, z, { color: '#ffd34d', scale: 1.5, prio: true });
     SFX.play('headshot');
     puff(x, y, z, 0xffe08a, 6, 0.6);
     if (V.poss) {
@@ -272,7 +281,8 @@ function startRagdoll(u, fx2, fz2) {
   u.g.rotation.y = u.rag.dir + Math.PI;
   puff(x, u.g.position.y + 0.8, z, 0xd8c48f, 5, 0.8);
   SFX.play('whoosh', { x, z });
-  if (Math.random() < 0.5) word(pick(['UIIIH!', 'HUIII!', 'AUA!', 'FLIEG!']), x, u.g.position.y + 3, z, { color: '#ffffff', scale: 0.9 });
+  if (Math.random() < 0.5)
+    word(pick([TR('UIIIH!'), TR('HUIII!'), TR('AUA!'), TR('FLIEG!')]), x, u.g.position.y + 3, z, { color: '#ffffff', scale: 0.9 });
 }
 function startTumble(u) {
   if (!u || u.rag) return;
@@ -284,7 +294,7 @@ function startTumble(u) {
     puff(x + Math.cos(a) * 1.2, u.g.position.y + 0.2, z + Math.sin(a) * 1.2, 0xd8c48f, 1, 0.8);
   }
   SFX.play('bonk', { x, z });
-  word(pick(['AUA!', 'UFF!', 'AUTSCH!', 'Mein Rücken!']), x, u.g.position.y + 3, z, { color: '#ffffff', scale: 0.9 });
+  word(pick([TR('AUA!'), TR('UFF!'), TR('AUTSCH!'), TR('Mein Rücken!')]), x, u.g.position.y + 3, z, { color: '#ffffff', scale: 0.9 });
 }
 function ragdollRig(u, dt) {
   const R = u.rag;
@@ -342,7 +352,7 @@ function ragdollRig(u, dt) {
     u.rig.rotation.z = 0;
     u.rag = null;
     if (Math.random() < 0.4)
-      word(pick(['Geht schon!', 'Nix passiert!', 'Weiter!']), u.g.position.x, u.g.position.y + 3.2, u.g.position.z, {
+      word(pick([TR('Geht schon!'), TR('Nix passiert!'), TR('Weiter!')]), u.g.position.x, u.g.position.y + 3.2, u.g.position.z, {
         color: '#ffffff',
         scale: 0.7,
       });

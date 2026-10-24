@@ -27,7 +27,7 @@ def connect(ctx, mq_ok=False):
     for i in range(2):
         pg=ctx.new_page(); pg.route('**/*', mkroute(True, mq_ok))
         pg.on('pageerror', lambda e, i=i: errs.append(('h' if i==0 else 'g')+': '+str(e)))
-        pg.add_init_script(TRAP+"window.WVR_MQTT=['ws://127.0.0.1:9001'];window.WVR_PEER={host:'127.0.0.1',port:9000,path:'/myapp',secure:false,debug:0};")
+        pg.add_init_script(TRAP+"window.WVR_LANG='de';window.WVR_MQTT=['ws://127.0.0.1:9001'];window.WVR_PEER={host:'127.0.0.1',port:9000,path:'/myapp',secure:false,debug:0};")
         pg.goto('http://127.0.0.1:9000/'); pgs.append(pg)
     h,g=pgs; h.wait_for_timeout(2500)
     h.click('#btnHost'); h.wait_for_timeout(3500); code=h.input_value('#codeIn')

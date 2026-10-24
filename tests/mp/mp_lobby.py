@@ -2,7 +2,7 @@
 # Checks: "Schnelles Spiel" with an empty list opens a public game that a second page sees under "Offene Spiele" and joins from there
 # (no photos between strangers, the entry disappears once the match runs); a second "Schnelles Spiel" joins an open game instead of
 # opening its own; a host practising against the computer is interrupted by a joining player after the countdown, or declines with
-# "Weiter üben" (the joining player is told, the entry is gone).
+# "Weiter üben" (the joining player is told, the entry is gone). Also: the profile travels to another device with the transfer code.
 import sys, os
 from pathlib import Path
 from playwright.sync_api import sync_playwright
@@ -23,7 +23,7 @@ errs=[]; res={}
 def page(ctx, tag):
     pg=ctx.new_page(); pg.route('**/*', route)
     pg.on('pageerror', lambda e: errs.append(tag+': '+str(e)))
-    pg.add_init_script("window.WVR_MQTT=['ws://127.0.0.1:9001'];window.WVR_PEER={host:'127.0.0.1',port:9000,path:'/myapp',secure:false,debug:0};")
+    pg.add_init_script("window.WVR_LANG='de';window.WVR_MQTT=['ws://127.0.0.1:9001'];window.WVR_PEER={host:'127.0.0.1',port:9000,path:'/myapp',secure:false,debug:0};")
     pg.goto('http://127.0.0.1:9000/'); pg.wait_for_timeout(2500)
     pg.evaluate("document.querySelector('.online').scrollIntoView()")  # the list is watched while it is on screen
     pg.wait_for_timeout(300)
@@ -40,12 +40,17 @@ with sync_playwright() as p:
     # 1) quick match with an empty list -> a public game, listed on the other page, joined from the list
     h=page(ctx,'h'); g=page(ctx,'g')
     h.evaluate("__wvr.FACE.mine={id:'f1',net:'data:image/jpeg;base64,'+'A'.repeat(900),crop:null}")
+    # the host's profile: level 10 with the Trainingsanzug skin for the Rentner and a picture of his own
+    h.evaluate("()=>{const W=__wvr,P=W.PLAYER; P.xp=1700; P.lvC=10; W.PLAYER=P; W.profEquip('r1'); W.profEquip('oma');}")
     h.click('#btnQuick')
     res['hostPub']=wait(h, "__wvr.NET.role==='host' && __wvr.NET.pub===true && !document.querySelector('#btnPractice').hidden")
     res['listed']=wait(g, "document.querySelectorAll('#lobbyList .lrow').length>0", 40)
     res['rows']=rows(g)
     g.click('#lobbyList .lrow button')
     res['match1']=wait(g, "__wvr.V.mode==='guest' && __wvr.V.playing", 60) and h.evaluate("__wvr.V.mode")=='host'
+    res['vsCard']=wait(g, "__wvr.V.vsN>0", 10, 200) and wait(h, "__wvr.V.vsN>0", 10, 200)
+    res['guestSeesSkin']=g.evaluate("__wvr.UNIT_SKIN[2] && __wvr.UNIT_SKIN[2].id")
+    res['guestSeesName']=g.evaluate("__wvr.V.oppPf && [__wvr.V.oppPf.lv, __wvr.V.oppPf.av]")
     g.wait_for_timeout(3000)
     res['noFace']=g.evaluate("__wvr.FACE.other===null || !__wvr.FACE.other.url") and g.evaluate("__wvr.NET.pub===true")
     c=page(ctx,'c'); c.wait_for_timeout(3500)
@@ -83,10 +88,21 @@ with sync_playwright() as p:
     res['stillPractising']=h.evaluate("__wvr.V.mode==='ai' && __wvr.V.playing && !__wvr.NET.r")
     c=page(ctx,'c4'); c.wait_for_timeout(3500)
     res['clearedAfterDecline']=rows(c)
+    for pg in (h,g,c): pg.close()
+    # 5) moving a profile to another device with the 8-digit code (used up once taken)
+    a=page(ctx,'a5'); d=page(ctx,'d5')
+    a.evaluate("()=>{const W=__wvr,P=W.PLAYER; P.xp=777; P.gems=123; P.nm=5; P.nr=42; P.ach.firstWin=1; W.PLAYER=P;}")
+    code=a.evaluate("__wvr.profSend()")
+    res['xferCode']=bool(code) and len(code)==8
+    got=d.evaluate("async c=>{const P=await __wvr.profFetch(c); return P && [P.xp, P.gems, P.nm, P.nr, !!P.ach.firstWin];}", code)
+    res['xferGot']=got
+    res['xferUsedUp']=d.evaluate("async c=>!(await __wvr.profFetch(c))", code)
     b.close()
 print(res)
 print('errs', errs[:5])
-ok = (res['hostPub'] and res['listed'] and res['rows'] and res['match1'] and res['noFace'] and res['clearedAfterStart']==[]
+ok = (res['hostPub'] and res['listed'] and res['rows'] and 'Lv 10' in res['rows'][0] and res['match1'] and res['noFace'] and res['clearedAfterStart']==[]
+      and res['vsCard'] and res['guestSeesSkin'] == 'r1' and res['guestSeesName'] == [10, 'oma']
       and res['quickJoin'] and res['practising'] and res['banner'] and res['guestToldPractice'] and res['match3'] and res['bannerGone']
-      and res['declinedTold'] and res['stillPractising'] and res['clearedAfterDecline']==[] and not errs)
+      and res['declinedTold'] and res['stillPractising'] and res['clearedAfterDecline']==[]
+      and res['xferCode'] and res['xferGot'] == [777, 123, 5, 42, True] and res['xferUsedUp'] and not errs)
 print('LOBBY', 'OK' if ok else 'FAIL')

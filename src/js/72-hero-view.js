@@ -36,7 +36,7 @@ function egoHero() {
   const P = V.poss;
   if (!P || P.heroOn || P.heroReq || !HERO.kinds.includes(P.k)) return;
   if (heroTargetView(P) === null) {
-    egoHint('Erst nah an einen Sandwurm ran, der aus dem Sand ragt!', 1500);
+    egoHint(TR('Erst nah an einen Sandwurm ran, der aus dem Sand ragt!'), 1500);
     SFX.play('error');
     return;
   }
@@ -92,10 +92,10 @@ function heroBegin(u, v, P) {
   u.heroSide = P ? heroCamSide(v) : 1;
   const p = u.g.position;
   if (fogSeen(p.x, p.z) || P)
-    word(KINDS[u.k].fac === 'viking' ? 'FÜR WALHALLA!' : 'FÜR DIE RENTE!', p.x, p.y + 3.2, p.z, { color: '#ffd34d', scale: 1.3 });
+    word(KINDS[u.k].fac === 'viking' ? TR('FÜR WALHALLA!') : TR('FÜR DIE RENTE!'), p.x, p.y + 3.2, p.z, { color: '#ffd34d', scale: 1.3 });
   SFX.play('rage', { x: p.x, z: p.z, vol: 1 });
   if (P) {
-    egoHint('Rauf auf den Wurm!', 1300);
+    egoHint(TR('Rauf auf den Wurm!'), 1300);
     EG.kick = Math.max(EG.kick, 0.4);
   }
 }
@@ -301,7 +301,7 @@ function heroFx(u, v, t, P) {
       puff(gp.x, gp.y + 1.2, gp.z, 0xdcb878, 2, 0.4);
     }
   if (cross(H.climb) && near) SFX.play('heave', { x: gp.x, z: gp.z, k: u.k });
-  if (cross(H.top) && P) egoHint('Zustechen!', 1100);
+  if (cross(H.top) && P) egoHint(TR('Zustechen!'), 1100);
   H.stabs.forEach((ts, i) => {
     if (!cross(ts)) return;
     const m = v.neck.localToWorld(HV3.d.copy(HERO_MAW));
@@ -319,7 +319,8 @@ function heroFx(u, v, t, P) {
           0.45
         );
     }
-    if (seen) word(['ZACK!', 'STICH!', 'NOCH EINER!'][i] || 'STICH!', m.x, m.y + 2.4, m.z, { color: '#ffe08a', scale: 1.15 });
+    if (seen)
+      word([TR('ZACK!'), TR('STICH!'), TR('NOCH EINER!')][i] || TR('STICH!'), m.x, m.y + 2.4, m.z, { color: '#ffe08a', scale: 1.15 });
     if (P) {
       EG.kick = Math.max(EG.kick, 0.45);
       shake(0.18);
@@ -330,7 +331,7 @@ function heroFx(u, v, t, P) {
       SFX.play('whoosh', { x: gp.x, z: gp.z, vol: 1 });
       SFX.play('wormRoar', { x: gp.x, z: gp.z, vol: 1 });
     }
-    if (seen) word(vik ? 'FÜR WALHALLA!' : 'FÜR DIE RENTE!', gp.x, gp.y + 3, gp.z, { color: '#ffd34d', scale: 1.25 });
+    if (seen) word(vik ? TR('FÜR WALHALLA!') : TR('FÜR DIE RENTE!'), gp.x, gp.y + 3, gp.z, { color: '#ffd34d', scale: 1.25 });
   }
   if (cross(H.gulp)) {
     if (W) {
@@ -343,9 +344,9 @@ function heroFx(u, v, t, P) {
       SFX.play('gulp', { x: gp.x, z: gp.z, vol: 1.2 });
     }
     const wp = v.g.position;
-    if (seen) word('HAPP!', wp.x, wp.y + 8, wp.z, { color: '#ffd38a', scale: 1.3 });
+    if (seen) word(TR('HAPP!'), wp.x, wp.y + 8, wp.z, { color: '#ffd38a', scale: 1.3 });
     if (P) {
-      egoHint('Verschluckt! Er sticht von innen weiter …', 1800);
+      egoHint(TR('Verschluckt! Er sticht von innen weiter …'), 1800);
       shake(0.25);
     }
   }
@@ -360,7 +361,8 @@ function heroFx(u, v, t, P) {
       for (let k = 0; k < 5; k++)
         puff(m.x + (Math.random() - 0.5) * 2, m.y + Math.random(), m.z + (Math.random() - 0.5) * 2, 0xdcb878, 1, 0.6);
     }
-    if (seen) word(pick(['AUA!', 'HICKS!', 'AUTSCH!', 'BAUCHWEH!']), m.x, m.y + 2.5, m.z, { color: '#ffffff', scale: 1.05 });
+    if (seen)
+      word(pick([TR('AUA!'), TR('HICKS!'), TR('AUTSCH!'), TR('BAUCHWEH!')]), m.x, m.y + 2.5, m.z, { color: '#ffffff', scale: 1.05 });
     if (P) shake(0.15);
   });
 }
@@ -379,7 +381,7 @@ function heroTick() {
       v.g.rotation.y = (h[5] || 0) / 100; // a worm unit faces the hero for the whole sequence
       if (V.poss && V.poss.id === v.id && now() - (v.heroVictimT || -1e9) > 8000) {
         v.heroVictimT = now(); // your own worm: tell once per sequence why it does not obey
-        egoHint('Ein Held klettert auf deinen Wurm!', 2200);
+        egoHint(TR('Ein Held klettert auf deinen Wurm!'), 2200);
       }
     }
     const t = h[2] / 100 + age,
@@ -405,7 +407,7 @@ function heroTick() {
       } else if (V.units.get(P.id)) {
         EG.camInit = false;
         EG.intro = Math.max(EG.intro, 0.7);
-        egoHint('Geschafft – der Sandwurm ist besiegt, und du lebst!', 2200);
+        egoHint(TR('Geschafft – der Sandwurm ist besiegt, und du lebst!'), 2200);
       }
     }
   }

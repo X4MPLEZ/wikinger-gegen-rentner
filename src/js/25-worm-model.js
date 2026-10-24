@@ -582,12 +582,23 @@ const BOW_LIMB = (() => {
     6
   );
 })();
+// a unit model in its team's skin (UNIT_SKIN, set per match by setSkins in 65-profile.js): the skin swaps colours while it is built
 function buildUnit(k) {
+  const sk = UNIT_SKIN[k];
+  if (!sk || LAM_MAP) return buildUnitRaw(k);
+  LAM_MAP = sk.map;
+  try {
+    return buildUnitRaw(k);
+  } finally {
+    LAM_MAP = null;
+  }
+}
+function buildUnitRaw(k) {
   if (KINDS[k].worm) return buildWorm(k);
   if (KINDS[k].bear) return buildBear(k);
   if (KINDS[k].role === 'siege') return buildCatapult(k);
   const g = new THREE.Group();
-  const P = {
+  const P0 = {
     0: { body: 0x326a9e, leg: 0x5a4330, arm: 0xefbf98, skin: 0xefbf98, boot: 0x4a3424 },
     1: { body: 0x58a0c8, leg: 0x5a4330, arm: 0x58a0c8, skin: 0xf5cfb0, boot: 0x5b3d27 },
     2: { body: 0x995a8d, leg: 0x55565e, arm: 0x995a8d, belt: 0x5d3b58, skin: 0xefc4a6, boot: 0x4a3020 },
@@ -595,6 +606,8 @@ function buildUnit(k) {
     4: { body: 0x396f9e, leg: 0x5a4330, arm: 0xf0c39c, skin: 0xf0c39c, boot: 0x4a3424 },
     5: { body: 0x83517d, leg: 0x55565e, arm: 0x83517d, belt: 0x4e3250, skin: 0xecc1a3 },
   }[k];
+  // the skin's swaps already here, so shades derived from these colours (sleeves, dark trims) follow the skin
+  const P = LAM_MAP ? Object.fromEntries(Object.entries(P0).map(([n, c]) => [n, LAM_MAP.has(c) ? LAM_MAP.get(c) : c])) : P0;
   const rig = new THREE.Group();
   rig.scale.setScalar(1.25);
   g.add(rig);

@@ -102,7 +102,7 @@ addEventListener('keydown', e => {
 const GTIERS = [
   {
     id: 'high',
-    name: 'Hoch',
+    name: TR('Hoch'),
     pr: COARSE ? 1.5 : 1.75,
     sc: 1,
     mp: 3.7,
@@ -121,7 +121,7 @@ const GTIERS = [
   },
   {
     id: 'mid',
-    name: 'Mittel',
+    name: TR('Mittel'),
     pr: 1.3,
     sc: 1,
     mp: 2.2,
@@ -140,7 +140,7 @@ const GTIERS = [
   },
   {
     id: 'low',
-    name: 'Niedrig',
+    name: TR('Niedrig'),
     pr: 1.0,
     sc: 0.9,
     mp: 1.4,
@@ -159,7 +159,7 @@ const GTIERS = [
   },
   {
     id: 'vlow',
-    name: 'Sehr niedrig',
+    name: TR('Sehr niedrig'),
     pr: 0.8,
     sc: 0.75,
     mp: 0.9,
@@ -256,7 +256,8 @@ const QS = {
     return GTIERS[LADDER[this.lvl].t];
   },
   name() {
-    return (this.mode() === 'auto' ? 'Auto: ' : '') + this.tier().name + (LADDER[this.lvl].m < 1 ? ' (−Auflösung)' : '');
+    const n = this.tier().name + (LADDER[this.lvl].m < 1 ? ' ' + TR('(−Auflösung)') : '');
+    return this.mode() === 'auto' ? TR('Auto: {0}', n) : n;
   },
 };
 function initQuality() {

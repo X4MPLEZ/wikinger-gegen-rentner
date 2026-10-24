@@ -1,6 +1,6 @@
 # Rentner gegen Wikinger
 
-3D-Strategiespiel mit direkter Einheitensteuerung, Physik-Chaos und Humor. Läuft im Browser auf Handy und PC, gegen den Computer oder online zu zweit.
+3D-Strategiespiel mit direkter Einheitensteuerung, Physik-Chaos und Humor. Läuft im Browser auf Handy und PC, gegen den Computer oder online zu zweit – in 14 Sprachen (Deutsch, Englisch, Spanisch, Französisch, Italienisch, Portugiesisch, Polnisch, Türkisch, Russisch, Niederländisch, Indonesisch, Japanisch, Koreanisch, Chinesisch). Das Spiel nimmt die Sprache des Geräts (sonst Englisch); im Menü unten lässt sie sich wechseln.
 
 ## Kurz erklärt
 
@@ -49,10 +49,19 @@ Unter „Grafik“ im Menü oder im Pausenmenü: **Automatisch**, Hoch, Mittel, 
 
 ## Online-Spiel
 
-Einer tippt auf „Erstellen“, der andere öffnet dieselbe Seite und gibt den Code bei „Beitreten“ ein. Die Geräte verbinden sich direkt miteinander, eine Anmeldung ist nicht nötig.
+- **Schnelles Spiel:** tritt dem offenen Spiel bei, das am längsten wartet – oder stellt ein eigenes in die Liste **„Offene Spiele“**. Wer wartet, kann solange gegen den Computer üben; tritt jemand bei, startet die Online-Partie nach einem kurzen Countdown („Weiter üben“ sagt ab).
+- **Mit Freunden:** Einer tippt auf „Erstellen“, der andere gibt den Code bei „Beitreten“ ein. Nur hier wird das eigene Foto an den Gegner geschickt; Fremde sehen Spielername, Profilbild und Level.
+- Die Geräte verbinden sich direkt miteinander, eine Anmeldung ist nicht nötig. Zum Verbinden und für die Liste nutzt das Spiel kostenlose öffentliche Dienste (PeerJS, MQTT).
+
+## Profil
+
+Jeder spielt sofort als Gast, das Profil liegt auf dem Gerät (oben im Menü antippen). Mit **„Profil übertragen“** zieht es per 8-stelligem Code auf ein anderes Gerät um.
+- **Statistik** über alle Partien, **Erfolge** (36 Stück, z. B. „Kegelkönig“, „Festung“, „Wurmbezwinger“) bringen **Juwelen**.
+- **Ruhmespfad:** Erfahrung aus jeder Partie, 30 Level mit Belohnungen (Juwelen, Profilbilder, Skins), danach alle 500 EP weitere Juwelen. Der erste Sieg des Tages gibt 20 Juwelen extra.
+- **Sammlung:** Profilbilder (für die Liste der offenen Spiele und den Gegner) und **Skins** – Farbvarianten der eigenen Armee (Rotbart, Eiswolf, Gold-Jarl; Trainingsanzug, Strandurlaub, Disco-Rentner), die auch der Gegner online sieht. Freischalten über Level, Erfolge oder mit Juwelen. Juwelen gibt es nur fürs Spielen, nicht für Geld.
 
 **Steuerung am Handy:** Unten eine Reihe runder Knöpfe (Bild = Einheit, Zahl = Preis); kurz tippen bildet aus, lange drücken schaltet AUTO ein (grüner Ring). Ego-Befehle liegen rechts oben.  Krieger antippen oder „Alle“ wählen, dann aufs Ziel tippen. Mit Auswahl ist jeder Tipp ein Befehl, auch auf eigene Krieger. „Abwählen“ hebt die Auswahl auf, danach lässt sich wieder ein einzelner Krieger antippen. Gegner werden nicht ausgewählt, sondern direkt angegriffen.
 
 ## Für Entwickler
 
-Das Spiel wird aus `src/` gebaut: `node tools/build.mjs` erzeugt die fertige `index.html` (nie direkt bearbeiten). Tests: `sh tests/run.sh` (mit `mp` auch das Online-Spiel). Aufbau, Dateiübersicht und Rezepte für typische Änderungen stehen in [CLAUDE.md](CLAUDE.md) – geschrieben für KI-Assistenten, damit sie mit wenig Lesen gezielt die richtige Stelle finden.
+Das Spiel wird aus `src/` gebaut: `node tools/build.mjs` erzeugt die fertige `index.html` (nie direkt bearbeiten). Tests: `sh tests/run.sh` (mit `mp` auch das Online-Spiel). Übersetzungen liegen in `src/lang/<code>.json`; `python3 tools/i18n.py` zeigt, was fehlt. `node tools/portal.mjs` baut das Upload-Paket für Spieleportale (`dist/rentner-gegen-wikinger.zip`: alles lokal, ohne eigenen Vollbild-Knopf, ohne Fotos an den Gegner). Aufbau, Dateiübersicht und Rezepte für typische Änderungen stehen in [CLAUDE.md](CLAUDE.md) – geschrieben für KI-Assistenten, damit sie mit wenig Lesen gezielt die richtige Stelle finden.

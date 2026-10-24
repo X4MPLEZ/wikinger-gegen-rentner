@@ -9,6 +9,8 @@
     "test:mp": "sh tests/run.sh mp"
   },
   "devDependencies": {
+    "@fontsource/lilita-one": "^5.1.0",
+    "@fontsource/rubik": "^5.1.0",
     "@vladmandic/face-api": "1.7.14",
     "aedes": "0.51.3",
     "express": "4.22.3",

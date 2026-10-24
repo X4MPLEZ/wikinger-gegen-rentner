@@ -189,14 +189,14 @@ function frame() {
               0.8
             );
           if (baseViews[bi]) baseViews[bi].shake = 0.35;
-          word(c ? 'SAHNE AN DER WAND!' : 'VOLLTREFFER!', p.to.x, p.to.y + 3, p.to.z, { color: '#ffcf6a', scale: 1.3 });
+          word(c ? TR('SAHNE AN DER WAND!') : TR('VOLLTREFFER!'), p.to.x, p.to.y + 3, p.to.z, { color: '#ffcf6a', scale: 1.3 });
         }
       }
       projPut(p.m);
       const c = p.kind === 'cake';
       emitFX('explosion', p.to.x, p.to.y - 0.6, p.to.z, { col: c ? 0xf6b8d0 : 0xb9ad9a, n: 18, size: 1.3 });
       emitFX('land', p.to.x, p.to.y - 0.8, p.to.z, { col: c ? 0xffffff : 0x8a7a66, n: 8, size: 1.4 });
-      word(c ? 'SPLATSCH!' : 'KRAWUMM!', p.to.x, p.to.y + 2, p.to.z, { color: c ? '#ffd6e6' : '#ffb35c', scale: 1.3 });
+      word(c ? TR('SPLATSCH!') : TR('KRAWUMM!'), p.to.x, p.to.y + 2, p.to.z, { color: c ? '#ffd6e6' : '#ffb35c', scale: 1.3 });
       SFX.play(c ? 'splat' : 'crash', { x: p.to.x, z: p.to.z, vol: 1 });
       aoeRing(p.to.x, p.to.z, 4.2 * (p.sal ? 0.8 : 1.1), c ? 0xff8fc0 : 0xffa040);
       fx.projs.splice(i, 1);
@@ -210,7 +210,7 @@ function frame() {
         vol: 0.75,
       });
       puff(p.to.x, p.to.y, p.to.z, p.kind === 'teeth' ? 0xffffff : 0xfff1a8, 2, 0.5);
-      if (p.kind === 'teeth' && Math.random() < 0.15) word('KLAPPER!', p.to.x, p.to.y + 1.6, p.to.z, { color: '#ffffff' });
+      if (p.kind === 'teeth' && Math.random() < 0.15) word(TR('KLAPPER!'), p.to.x, p.to.y + 1.6, p.to.z, { color: '#ffffff' });
       fx.projs.splice(i, 1);
     }
   }
@@ -510,7 +510,7 @@ function renderUnits(t, dt) {
         }
         if (now() - (V.rummsT || 0) > 250) {
           V.rummsT = now();
-          word(pick(['RUMMS!', 'WUMMS!', 'BAMM!']), x, y + 2.6, z, { color: '#ffcf6a', scale: 1.05 });
+          word(pick([TR('RUMMS!'), TR('WUMMS!'), TR('BAMM!')]), x, y + 2.6, z, { color: '#ffcf6a', scale: 1.05 });
         }
       }
       u.airPoseT = (u.airPoseT || 0) + dt;
@@ -555,7 +555,8 @@ function renderUnits(t, dt) {
       }
       if (ist & 1 && !u.slipW) {
         u.slipW = 1;
-        if (Math.random() < 0.7) word(pick(['HUCH!', 'RUTSCH!', 'UIII!', 'GLATTEIS!']), x, y + 2.6, z, { color: '#bfefff', scale: 0.85 });
+        if (Math.random() < 0.7)
+          word(pick([TR('HUCH!'), TR('RUTSCH!'), TR('UIII!'), TR('GLATTEIS!')]), x, y + 2.6, z, { color: '#bfefff', scale: 0.85 });
         SFX.play('whoosh', { x, z, vol: 0.5 });
       } else if (!(ist & 1)) u.slipW = 0;
       if (ist & 4 && !u.frost && !u.arm) {
@@ -585,7 +586,7 @@ function renderUnits(t, dt) {
         if (Math.random() < dt * 5)
           puff(x + (Math.random() - 0.5) * 0.9, y + 0.4 + Math.random() * 1.6, z + (Math.random() - 0.5) * 0.9, 0xcff4ff, 1, 0.3);
         if ((u.team === V.myTeam || mine) && Math.random() < dt * 0.35)
-          word(pick(['BRRR!', 'KALT!', 'Zähneklappern …']), x, y + 2.8, z, { color: '#9be7ff', scale: 0.8 });
+          word(pick([TR('BRRR!'), TR('KALT!'), TR('Zähneklappern …')]), x, y + 2.8, z, { color: '#9be7ff', scale: 0.8 });
       } else if (u.rig.position.x) u.rig.position.x = 0;
       if (mine) {
         const fr = $('#frost');

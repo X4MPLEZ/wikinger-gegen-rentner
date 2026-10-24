@@ -137,7 +137,7 @@ function loadFaceApi() {
   if (faceApiP) return faceApiP;
   faceApiP = new Promise((res, rej) => {
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/dist/face-api.js';
+    s.src = WVR_LIB('faceapi') || 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/dist/face-api.js';
     const to = setTimeout(() => rej(new Error('timeout')), 20000);
     s.onload = async () => {
       try {
@@ -200,7 +200,7 @@ async function openFaceEditor(file) {
   try {
     img = await loadDataUrl(url);
   } catch (_) {
-    toastMenu('Das Bild konnte nicht geladen werden.');
+    toastMenu(TR('Das Bild konnte nicht geladen werden.'));
     return;
   }
   const sc = Math.min(1, 900 / Math.max(img.width, img.height)),
@@ -214,8 +214,8 @@ async function openFaceEditor(file) {
   showScreen('faceScr');
   drawFaceEditor();
   $('#faceMsg').textContent = COARSE
-    ? 'Bild mit dem Finger verschieben, mit zwei Fingern oder ＋/－ vergrößern.'
-    : 'Bild mit der Maus ziehen, mit Mausrad oder ＋/－ vergrößern.';
+    ? TR('Bild mit dem Finger verschieben, mit zwei Fingern oder ＋/－ vergrößern.')
+    : TR('Bild mit der Maus ziehen, mit Mausrad oder ＋/－ vergrößern.');
 }
 faceCv.addEventListener('pointerdown', e => {
   faceCv.setPointerCapture(e.pointerId);

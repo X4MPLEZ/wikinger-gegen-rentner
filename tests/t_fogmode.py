@@ -14,6 +14,10 @@ with sync_playwright() as p:
     pg.screenshot(path=f'{OUT}_menu.png')
     pg.evaluate("() => { window.__toasts = []; const t = document.querySelector('#toast'); new MutationObserver(() => window.__toasts.push(t.textContent)).observe(t, { childList:true, characterData:true, subtree:true }); const hb = document.querySelector('#hlBan'); new MutationObserver(() => window.__toasts.push(hb.textContent)).observe(hb, { childList:true, characterData:true, subtree:true }); }")
     pg.evaluate("document.querySelector('.mcard.m1').click()"); pg.click('#btnAi'); pg.wait_for_timeout(5000)
+    try:  # the fog fades in over 2.5 s of frames: a slow software renderer needs longer
+        pg.wait_for_function('__wvr.FOG.k > 0.9', timeout=10000)
+    except Exception:
+        pass
     st = pg.evaluate("""() => { const W = __wvr, s = W.V.latest; return { gfog:W.G.fog, fg:s && s.fg, on:W.FOG.on, k:+W.FOG.k.toFixed(2), toast:window.__toasts.join(' | '), wall:W.FOGW.active }; }""")
     pg.screenshot(path=f'{OUT}_cmd.png')
     # events: never the fog event in fog mode

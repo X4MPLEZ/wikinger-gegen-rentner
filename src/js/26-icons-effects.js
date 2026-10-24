@@ -69,9 +69,11 @@ function roleGlyph(o, role, cx, cy) {
   }
   o.restore();
 }
-const UNIT_HEAD = [];
-function unitHead(k) {
-  if (UNIT_HEAD[k]) return UNIT_HEAD[k];
+const UNIT_HEAD = [],
+  HEAD_RAW = [];
+// the head of unit kind k, rendered once in 3D (transparent 192 px canvas; always the classic colours, no skin)
+function headRaw(k) {
+  if (HEAD_RAW[k]) return HEAD_RAW[k];
   const S = 192,
     rt = new THREE.WebGLRenderTarget(S, S);
   rt.texture.encoding = THREE.sRGBEncoding;
@@ -83,7 +85,7 @@ function unitHead(k) {
   const rl = new THREE.DirectionalLight(lin(0x9fc8ff), 0.6);
   rl.position.set(-5, 2, -3);
   sc.add(rl);
-  const u = Object.assign(buildUnit(k), { id: 0, wob: 0, wobV: 0, atkT: 9, walk: 0, speed: 0, flash: 0 });
+  const u = Object.assign(buildUnitRaw(k), { id: 0, wob: 0, wobV: 0, atkT: 9, walk: 0, speed: 0, flash: 0 });
   scene.remove(u.g);
   hpGroup.remove(u.hp);
   u.blob.visible = false;
@@ -115,7 +117,13 @@ function unitHead(k) {
     id = rx.createImageData(S, S);
   for (let y = 0; y < S; y++) id.data.set(px.subarray((S - 1 - y) * S * 4, (S - y) * S * 4), y * S * 4);
   rx.putImageData(id, 0, 0);
-  const out = cnv(128, 128),
+  sc.remove(u.g);
+  return (HEAD_RAW[k] = raw);
+}
+function unitHead(k) {
+  if (UNIT_HEAD[k]) return UNIT_HEAD[k];
+  const raw = headRaw(k),
+    out = cnv(128, 128),
     o = out.getContext('2d'),
     col = new THREE.Color(FAC[KINDS[k].fac].css),
     light = '#' + col.clone().lerp(new THREE.Color(0xffffff), 0.5).getHexString(),
@@ -136,7 +144,6 @@ function unitHead(k) {
   o.beginPath();
   o.arc(64, 64, 61, 0, TAU);
   o.stroke();
-  sc.remove(u.g);
   return (UNIT_HEAD[k] = out.toDataURL());
 }
 function unitIcon(k) {

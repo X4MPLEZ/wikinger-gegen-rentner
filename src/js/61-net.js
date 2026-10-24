@@ -76,8 +76,13 @@ function localRoom() {
     },
   };
 }
-const ROOM_HELP =
-  'Keine Online-Verbindung. Das klappt nur, wenn ihr beide in Claude eingeloggt seid und das Spiel direkt mit dem Konto deines Mitspielers geteilt ist (im Teilen-Menü seine E-Mail eintragen). Über einen öffentlichen Link geht es nicht.';
+const ROOM_HELP = TR(
+  'Keine Online-Verbindung. Das klappt nur, wenn ihr beide in Claude eingeloggt seid und das Spiel direkt mit dem Konto deines Mitspielers geteilt ist (im Teilen-Menü seine E-Mail eintragen). Über einen öffentlichen Link geht es nicht.'
+);
+// the portal build ships the libraries next to the page (tools/portal.mjs sets window.WVR_LIBS = { peer, mqtt, faceapi })
+function WVR_LIB(n) {
+  return (window.WVR_LIBS && window.WVR_LIBS[n]) || null;
+}
 function loadScript(src) {
   return new Promise((res, rej) => {
     const s = document.createElement('script');
@@ -323,7 +328,11 @@ async function viewerRoom() {
 async function getRoom() {
   if (NET.room) return NET.room;
   // same transport on every device: P2P (PeerJS) first, so phone and laptop always find each other
-  for (const src of ['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js', 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js']) {
+  for (const src of [
+    WVR_LIB('peer'),
+    'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
+    'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js',
+  ].filter(Boolean)) {
     if (window.Peer) break;
     try {
       await loadScript(src);
@@ -349,11 +358,12 @@ async function getRoom() {
   return NET.room;
 }
 const P2P_MSG = {
-  not_found: 'Kein Spiel mit diesem Code gefunden. Stimmt der Code?',
-  taken: 'Dieser Code ist gerade vergeben. Bitte noch einmal versuchen.',
-  network: 'Keine Verbindung zum Vermittlungsdienst. Bist du online?',
-  timeout:
-    'Die Verbindung hat zu lange gedauert. Tipp: Beide Geräte neu laden und es noch einmal versuchen. Falls es am Handy nicht klappt, kurz zwischen WLAN und mobilen Daten wechseln.',
+  not_found: TR('Kein Spiel mit diesem Code gefunden. Stimmt der Code?'),
+  taken: TR('Dieser Code ist gerade vergeben. Bitte noch einmal versuchen.'),
+  network: TR('Keine Verbindung zum Vermittlungsdienst. Bist du online?'),
+  timeout: TR(
+    'Die Verbindung hat zu lange gedauert. Tipp: Beide Geräte neu laden und es noch einmal versuchen. Falls es am Handy nicht klappt, kurz zwischen WLAN und mobilen Daten wechseln.'
+  ),
 };
 const netErrMsg = e => P2P_MSG[e && e.code] || (NET.via === 'claude' ? ROOM_HELP : P2P_MSG.network);
 function roomReady(r) {
@@ -417,7 +427,7 @@ async function openRoom(code, role) {
   return r;
 }
 /* open every available transport at once (direct P2P + Claude room), so devices that ended up on different ones still meet */
-const NET_VER = 43; // bump when snapshots, commands or presence change shape: two different versions refuse to play together
+const NET_VER = 44; // bump when snapshots, commands or presence change shape: two different versions refuse to play together
 async function openClaude(code, role) {
   const vr = await viewerRoom();
   if (!vr) return null;
@@ -446,7 +456,11 @@ async function openClaude(code, role) {
 /* relay transport over public MQTT brokers (WebSocket): works across any two networks, no direct link needed */
 const MQTT_URLS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
 async function loadMqtt() {
-  for (const src of ['https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js', 'https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js']) {
+  for (const src of [
+    WVR_LIB('mqtt'),
+    'https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js',
+    'https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js',
+  ].filter(Boolean)) {
     if (window.mqtt) break;
     try {
       await loadScript(src);
@@ -593,7 +607,11 @@ function mqttTransport() {
   };
 }
 async function loadPeer() {
-  for (const src of ['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js', 'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js']) {
+  for (const src of [
+    WVR_LIB('peer'),
+    'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js',
+    'https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js',
+  ].filter(Boolean)) {
     if (window.Peer) break;
     try {
       await loadScript(src);
@@ -823,7 +841,8 @@ function leaveNet() {
 // face exchange via presence chunks
 const FC_SIZE = 700;
 function faceChunkPatch(otherPresence) {
-  if (NET.pub || !FACE.mine || NET.fcDone === FACE.mine.id) return null; // public games: no photos between strangers
+  // public games: no photos between strangers; the portal build sends no photos at all (pictures of players would need moderation)
+  if (NET.pub || window.WVR_PORTAL || !FACE.mine || NET.fcDone === FACE.mine.id) return null;
   if (otherPresence && otherPresence.fgot === FACE.mine.id) {
     NET.fcDone = FACE.mine.id;
     return { fc: null };
@@ -869,7 +888,7 @@ function oppQuit() {
   if (!V.playing || V.ending) return;
   NET.gone = true;
   endGame(Object.assign({}, V.latest || {}, { o: V.myTeam }));
-  $('#endSub').textContent = 'Dein Gegner hat aufgegeben. Der Sieg gehört dir!';
+  $('#endSub').textContent = TR('Dein Gegner hat aufgegeben. Der Sieg gehört dir!');
   const a = NET.connectAttempt;
   setTimeout(() => a === NET.connectAttempt && leaveNet(), 1500);
 }
@@ -886,8 +905,8 @@ async function hostOnline(pub = false) {
   NET.pub = !!pub; // a public game: listed under "Offene Spiele", no photos
   const attempt = NET.connectAttempt;
   const code = genCode();
-  showLobby(true, code, 'Verbinde', true);
-  if (pub) $('#onlineNote').textContent = 'Gleich steht dein Spiel bei „Offene Spiele“. Die Partie startet, sobald jemand beitritt.';
+  showLobby(true, code, TR('Verbinde'), true);
+  if (pub) $('#onlineNote').textContent = TR('Gleich steht dein Spiel bei „Offene Spiele“. Die Partie startet, sobald jemand beitritt.');
   let r;
   try {
     r = await openMulti(code, 'host');
@@ -911,15 +930,16 @@ async function hostOnline(pub = false) {
     mode = gameMode,
     fresh = () => newGame(facs, seed, mode === 'chaos', { fog: mode === 'fog' });
   G = fresh();
-  await r.presence({ role: 'host', code, v: NET_VER, fa: facs, sd: seed, st: 'wait', gp: null }).catch(() => {});
+  await r.presence({ role: 'host', code, v: NET_VER, fa: facs, sd: seed, st: 'wait', gp: null, pf: profPublic() }).catch(() => {});
   if (attempt !== NET.connectAttempt) return;
-  setLobbyStatus(pub ? 'Warte auf einen Gegner' : 'Warte auf deinen Gegner', true);
+  setLobbyStatus(pub ? TR('Warte auf einen Gegner') : TR('Warte auf deinen Gegner'), true);
   if (pub) {
-    lobbyHostStart({ c: code, f: myFac, m: mode, p: MAPTYPE_KEYS.indexOf(seedMapType(seed)), n: lobbyNameIdx(), t: Date.now() });
-    $('#onlineNote').textContent = 'Dein Spiel steht jetzt bei „Offene Spiele“. Die Partie startet, sobald jemand beitritt.';
+    const pf = profPublic();
+    lobbyHostStart({ c: code, f: myFac, m: mode, p: MAPTYPE_KEYS.indexOf(seedMapType(seed)), n: pf.n, a: pf.a, l: pf.l, t: Date.now() });
+    $('#onlineNote').textContent = TR('Dein Spiel steht jetzt bei „Offene Spiele“. Die Partie startet, sobald jemand beitritt.');
     $('#btnPractice').hidden = false;
   }
-  if (NET.local) $('#onlineNote').textContent = 'Testmodus: Verbindung nur zwischen zwei Tabs in diesem Browser.';
+  if (NET.local) $('#onlineNote').textContent = TR('Testmodus: Verbindung nur zwischen zwei Tabs in diesem Browser.');
   NET.poll = setInterval(() => {
     if (V.mode === 'host') return;
     const all = (r.peers() || []).filter(p => !p.isMe && p.presence && p.presence.role === 'guest' && p.presence.code === code),
@@ -927,7 +947,7 @@ async function hostOnline(pub = false) {
       guest = r.pick ? r.pick(gl, 'guest') : gl[0];
     if (!guest && all.length && !NET.verWarn) {
       NET.verWarn = true;
-      setLobbyStatus('Dein Gegner hat eine andere Spielversion. Bitte beide Geräte neu laden.', false);
+      setLobbyStatus(TR('Dein Gegner hat eine andere Spielversion. Bitte beide Geräte neu laden.'), false);
     }
     if (guest && NET.declined) return;
     if (!guest && NET.found) {
@@ -943,7 +963,7 @@ async function hostOnline(pub = false) {
       }
       const left = 5 - (now() - NET.found) / 1000;
       if (left > 0) {
-        $('#foundTxt').textContent = 'Online-Partie in ' + Math.ceil(left) + ' …';
+        $('#foundTxt').textContent = TR('Online-Partie in {0} …', Math.ceil(left));
         return;
       }
       foundBan(false);
@@ -962,6 +982,7 @@ async function hostOnline(pub = false) {
       NET.guestPeer = guest.peer;
       NET.guestSid = guest.presence.sid;
       NET.lastSeq = 0;
+      V.oppPf = profPeer(guest.presence.pf);
       beginMatch('host', facs, 0, seed);
       pushSnap(snapOf(G));
       startSim(false);
@@ -982,7 +1003,7 @@ function hostReadGuest() {
   }
   const wasGone = NET.gone;
   NET.gone = !g;
-  if (NET.gone && !wasGone) netWarn('Dein Gegner ist weg. Warte auf seine Rückkehr …');
+  if (NET.gone && !wasGone) netWarn(TR('Dein Gegner ist weg. Warte auf seine Rückkehr …'));
   if (!NET.gone && wasGone) $('#netwarn').hidden = true;
   if (!g) return;
   if (g.presence.quit) {
@@ -1025,7 +1046,7 @@ function rematchTick() {
     NET.rmMiss = NET.rmMiss || now();
     if (now() - NET.rmMiss < 5000) return;
     b.hidden = true;
-    n.textContent = 'Dein Gegner hat den Raum verlassen.';
+    n.textContent = TR('Dein Gegner hat den Raum verlassen.');
     clearInterval(NET.endPoll);
     NET.endPoll = null;
     if (V.mode === 'host') leaveNet();
@@ -1053,7 +1074,11 @@ function rematchTick() {
     hostBroadcast();
     return;
   }
-  b.textContent = NET.rmWant ? 'Warte auf Gegner …' : NET.rmOther ? 'Gegner will nochmal! Noch eine Runde!' : 'Noch eine Runde!';
+  b.textContent = NET.rmWant
+    ? TR('Warte auf Gegner …')
+    : NET.rmOther
+      ? TR('Gegner will nochmal! Noch eine Runde!')
+      : TR('Noch eine Runde!');
   b.classList.toggle('pulse', NET.rmOther && !NET.rmWant);
   if (V.mode === 'host') hostBroadcast();
 }
@@ -1061,7 +1086,7 @@ $('#btnRematch').addEventListener('click', () => {
   if (!NET.r) return;
   NET.rmWant = true;
   NET.r.presence({ rm: NET.endSeed }).catch(() => {});
-  $('#btnRematch').textContent = 'Warte auf Gegner …';
+  $('#btnRematch').textContent = TR('Warte auf Gegner …');
   SFX.play('order');
 });
 function hostBroadcast() {
@@ -1091,7 +1116,7 @@ function hostBroadcast() {
   if (patch.fc && JSON.stringify(patch).length > 3500) patch.fc = null;
   // Native P2P, MQTT and local transport retain the entire army.
   if (NET.via === 'claude' && JSON.stringify(patch).length > 3900) {
-    netWarn('Diese Verbindung ist für die Armee zu klein. Bitte beide Geräte direkt über die Spieladresse verbinden.');
+    netWarn(TR('Diese Verbindung ist für die Armee zu klein. Bitte beide Geräte direkt über die Spieladresse verbinden.'));
     return;
   }
   NET.r.presence(patch).catch(() => {});
@@ -1103,7 +1128,7 @@ async function joinOnline(code, opt = {}) {
     const s = $('#onlineStatus'); // right under the code field, where the player looks
     s.hidden = false;
     s.classList.remove('dots');
-    s.textContent = 'Bitte gib den vierstelligen Zahlencode ein.';
+    s.textContent = TR('Bitte gib den vierstelligen Zahlencode ein.');
     return;
   }
   leaveNet();
@@ -1111,7 +1136,7 @@ async function joinOnline(code, opt = {}) {
   NET.pub = !!opt.pub;
   NET.quick = opt.quick || null; // "Schnelles Spiel": the codes tried so far
   const attempt = NET.connectAttempt;
-  showLobby(false, code, 'Suche Spiel', true);
+  showLobby(false, code, TR('Suche Spiel'), true);
   let r;
   try {
     r = await openMulti(code, 'guest');
@@ -1129,7 +1154,7 @@ async function joinOnline(code, opt = {}) {
   NET.role = 'guest';
   NET.joinT = now();
   NET.sid = Math.random().toString(36).slice(2, 8); // tells the host that this is a new session (fresh command numbers)
-  await r.presence({ role: 'guest', code, v: NET_VER, sid: NET.sid, cmds: [] }).catch(() => {});
+  await r.presence({ role: 'guest', code, v: NET_VER, sid: NET.sid, cmds: [], pf: profPublic() }).catch(() => {});
   if (attempt !== NET.connectAttempt) return;
   let lastT = -1;
   NET.poll = setInterval(() => {
@@ -1137,7 +1162,7 @@ async function joinOnline(code, opt = {}) {
     const hl = peers.filter(p => !p.isMe && p.presence && p.presence.role === 'host' && p.presence.code === code),
       host = r.pick ? r.pick(hl, 'host') : hl[0];
     if (hl.length && !host && V.mode !== 'guest') {
-      setLobbyStatus('Spiel gefunden, verbinde', true);
+      setLobbyStatus(TR('Spiel gefunden, verbinde'), true);
       return;
     }
     if (host && r.lockTo) {
@@ -1149,16 +1174,21 @@ async function joinOnline(code, opt = {}) {
       if (me) NET.myPeer = me.peer;
     }
     if (!host) {
-      if (V.mode === 'guest' && V.playing) netWarn('Verbindung zum Gegner verloren …');
+      if (V.mode === 'guest' && V.playing) netWarn(TR('Verbindung zum Gegner verloren …'));
       else if (now() - NET.joinT > 35000)
         setLobbyStatus(
-          'Kein Spiel mit diesem Code gefunden. Stimmt der Code? Tipp: Beide Geräte neu laden (damit beide die neueste Version haben) und neu erstellen.',
+          TR(
+            'Kein Spiel mit diesem Code gefunden. Stimmt der Code? Tipp: Beide Geräte neu laden (damit beide die neueste Version haben) und neu erstellen.'
+          ),
           true
         );
       return;
     }
     if (host.presence.v !== NET_VER && V.mode !== 'guest') {
-      setLobbyStatus('Dein Gegner hat eine andere Spielversion. Bitte beide Geräte neu laden (dann habt ihr beide die neueste).', false);
+      setLobbyStatus(
+        TR('Dein Gegner hat eine andere Spielversion. Bitte beide Geräte neu laden (dann habt ihr beide die neueste).'),
+        false
+      );
       return;
     }
     const P = host.presence;
@@ -1167,7 +1197,7 @@ async function joinOnline(code, opt = {}) {
       return;
     }
     if (P.gp && NET.myPeer && P.gp !== NET.myPeer && V.mode !== 'guest') {
-      setLobbyStatus('Dieses Spiel ist schon voll.', false);
+      setLobbyStatus(TR('Dieses Spiel ist schon voll.'), false);
       if (NET.quick && NET.quick.length < 4) {
         const skip = NET.quick;
         toMenu();
@@ -1176,14 +1206,15 @@ async function joinOnline(code, opt = {}) {
       return;
     }
     if (V.mode !== 'guest' && P.st === 'no') {
-      setLobbyStatus('Dein Gegner übt lieber noch weiter. Such dir ein anderes Spiel.', false);
+      setLobbyStatus(TR('Dein Gegner übt lieber noch weiter. Such dir ein anderes Spiel.'), false);
       return;
     }
-    if (V.mode !== 'guest' && P.st === 'wait' && P.pr) setLobbyStatus('Gegner gefunden! Er beendet gerade sein Übungsspiel …', true);
+    if (V.mode !== 'guest' && P.st === 'wait' && P.pr) setLobbyStatus(TR('Gegner gefunden! Er beendet gerade sein Übungsspiel …'), true);
     // start the match; after an end screen also the next round, in case the rematch poll gave up too early
     const next = V.mode === 'guest' && !V.playing && !NET.endPoll && NET.endSeed && P.sd !== NET.endSeed;
     if ((V.mode !== 'guest' || next) && P.st === 'play' && P.gp === NET.myPeer && Array.isArray(P.fa) && Number.isFinite(P.sd)) {
       showScreen(null);
+      V.oppPf = profPeer(P.pf);
       beginMatch('guest', P.fa, 1, P.sd);
     }
     try {

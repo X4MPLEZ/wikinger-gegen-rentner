@@ -174,7 +174,7 @@ function tutBlock(act) {
     c.classList.remove('in');
     void c.offsetWidth;
     c.classList.add('in');
-    toast('Erst das machen, was ' + (TUT.nar ? TUT.nar.name : 'der Lehrer') + ' sagt', 1400);
+    toast(TUT.nar ? TR('Erst das machen, was {0} sagt', TUT.nar.name) : TR('Erst das machen, was der Lehrer sagt'), 1400);
   }
   return true;
 }
@@ -182,7 +182,7 @@ function setRallyMode(on) {
   if (on && tutBlock('rally')) return;
   V.rallyMode = on;
   $('#rallyBtn').setAttribute('aria-pressed', String(on));
-  if (on) toast('Tippe auf den Boden, wo die Sammelfahne hin soll.', 2600);
+  if (on) toast(TR('Tippe auf den Boden, wo die Sammelfahne hin soll.'), 2600);
 }
 $('#rallyBtn').addEventListener('click', () => setRallyMode(!V.rallyMode));
 function commandAt(g, forceMove, target) {
@@ -194,7 +194,7 @@ function commandAt(g, forceMove, target) {
     marker(x, z, 0xf0bf4c);
     SFX.play('order');
     TUT.flags.rally = true;
-    toast('Sammelfahne versetzt. Neue Krieger laufen hierhin.', 1800);
+    toast(TR('Sammelfahne versetzt. Neue Krieger laufen hierhin.'), 1800);
     return;
   }
   if (V.selected.size) {
@@ -216,7 +216,7 @@ function commandAt(g, forceMove, target) {
     if (mv) TUT.flags.moveOrder = true;
   } else if (now() - (V.noSelT || 0) > 4000) {
     V.noSelT = now();
-    toast('Erst Krieger auswählen. Die Sammelfahne versetzt du mit dem Fahnen-Knopf.', 2400);
+    toast(TR('Erst Krieger auswählen. Die Sammelfahne versetzt du mit dem Fahnen-Knopf.'), 2400);
   }
 }
 function finishLasso(pts) {
@@ -513,42 +513,42 @@ const BIND_DEF = {
 };
 const BIND_GROUPS = [
   [
-    'Ego-Krieger',
+    TR('Ego-Krieger'),
     [
-      ['fwd', 'Vorwärts'],
-      ['back', 'Rückwärts'],
-      ['left', 'Links'],
-      ['right', 'Rechts'],
-      ['attack', 'Angriff'],
-      ['special', 'Spezialfähigkeit'],
-      ['jump', 'Springen (Perk)'],
-      ['nade', 'Discogranate (halten)'],
-      ['hero', 'Den Helden spielen (am Sandwurm)'],
-      ['cmdHere', 'Alle zu mir'],
-      ['cmdAtk', 'Alle greifen Blickziel an'],
-      ['swap', 'Nächsten Krieger steuern'],
-      ['exit', 'Ego verlassen'],
+      ['fwd', TR('Vorwärts')],
+      ['back', TR('Rückwärts')],
+      ['left', TR('Links')],
+      ['right', TR('Rechts')],
+      ['attack', TR('Angriff')],
+      ['special', TR('Spezialfähigkeit')],
+      ['jump', TR('Springen (Perk)')],
+      ['nade', TR('Discogranate (halten)')],
+      ['hero', TR('Den Helden spielen (am Sandwurm)')],
+      ['cmdHere', TR('Alle zu mir')],
+      ['cmdAtk', TR('Alle greifen Blickziel an')],
+      ['swap', TR('Nächsten Krieger steuern')],
+      ['exit', TR('Ego verlassen')],
     ],
   ],
   [
-    'Feldherr',
+    TR('Feldherr'),
     [
-      ['take', 'Krieger übernehmen'],
-      ['order', 'Befehl geben'],
-      ['rally', 'Sammelfahne setzen'],
-      ['selAll', 'Alle auswählen'],
-      ['desel', 'Auswahl aufheben'],
-      ['mode', 'Angreifen/Laufen'],
-      ['home', 'Kamera zur Basis'],
-      ['pause', 'Pause'],
-      ['s1', 'Einheit 1 ausbilden'],
-      ['s2', 'Einheit 2 ausbilden'],
-      ['s3', 'Einheit 3 ausbilden'],
-      ['s4', 'Einheit 4 ausbilden'],
-      ['selMelee', 'Nahkämpfer wählen'],
-      ['selRanged', 'Fernkämpfer wählen'],
-      ['selCav', 'Reiter wählen'],
-      ['mute', 'Ton an/aus'],
+      ['take', TR('Krieger übernehmen')],
+      ['order', TR('Befehl geben')],
+      ['rally', TR('Sammelfahne setzen')],
+      ['selAll', TR('Alle auswählen')],
+      ['desel', TR('Auswahl aufheben')],
+      ['mode', TR('Angreifen/Laufen')],
+      ['home', TR('Kamera zur Basis')],
+      ['pause', TR('Pause')],
+      ['s1', TR('Einheit 1 ausbilden')],
+      ['s2', TR('Einheit 2 ausbilden')],
+      ['s3', TR('Einheit 3 ausbilden')],
+      ['s4', TR('Einheit 4 ausbilden')],
+      ['selMelee', TR('Nahkämpfer wählen')],
+      ['selRanged', TR('Fernkämpfer wählen')],
+      ['selCav', TR('Reiter wählen')],
+      ['mute', TR('Ton an/aus')],
     ],
   ],
 ];
@@ -599,26 +599,26 @@ function keyLabel(c) {
     if (v) return v.toUpperCase();
   }
   const M = {
-    Mouse0: 'Linksklick',
-    Mouse1: 'Mittelklick',
-    Mouse2: 'Rechtsklick',
-    Mouse3: 'Maus 4',
-    Mouse4: 'Maus 5',
-    Space: 'Leertaste',
+    Mouse0: TR('Linksklick'),
+    Mouse1: TR('Mittelklick'),
+    Mouse2: TR('Rechtsklick'),
+    Mouse3: TR('Maus 4'),
+    Mouse4: TR('Maus 5'),
+    Space: TR('Leertaste'),
     Escape: 'Esc',
     ShiftLeft: 'Shift',
-    ShiftRight: 'Shift rechts',
-    ControlLeft: 'Strg',
-    ControlRight: 'Strg rechts',
+    ShiftRight: TR('Shift rechts'),
+    ControlLeft: TR('Strg'),
+    ControlRight: TR('Strg rechts'),
     AltLeft: 'Alt',
     Enter: 'Enter',
     Tab: 'Tab',
-    Backspace: 'Rücktaste',
+    Backspace: TR('Rücktaste'),
     ArrowUp: '↑',
     ArrowDown: '↓',
     ArrowLeft: '←',
     ArrowRight: '→',
-    CapsLock: 'Feststell',
+    CapsLock: TR('Feststell'),
   };
   if (M[c]) return M[c];
   if (c.startsWith('Key')) return c.slice(3);
@@ -761,11 +761,11 @@ function egoAct(c, down, e) {
     if ((c === 'Escape' && !PL.on) || isB('exit', c)) {
       if (tutBlock('exit')) return;
       if (V.poss.dance) {
-        egoHint('Du tanzt noch! Verlassen geht erst danach.', 1600);
+        egoHint(TR('Du tanzt noch! Verlassen geht erst danach.'), 1600);
         return;
       }
       if (V.poss.heroOn || V.poss.heroReq) {
-        egoHint('Ein Held kneift nicht!', 1400);
+        egoHint(TR('Ein Held kneift nicht!'), 1400);
         return;
       }
       exitEgo(true);
@@ -866,7 +866,7 @@ function renderKeys() {
       list
         .map(
           ([a, n]) =>
-            `<div class="krow"><span>${n}</span>${[0, 1].map(i => `<button class="kbtn${REB.act === a && REB.idx === i ? ' wait' : ''}" data-a="${a}" data-i="${i}">${REB.act === a && REB.idx === i ? 'Taste drücken …' : keyLabel(BIND[a][i])}</button>`).join('')}</div>`
+            `<div class="krow"><span>${n}</span>${[0, 1].map(i => `<button class="kbtn${REB.act === a && REB.idx === i ? ' wait' : ''}" data-a="${a}" data-i="${i}">${REB.act === a && REB.idx === i ? TR('Taste drücken …') : keyLabel(BIND[a][i])}</button>`).join('')}</div>`
         )
         .join('')
   ).join('');
@@ -902,7 +902,7 @@ function rebindTo(c) {
     if (lost.length) {
       // say which action lost its key, so nothing goes missing unnoticed
       const n = $('#keysNote');
-      n.textContent = keyLabel(c) + ' gehört jetzt zu „' + actName(REB.act) + '“ – „' + lost.join('“, „') + '“ hat dafür keine Taste mehr.';
+      n.textContent = TR('{0} gehört jetzt zu „{1}“ – „{2}“ hat dafür keine Taste mehr.', keyLabel(c), actName(REB.act), lost.join(', '));
       n.classList.add('warn');
       clearTimeout(REB.noteT);
       REB.noteT = setTimeout(() => {

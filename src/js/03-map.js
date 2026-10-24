@@ -15,15 +15,15 @@ function crevDist(m, x, z) {
   return d;
 }
 const MAPTYPES = {
-    wiesen: { n: 'Wiesen', ic: si('flower') },
-    wueste: { n: 'Wüste', ic: si('cactus') },
-    arktis: { n: 'Arktis', ic: si('snow') },
-    klippen: { n: 'Klippen', ic: si('mountain') },
+    wiesen: { n: TR('Wiesen'), ic: si('flower') },
+    wueste: { n: TR('Wüste'), ic: si('cactus') },
+    arktis: { n: TR('Arktis'), ic: si('snow') },
+    klippen: { n: TR('Klippen'), ic: si('mountain') },
   },
   MAPTYPE_KEYS = ['wiesen', 'wueste', 'arktis', 'klippen'];
 const THEMES = {
   summer: {
-    n: 'Sommerwiese',
+    n: TR('Sommerwiese'),
     lo: 0x4d8236,
     hi: 0x7da44a,
     pine: [0.3, 0.42, 0.2],
@@ -33,7 +33,7 @@ const THEMES = {
     trees: 1,
   },
   spring: {
-    n: 'Frühlingstal',
+    n: TR('Frühlingstal'),
     lo: 0x5f9a3c,
     hi: 0x9cc65e,
     pine: [0.31, 0.45, 0.24],
@@ -47,7 +47,7 @@ const THEMES = {
     trees: 1,
   },
   autumn: {
-    n: 'Herbstwald',
+    n: TR('Herbstwald'),
     lo: 0x6f8a3a,
     hi: 0xa39a48,
     pine: [0.3, 0.35, 0.19],
@@ -62,7 +62,7 @@ const THEMES = {
     trees: 1.3,
   },
   desert: {
-    n: 'Wüste',
+    n: TR('Wüste'),
     lo: 0xd6b072,
     hi: 0xe9cf95,
     pine: [0.27, 0.3, 0.22],
@@ -74,7 +74,7 @@ const THEMES = {
     rock: 0xb7865a,
   },
   cliffs: {
-    n: 'Klippen',
+    n: TR('Klippen'),
     lo: 0x56803f,
     hi: 0x86a35e,
     pine: [0.31, 0.38, 0.19],
@@ -85,7 +85,7 @@ const THEMES = {
     rock: 0x7f7b72,
   },
   winter: {
-    n: 'Arktis',
+    n: TR('Arktis'),
     lo: 0xcfdbe3,
     hi: 0xf2f6fa,
     pine: [0.42, 0.28, 0.2],

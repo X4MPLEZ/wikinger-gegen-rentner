@@ -1,18 +1,18 @@
 /* 73-deaths.js - DEATHS: several death animations per unit (startDeath/deathTick), weapons and rollators fly off, catapults shatter, the rising ghost. */
 const DIE_DRAMA = {
   viking: [
-    'Walhalla … ich komme …',
-    'Rächt mich, Brüder!',
-    'Sagt meiner Ziege … ich hab sie geliebt …',
-    'Es wird so dunkel …',
-    'Nicht … so …',
+    TR('Walhalla … ich komme …'),
+    TR('Rächt mich, Brüder!'),
+    TR('Sagt meiner Ziege … ich hab sie geliebt …'),
+    TR('Es wird so dunkel …'),
+    TR('Nicht … so …'),
   ],
   rentner: [
-    'Mein Gebiss … nehmt es …',
-    'Das war mein letzter Kaffee …',
-    'Sagt meinem Dackel … Lebewohl …',
-    'Früher … war alles … besser …',
-    'Ich will … meine Rente …',
+    TR('Mein Gebiss … nehmt es …'),
+    TR('Das war mein letzter Kaffee …'),
+    TR('Sagt meinem Dackel … Lebewohl …'),
+    TR('Früher … war alles … besser …'),
+    TR('Ich will … meine Rente …'),
   ],
 };
 function dropPart(obj, vx, vy, vz, spin) {
@@ -37,7 +37,7 @@ function breakCatapult(u) {
     puff(c.x + (Math.random() - 0.5) * 3, c.y + Math.random() * 1.5, c.z + (Math.random() - 0.5) * 3, k % 2 ? 0x9a7b56 : 0xd8c48f, 1, 1.2);
   u.g.visible = false;
   SFX.play('splinter', { x: c.x, z: c.z });
-  word(pick(['KRACH!', 'KAPUTT!', 'SPLITTER!']), c.x, c.y + 3, c.z, { color: '#ffb347', scale: 1.3 });
+  word(pick([TR('KRACH!'), TR('KAPUTT!'), TR('SPLITTER!')]), c.x, c.y + 3, c.z, { color: '#ffb347', scale: 1.3 });
 }
 // The little ghost that rises from a fallen warrior. Geometry and the eye/halo materials are shared by all ghosts; each ghost has only
 // its own fading body material, freed again in ghostDrop (one ghost per death: nothing may pile up on the GPU in a long match).
@@ -149,11 +149,11 @@ function startDeath(u, cause) {
   }
   const vo = fac === 'rentner' ? 'dieR' : 'dieV';
   if (u.dv === 'fall' && u.fallY === undefined) {
-    word(pick(['AAAAH!', 'NEEEIN!', 'HILFEEE!']), x, y + 2.5, z, { color: '#ffffff', scale: 1 });
+    word(pick([TR('AAAAH!'), TR('NEEEIN!'), TR('HILFEEE!')]), x, y + 2.5, z, { color: '#ffffff', scale: 1 });
     SFX.play('whoosh', { x, z });
     setTimeout(() => SFX.play('crash', { x, z, vol: 0.6 }), 650);
   } else if (u.dv === 'squash') {
-    word('PLATT!', x, y + 1.5, z, { color: '#ffffff', scale: 1.2 });
+    word(TR('PLATT!'), x, y + 1.5, z, { color: '#ffffff', scale: 1.2 });
     SFX.play('squish', { x, z });
   } else if (u.dv === 'drama') {
     word(pick(DIE_DRAMA[fac]), x, y + 4, z, { bubble: true, follow: u });
@@ -256,7 +256,7 @@ function deathTick(u, dt) {
       F.land = 1;
       SFX.play('bonk', { x: u.g.position.x, z: u.g.position.z });
       puff(u.g.position.x, u.g.position.y + 0.2, u.g.position.z, 0xd8c48f, 4, 0.9);
-      word('BONK!', u.g.position.x, u.g.position.y + 2, u.g.position.z, { color: '#ffffff', scale: 0.8 });
+      word(TR('BONK!'), u.g.position.x, u.g.position.y + 2, u.g.position.z, { color: '#ffffff', scale: 0.8 });
     }
     if (t > 0.55 && t < 0.8) r.rotation.z = u.side * (Math.PI / 2 - Math.sin(((t - 0.55) / 0.25) * Math.PI) * 0.15);
     return sink(1.4, 2.3);

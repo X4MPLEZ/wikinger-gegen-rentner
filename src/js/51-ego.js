@@ -67,7 +67,7 @@ function enterEgo() {
     } catch (_) {}
   }
   $('#egoName').textContent = K.name;
-  $('#spName').textContent = K.sp || 'Salve';
+  $('#spName').textContent = K.sp || TR('Salve');
   $('#spIco').innerHTML = SP_ICON[u.k] || ICON.star;
   $('#egoResIco').innerHTML = ICON[FAC[V.facs[V.myTeam]].icon];
   EG.gtxt = '';
@@ -79,7 +79,9 @@ function enterEgo() {
       () =>
         V.poss &&
         egoHint(
-          'Sandwurm: Angriff = Maul-Biss gegen alle vor dir · Spezial = eingraben, unter dem Sand steuern, nochmal Spezial = auftauchen und alle im Kreis verschlingen',
+          TR(
+            'Sandwurm: Angriff = Maul-Biss gegen alle vor dir · Spezial = eingraben, unter dem Sand steuern, nochmal Spezial = auftauchen und alle im Kreis verschlingen'
+          ),
           5200
         ),
       1200
@@ -87,7 +89,7 @@ function enterEgo() {
   if (K.role === 'ranged' && !EG.aimHint) {
     EG.aimHint = true;
     setTimeout(
-      () => V.poss && egoHint('Du zielst selbst: Das Kreuz in der Mitte ist dein Ziel. Kopftreffer machen vierfachen Schaden!', 5000),
+      () => V.poss && egoHint(TR('Du zielst selbst: Das Kreuz in der Mitte ist dein Ziel. Kopftreffer machen vierfachen Schaden!'), 5000),
       1900
     );
   } else if (!EG.hintShown) {
@@ -97,15 +99,14 @@ function enterEgo() {
         V.poss &&
         egoHint(
           COARSE
-            ? 'Links ziehen zum Laufen, rechts wischen zum Umschauen. Rechts unten angreifen.'
-            : (kl('fwd') + kl('left') + kl('back') + kl('right')).replace(/[↑←↓→]/g, '') +
-                ' laufen · Maus umschauen · ' +
-                kl('attack') +
-                ': angreifen (halten) · ' +
-                kl('special') +
-                ': Spezial · ' +
-                kl('exit') +
-                ': verlassen',
+            ? TR('Links ziehen zum Laufen, rechts wischen zum Umschauen. Rechts unten angreifen.')
+            : TR(
+                '{0} laufen · Maus umschauen · {1}: angreifen (halten) · {2}: Spezial · {3}: verlassen',
+                (kl('fwd') + kl('left') + kl('back') + kl('right')).replace(/[↑←↓→]/g, ''),
+                kl('attack'),
+                kl('special'),
+                kl('exit')
+              ),
           5000
         ),
       1900
@@ -267,7 +268,8 @@ function plHintUi() {
   const h = $('#plHint');
   if (!h) return;
   h.hidden = PL.on || !V.poss || COARSE;
-  if (!h.hidden) h.lastChild.textContent = ML.noLock ? ' Maustaste halten und ziehen zum Umschauen' : ' Klicken, um die Maus zu fangen';
+  if (!h.hidden)
+    h.lastChild.textContent = ' ' + (ML.noLock ? TR('Maustaste halten und ziehen zum Umschauen') : TR('Klicken, um die Maus zu fangen'));
 }
 function mlTake(mx, my, m) {
   ML.mx += mx;
@@ -476,14 +478,14 @@ function egoCmdHere() {
   if (!P || !V.playing || tutBlock('egoCmd')) return;
   const ids = ownIdsFor(P);
   if (!ids.length) {
-    egoHint('Keine Krieger da – bilde erst welche aus.', 1500);
+    egoHint(TR('Keine Krieger da – bilde erst welche aus.'), 1500);
     SFX.play('error');
     return;
   }
   sendCmd({ t: 'order', ids, x: +P.x.toFixed(1), z: +P.z.toFixed(1), m: 0 });
   SFX.play('rally');
-  egoHint('Alle zu mir! ' + ids.length + (ids.length === 1 ? ' Krieger kommt.' : ' Krieger kommen.'), 1500);
-  word('ZU MIR!', P.x, unitY(P.x, P.z) + 4.6, P.z, { color: '#9fe8b8', scale: 1.2 });
+  egoHint(ids.length === 1 ? TR('Alle zu mir! 1 Krieger kommt.') : TR('Alle zu mir! {0} Krieger kommen.', ids.length), 1500);
+  word(TR('ZU MIR!'), P.x, unitY(P.x, P.z) + 4.6, P.z, { color: '#9fe8b8', scale: 1.2 });
   for (let i = 0; i < 10; i++) {
     const a = (i / 10) * TAU;
     puff(P.x + Math.cos(a) * 2.2, unitY(P.x, P.z) + 0.4, P.z + Math.sin(a) * 2.2, 0x9fe8b8, 1, 0.6);
@@ -495,7 +497,7 @@ function egoCmdAttack() {
   if (!P || !V.playing || tutBlock('egoCmd')) return;
   const ids = ownIdsFor(P);
   if (!ids.length) {
-    egoHint('Keine Krieger da – bilde erst welche aus.', 1500);
+    egoHint(TR('Keine Krieger da – bilde erst welche aus.'), 1500);
     SFX.play('error');
     return;
   }
@@ -519,9 +521,15 @@ function egoCmdAttack() {
   const tx = tgt ? tgt.g.position.x : onBase ? B.x : pt.x,
     tz = tgt ? tgt.g.position.z : onBase ? B.z : pt.z;
   SFX.play('order');
-  word(tgt ? 'ANGRIFF!' : onBase ? 'AUF DIE BASIS!' : 'DORTHIN!', tx, unitY(tx, tz) + 3.8, tz, { color: '#ff9b54', scale: 1.25 });
+  word(tgt ? TR('ANGRIFF!') : onBase ? TR('AUF DIE BASIS!') : TR('DORTHIN!'), tx, unitY(tx, tz) + 3.8, tz, {
+    color: '#ff9b54',
+    scale: 1.25,
+  });
   aoeRing(tx, tz, 2.4, 0xff9b54);
-  egoHint(tgt ? 'Alle greifen ' + KINDS[tgt.k].name + ' an!' : onBase ? 'Alle stürmen die Basis!' : 'Alle rücken dorthin vor!', 1500);
+  egoHint(
+    tgt ? TR('Alle greifen {0} an!', KINDS[tgt.k].name) : onBase ? TR('Alle stürmen die Basis!') : TR('Alle rücken dorthin vor!'),
+    1500
+  );
   EG.cmdT = now();
 }
 function egoSwitch() {
@@ -529,7 +537,7 @@ function egoSwitch() {
   if (!P || !V.playing || P.dance || P.heroOn || P.heroReq || tutBlock('egoSwitch')) return;
   const list = [...V.units.values()].filter(u => u.team === V.myTeam && u.id !== P.id && !u.isPoss).sort((a, b) => a.id - b.id);
   if (!list.length) {
-    egoHint('Kein anderer Krieger zum Wechseln.', 1500);
+    egoHint(TR('Kein anderer Krieger zum Wechseln.'), 1500);
     SFX.play('error');
     return;
   }
@@ -544,7 +552,7 @@ function egoSwitch() {
     V.poss.pitch = pitch;
     EG.intro = Math.min(EG.intro, 0.6);
     SFX.play('switch');
-    egoHint('Gewechselt: ' + KINDS[nu.k].name + ' (' + list.length + ' weitere)', 1400);
+    egoHint(TR('Gewechselt: {0} ({1} weitere)', KINDS[nu.k].name, list.length), 1400);
   }
 }
 const SP_ICON = {
@@ -560,12 +568,12 @@ const SP_ICON = {
   9: si('paw'),
 };
 const DMOVES = [
-  ['spin', 'DREHUNG!'],
-  ['jump', 'HÜPF!'],
-  ['floss', 'FLOSS!'],
-  ['robot', 'ROBOTER!'],
-  ['disco', 'DISCO-FINGER!'],
-  ['split', 'SPAGAT!'],
+  ['spin', TR('DREHUNG!')],
+  ['jump', TR('HÜPF!')],
+  ['floss', TR('FLOSS!')],
+  ['robot', TR('ROBOTER!')],
+  ['disco', TR('DISCO-FINGER!')],
+  ['split', TR('SPAGAT!')],
 ];
 function egoDance(P) {
   if (P.mv && P.mv.t < 0.4) return;
@@ -589,7 +597,9 @@ function egoDance(P) {
   EG.kick = Math.max(EG.kick, 0.1);
   if (P.dc % 5 === 0)
     egoHint(
-      ['Saturday Night Fever!', 'Die Menge tobt!', 'Du bist der Star der Tanzfläche!', 'Mehr! Mehr! Mehr!'][Math.floor(Math.random() * 4)],
+      ['Saturday Night Fever!', TR('Die Menge tobt!'), TR('Du bist der Star der Tanzfläche!'), TR('Mehr! Mehr! Mehr!')][
+        Math.floor(Math.random() * 4)
+      ],
       1400
     );
 }
@@ -601,7 +611,7 @@ function egoAttack() {
   if (V.poss && V.poss.tun) {
     if (!V.poss.tunHint) {
       V.poss.tunHint = 1;
-      egoHint('Unter dem Sand beißt du nicht – Spezial drücken zum Auftauchen!', 1800);
+      egoHint(TR('Unter dem Sand beißt du nicht – Spezial drücken zum Auftauchen!'), 1800);
     }
     return;
   }
@@ -847,7 +857,7 @@ function egoSpecial() {
     }
     if (P.spT > 0 || P.held) return;
     if (!canBurrow(P.x, P.z)) {
-      egoHint('Hier ist kein Sand zum Eingraben!', 1400);
+      egoHint(TR('Hier ist kein Sand zum Eingraben!'), 1400);
       SFX.play('error');
       return;
     }
@@ -915,12 +925,12 @@ $('#egoSp').addEventListener('pointerdown', e => {
 $('#egoExit').addEventListener('click', () => {
   if (tutBlock('exit')) return;
   if (V.poss && V.poss.dance) {
-    egoHint('Du tanzt noch! Verlassen geht erst danach.', 1600);
+    egoHint(TR('Du tanzt noch! Verlassen geht erst danach.'), 1600);
     SFX.play('error');
     return;
   }
   if (V.poss && (V.poss.heroOn || V.poss.heroReq)) {
-    egoHint('Ein Held kneift nicht!', 1400);
+    egoHint(TR('Ein Held kneift nicht!'), 1400);
     SFX.play('error');
     return;
   }
@@ -1423,8 +1433,8 @@ function egoUpdate(dt) {
       ab = $('#egoAtk');
     if (ab.classList.contains('dance') !== dz) {
       ab.classList.toggle('dance', dz);
-      ab.innerHTML = '<i class="cd"></i>' + (dz ? si('dance') : ICON.sword) + (COARSE ? '' : '<kbd class="kb">Klick</kbd>');
-      ab.setAttribute('aria-label', dz ? 'Tanzen' : 'Angriff');
+      ab.innerHTML = '<i class="cd"></i>' + (dz ? si('dance') : ICON.sword) + (COARSE ? '' : '<kbd class="kb">' + TR('Klick') + '</kbd>');
+      ab.setAttribute('aria-label', dz ? TR('Tanzen') : TR('Angriff'));
       $('#danceBan').hidden = !dz;
       if (!dz) P.mv = null;
     }
@@ -1452,7 +1462,7 @@ function egoUpdate(dt) {
   if (!P.confirmed && u && u.isPoss) P.confirmed = true;
   if (!P.confirmed && now() - P.t0 > (V.mode === 'guest' ? 12000 : 4000)) {
     exitEgo(false);
-    toast('Übernehmen hat nicht geklappt.', 1800);
+    toast(TR('Übernehmen hat nicht geklappt.'), 1800);
     return;
   }
   {
@@ -1466,9 +1476,9 @@ function egoUpdate(dt) {
         if (!EG.heroTold) {
           EG.heroTold = true;
           egoHint(
-            'Nah am Sandwurm! ' +
-              (COARSE ? 'Tippe' : 'Drück ' + kl('hero') + ' oder klicke') +
-              ' „Den Helden spielen“: rauf, zustechen, fressen lassen.',
+            COARSE
+              ? TR('Nah am Sandwurm! Tippe „Den Helden spielen“: rauf, zustechen, fressen lassen.')
+              : TR('Nah am Sandwurm! Drück {0} oder klicke „Den Helden spielen“: rauf, zustechen, fressen lassen.', kl('hero')),
             3200
           );
         }
@@ -1476,7 +1486,7 @@ function egoUpdate(dt) {
     }
     if (P.heroReq && !P.heroOn && now() - P.heroReq > 1600) {
       P.heroReq = 0;
-      egoHint('Zu spät – der Wurm ist schon weg!', 1400);
+      egoHint(TR('Zu spät – der Wurm ist schon weg!'), 1400);
     }
   }
   if (P.heroOn && heroCam(P, dt)) return;

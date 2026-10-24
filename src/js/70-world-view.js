@@ -652,7 +652,7 @@ function eventView(s, dt) {
     FOG.on = fogOn;
     if (fogOn && V.playing) {
       if (s.fg) hlPush('fogMode', -1, 0, 0, 0);
-      else toast('Nebelwand! Man sieht nur noch, was nahe bei den eigenen Kriegern ist.', 3600);
+      else toast(TR('Nebelwand! Man sieht nur noch, was nahe bei den eigenen Kriegern ist.'), 3600);
     }
   }
   FOG.k = FOG.on ? Math.min(1, FOG.k + dt / 2.5) : Math.max(0, FOG.k - dt / 2.5);
@@ -670,7 +670,7 @@ function eventView(s, dt) {
       W = WV.wagon = { g: wagonMesh(), x, z, yaw, owner: -2, t: 0 };
       W.g.position.set(x, groundY(x, z), z);
       puff(x, groundY(x, z) + 1, z, 0xffd34d, 12, 0.8);
-      word('GOLDWAGEN!', x, groundY(x, z) + 4, z, { color: '#ffd34d', scale: 1.4 });
+      word(TR('GOLDWAGEN!'), x, groundY(x, z) + 4, z, { color: '#ffd34d', scale: 1.4 });
     }
     const f = Math.min(1, dt * 10);
     W.x = lerp(W.x, x, f);
@@ -688,7 +688,7 @@ function eventView(s, dt) {
       W.g.userData.cloth.material.color.copy(lin(col));
       W.g.userData.ring.material.color.set(owner < 0 ? 0xffd34d : FAC[V.facs[owner]].col);
       if (owner >= 0 && V.playing) {
-        word(owner === V.myTeam ? 'DU ESKORTIERST!' : 'GEGNER ESKORTIERT!', W.x, groundY(W.x, W.z) + 4, W.z, {
+        word(owner === V.myTeam ? TR('DU ESKORTIERST!') : TR('GEGNER ESKORTIERT!'), W.x, groundY(W.x, W.z) + 4, W.z, {
           color: owner === V.myTeam ? '#ffe08a' : '#ff9b8a',
           scale: 1.1,
         });
@@ -738,7 +738,7 @@ function moveFlagView(i, nx, nz, fx) {
       oy = groundY(ox, oz);
     for (let k = 0; k < 10; k++)
       puff(ox + (Math.random() - 0.5) * 2, oy + 0.5 + Math.random() * 3, oz + (Math.random() - 0.5) * 2, 0xffffff, 1, 0.7);
-    word('UMZUG!', ox, oy + 5, oz, { color: '#9fe8b8', scale: 1.1 });
+    word(TR('UMZUG!'), ox, oy + 5, oz, { color: '#9fe8b8', scale: 1.1 });
   }
   FL.x = nx;
   FL.z = nz;
@@ -784,7 +784,7 @@ function updateWorld(dt) {
           waterRipple(x, z, 1.2 * hr);
           SFX.play('splinter', { x, z });
           SFX.play('splat', { x, z, vol: 0.7 });
-          word(pick(['KNACKS!', 'EINGEBROCHEN!', 'PLATSCH!']), x, WL + 2.6, z, { color: '#9be7ff', scale: 1.2 });
+          word(pick([TR('KNACKS!'), TR('EINGEBROCHEN!'), TR('PLATSCH!')]), x, WL + 2.6, z, { color: '#9be7ff', scale: 1.2 });
         }
       }
     }
@@ -807,7 +807,7 @@ function updateWorld(dt) {
       SFX.play('boing', { x: p.x, z: p.z, vol: 1.1 });
       SFX.play('creak', { x: p.x, z: p.z, vol: 0.6 });
       emitFX('pad', p.x, p.y + 0.3, p.z, { dx: Math.sin(v.g.rotation.y), dz: Math.cos(v.g.rotation.y), size: 0.8 });
-      word('BOING!', p.x, p.y + 2.2, p.z, { color: '#ffd34d', scale: 1.1 });
+      word(TR('BOING!'), p.x, p.y + 2.2, p.z, { color: '#ffd34d', scale: 1.1 });
     }
     v.cd = e[1] / 10;
     v.armed = e[2];
@@ -837,7 +837,7 @@ function updateWorld(dt) {
       P.padAck = e[6];
       const age = Math.max(0, (now() - V.offset) / 1000 - s.t),
         elapsed = Math.min(PAD_FLY, e[5] / 100 + age);
-      if (!P.pj || P.pj.sx !== e[1] / 10 || P.pj.sz !== e[2] / 10) egoHint('Huiii!', 900);
+      if (!P.pj || P.pj.sx !== e[1] / 10 || P.pj.sz !== e[2] / 10) egoHint(TR('Huiii!'), 900);
       P.pj = { sx: e[1] / 10, sz: e[2] / 10, tx: e[3] / 10, tz: e[4] / 10, t: elapsed };
       P.jumpT = Math.max(0.001, PAD_FLY - elapsed);
       P.jDur = PAD_FLY;
@@ -987,7 +987,7 @@ function updateWorld(dt) {
       const yw = v.g.rotation.y;
       clawStreak(v.g.position.x + Math.sin(yw) * 0.9, y + 1.3, v.g.position.z + Math.cos(yw) * 0.9, yw, v.side, 1.1);
       SFX.play('bearSwipe', { x, z, vol: 0.9 });
-      if (Math.random() < 0.5) word('GRRR!', x, y + 3, z, { color: '#ffffff', scale: 0.9 });
+      if (Math.random() < 0.5) word(TR('GRRR!'), x, y + 3, z, { color: '#ffffff', scale: 0.9 });
     }
     if (v.swipe > 0) {
       v.swipe -= dt;
@@ -1023,7 +1023,7 @@ function updateWorld(dt) {
         mine = e[1] === V.myTeam;
       const wm = e[4] === 1;
       word(
-        wm ? (mine ? 'SANDWURM GEZÄHMT!' : 'Gegner zähmt Sandwurm!') : mine ? 'EISBÄR GEZÄHMT!' : 'Gegner zähmt Eisbär!',
+        wm ? (mine ? TR('SANDWURM GEZÄHMT!') : TR('Gegner zähmt Sandwurm!')) : mine ? TR('EISBÄR GEZÄHMT!') : TR('Gegner zähmt Eisbär!'),
         x,
         y + (wm ? 6 : 3.5),
         z,
@@ -1036,8 +1036,8 @@ function updateWorld(dt) {
       if (mine)
         egoHint(
           wm
-            ? 'Der Sandwurm kämpft jetzt für dich! Übernimm ihn: Spezial = abtauchen und verschlingen'
-            : 'Der Eisbär kämpft jetzt für dich! Übernimm ihn für Bärenklauen!',
+            ? TR('Der Sandwurm kämpft jetzt für dich! Übernimm ihn: Spezial = abtauchen und verschlingen')
+            : TR('Der Eisbär kämpft jetzt für dich! Übernimm ihn für Bärenklauen!'),
           2600
         );
     }
@@ -1094,7 +1094,10 @@ function updateWorld(dt) {
         y = groundY(x, z),
         mine = e[1] === V.myTeam,
         F = FAC[V.facs[e[1]]];
-      word(e[2] === 1 ? '+1 Discogranate' : '+' + e[3] + ' ' + F.res, x, y + 2.6, z, { color: mine ? '#ffe08a' : '#ff9b8a', scale: 1.1 });
+      word(e[2] === 1 ? TR('+1 Discogranate') : '+' + e[3] + ' ' + F.res, x, y + 2.6, z, {
+        color: mine ? '#ffe08a' : '#ff9b8a',
+        scale: 1.1,
+      });
       for (let k = 0; k < 10; k++)
         puff(
           x + (Math.random() - 0.5) * 1.5,
@@ -1108,7 +1111,9 @@ function updateWorld(dt) {
       if (mine && V.poss)
         egoHint(
           e[2] === 1
-            ? 'Discogranate eingesammelt! Halte ' + (COARSE ? 'den Granaten-Knopf' : kl('nade')) + ' zum Werfen.'
+            ? COARSE
+              ? TR('Discogranate eingesammelt! Halte den Granaten-Knopf zum Werfen.')
+              : TR('Discogranate eingesammelt! Halte {0} zum Werfen.', kl('nade'))
             : '+' + e[3] + ' ' + F.res + '!',
           1800
         );
@@ -1126,14 +1131,14 @@ function updateWorld(dt) {
       u.flash = 0.25;
       puff(u.g.position.x, u.g.position.y + 1, u.g.position.z, 0x4f8f3a, 3, 0.4);
       if (own || (V.poss && V.poss.id === id)) {
-        word(pick(['AUA! Kaktus!', 'AUTSCH!', 'Stachelig!']), u.g.position.x, u.g.position.y + 3.2, u.g.position.z, {
+        word(pick([TR('AUA! Kaktus!'), TR('AUTSCH!'), TR('Stachelig!')]), u.g.position.x, u.g.position.y + 3.2, u.g.position.z, {
           color: '#ff5a3c',
           scale: 0.9,
         });
         SFX.play('grunt', { x: u.g.position.x, z: u.g.position.z, k: u.k });
         if (V.poss && V.poss.id === id) {
           EG.kick = Math.max(EG.kick, 0.2);
-          egoHint('Aua! Weg vom Kaktus!', 1000);
+          egoHint(TR('Aua! Weg vom Kaktus!'), 1000);
         }
       }
     }

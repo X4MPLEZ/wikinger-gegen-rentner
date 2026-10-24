@@ -2,7 +2,7 @@
 
 A 3D real-time strategy game in one web page: two factions (Wikinger / Rentner) fight over flags; every warrior can be taken over
 and steered in third person ("Ego-Modus"). Phone and PC, against the computer or online for two. Three.js r128, no framework, no bundler.
-**All player-facing text is German. Code and comments are English.**
+**Player-facing text is written in German inside `TR('…')` and translated into 14 languages (`src/lang/`). Code and comments are English.**
 
 ## Golden rules (read these, they save the most time)
 
@@ -17,17 +17,24 @@ and steered in third person ("Ego-Modus"). Phone and PC, against the computer or
 4. **Small, local edits.** Find the place with the file map below and `grep -n`, read only that region, change it. Keep the style
    (prettier: `npx prettier --write src/js/*.js src/style.css`, printWidth 140, single quotes).
 5. **Test before you ship:** `sh tests/run.sh` (a few minutes). Online changes: `sh tests/run.sh mp`.
+6. **Every new player-facing text goes through `TR()`.** Write the German text as a string literal: `TR('Noch {0} s', n)` (placeholders
+   `{0}`…, never build sentences from pieces). Markup in src/body.html is translated automatically at start (text, `title`, `placeholder`,
+   `aria-label`; `data-l` for elements with inner markup). Then add the translation to every `src/lang/<code>.json`:
+   `python3 tools/i18n.py` lists what is missing, unused or has broken placeholders/tags (a missing text falls back to English, then German).
+   Numbers with decimals: `numL(v)`. Check long languages (ru, pl, fr, de) and CJK on a phone: `index.html?lang=ru`.
 
 ## Commands
 
 | What | Command |
 | --- | --- |
 | Build `index.html` (+ `dist/body.html` for tests) | `node tools/build.mjs` |
+| Translations: what is missing / broken | `python3 tools/i18n.py` (`--keys F` writes all German texts to F) |
+| Upload package for game portals (CrazyGames, itch.io) | `node tools/portal.mjs` → `dist/portal/` + `dist/rentner-gegen-wikinger.zip` |
 | Quick test suite | `sh tests/run.sh` |
 | Single test | `sh tests/run.sh t_chaos` or `python3 tests/t_chaos.py` (after a build) |
 | Online test (starts local PeerJS + MQTT servers) | `sh tests/run.sh mp` |
 | Format | `npx prettier --write src/js/*.js src/style.css` |
-| Play locally | open `index.html` in a browser (three.js comes from cdnjs) |
+| Play locally | open `index.html` in a browser (three.js comes from cdnjs); another language: `index.html?lang=en` |
 | Profiler overlay | `index.html?perf=1` or F9 |
 | Balance check (computer vs computer, ~1 h for 240 matches) | `python3 tools/balance.py 240 tests/out/balance.json` then `python3 tools/balance_report.py tests/out/balance.json` |
 
@@ -41,9 +48,11 @@ src/head.html       <head>: title, meta, fonts
 src/body.html       all HUD / menu markup (DOM, ids used by the JS)
 src/style.css       all styles (mobile first; landscape phones: @media (orientation: landscape) and (max-height: 600px))
 src/js/NN-*.js      the game, concatenated in name order (see file map)
+src/lang/<code>.json  translations { "German text": "translation" } (en es fr it pt pl tr ru nl id ja ko zh), embedded by the build
 src/assets/sounds.b64.txt   CC0 foley samples (one MP3, base64), embedded as <script id="sndData">
 models/             face detector weights (loaded on demand)
 tools/build.mjs     the build
+tools/i18n.py       translation check; tools/portal.mjs  portal package (all files local, no own fullscreen button, no photo sending)
 tests/              browser tests (Playwright, Python) – see "Testing"
 ```
 
@@ -54,6 +63,7 @@ Every file starts with a short header comment saying what is in it.
 | File | What | Main entry points |
 | --- | --- | --- |
 | 00-core | helpers | `$`, `$$`, `clamp`, `lerp`, `now`, `rng(seed)`, `store` (localStorage) |
+| 00-i18n | languages: picks the language, translates texts and the page | `TR(text, ...args)`, `numL`, `LANG`, `LANGS`, `i18nDom` |
 | 01-icons | SVG icon set | `si(name)`, `siCanvas` |
 | 02-data | **all game data and balance** | `KINDS`, `FAC`, `CFG`, `PERKS`, `TIERS` |
 | 03-map | map generation, terrain, pathfinding, body physics | `genMap`, `setMap`, `groundY`, `walkable`, `findPath`, `startAir`, `advanceGround` |
@@ -83,6 +93,9 @@ Every file starts with a short header comment saying what is in it.
 | 61-net | online: transports, lobby, host/guest sync, rematch | `openMulti`, `hostOnline`, `joinOnline`, `hostReadGuest`, `hostBroadcast`, `NET_VER` |
 | 62-screens | menus, pause, settings, quit | `showScreen`, `toMenu`, `quitMatch`, `menuScene` |
 | 63-tutorial | tutorial and Profi tutorial | `tutSteps`, `startTutorial`, `tutBlock` |
+| 64-lobby | public games: list „Offene Spiele“, „Schnelles Spiel“, practising while waiting | `LOBBY`, `lobbyWatch`, `lobbyValid`, `lobbyHostStart`, `quickMatch` |
+| 65-profile | the player's profile: levels (Ruhmespfad), achievements, Juwelen, pictures, skins, statistics, transfer code | `PLAYER`, `ACH`, `AVATARS`, `SKINS`, `LEVEL_REWARDS`, `profMatchEnd`, `profEvent`, `setSkins`, `avatarURL` |
+| 66-profile-ui | profile on screen: menu chip, profile screen, end-screen rewards, VS card | `profChipUi`, `profUi`, `profEndUi`, `vsCard` |
 | 70-world-view | bears, holes, pads, pickups, fog of war (client) | `updateWorld`, `itemMesh`, `fogVis`, `fogSeen`, `fogWallTick` |
 | 71-worm-view | wild sandworms on screen, sounds, victims | `wormWorldView`, `grabTick` |
 | 72-hero-view | the hero sequence on screen | `heroTick`, `heroCam` |
@@ -116,6 +129,10 @@ Every file starts with a short header comment saying what is in it.
 - `V` – the view: `V.latest` (newest snapshot), `V.units` (Map id → view), `V.poss` (the warrior you steer), `V.myTeam`, `V.mode`
   ('menu' | 'ai' | 'host' | 'guest').
 - `CFG` – balance numbers; `PERKS` – chaos perks; `pk(G, team, id, [off, on])` reads a perk effect.
+- `PLAYER` – the local profile (store `wvr-prof`, always passed through `profClean`): name index, avatar, xp, gems, owned and equipped
+  items, achievements, statistics. Online the presence carries `profPublic()`; the other side reads it with `profPeer()` → `V.oppPf`.
+- `NET.pub` – a public match (from the lobby list or quick match): no photos, only made-up names; `NET.practice` – the host practises
+  against the computer while his lobby entry waits.
 
 ## Conventions and pitfalls
 
@@ -129,6 +146,12 @@ Every file starts with a short header comment saying what is in it.
 - **Client randomness:** visuals both players should see the same (e.g. puddle decoration) use `rng(seed)` from snapshot data.
 - **Mobile first:** check portrait 390×844 and landscape 844×390 (`tests/t_hud_layout.py` asserts that HUD parts do not overlap).
 - **German wording:** "Discogranate", "Sammelfahne", "Basisschaden", "Ego-Krieger", "Den Helden spielen", "Aufgeben".
+- **Skins** are colour swaps applied while a unit model is built: `setSkins()` fills `UNIT_SKIN[k]`, `buildUnit` sets `LAM_MAP` so
+  `lam(color)` returns the swapped colour; caches of built models key on the skin. Both players see each other's skins.
+- **Strangers:** nothing typed by a player and no photos ever reach another player in a public match; everything received from the
+  lobby or a peer is validated (`lobbyValid`, `profPeer`).
+- **Portal build:** `window.WVR_PORTAL` (set by tools/portal.mjs) hides the own fullscreen button and photo sending; `window.WVR_LIBS`
+  points PeerJS / MQTT / face-api to local copies (`WVR_LIB(name)` in 61-net).
 - **Debugging:** in the browser console `__wvr.G`, `__wvr.V`, `__wvr.step(__wvr.G)` … (99-boot.js lists everything exported).
 
 ## Recipes
@@ -142,17 +165,26 @@ Every file starts with a short header comment saying what is in it.
 - **New sound:** add a synth function to `LIB` in 30-sound.js, play it with `SFX.play('name', { x, z })` (positional) or without x/z.
 - **New HUD element:** markup in src/body.html, style in src/style.css (+ landscape/portrait rules), update in `updateHud()`.
 - **New setting kept per device:** `store.get('wvr-…')` / `store.set('wvr-…', v)`.
+- **New achievement:** entry in `ACH` (65-profile: id, icon, gems, German name/description, a test on the match-end record or a live
+  event from `profEvent`) + translations. **New picture / skin:** `AVATARS` / `SKINS` + `SKIN_MAPS` (optionally a `LEVEL_REWARDS` step).
+- **New language:** add it to `LANGS` (00-i18n), create `src/lang/<code>.json` from `python3 tools/i18n.py --keys keys.json`, look at
+  the menu, HUD and profile in both phone orientations.
 
 ## Testing
 
 - `tests/harness.py` serves `dist/body.html` at `http://game.test/` with three.js from node_modules; all other requests are blocked.
+  Tests run in German (`window.WVR_LANG = 'de'`), so they can look for German texts.
 - A test is a Python script that drives the page and reads internals via `__wvr`, then prints `NAME OK` or `NAME FAIL` as its last line.
   Pattern: copy a small one (`t_chaos.py` for pure simulation checks with `__wvr.newGame` + `__wvr.step`, `t_ux.py` for UI flows).
 - Simulation tests do not need rendering: build a state with `W.newGame([...], seed, chaos, {squad: false})`, place units, call `W.step(G)`.
 - Screenshots and logs land in `tests/out/`. Look at screenshots for visual changes (and at both phone orientations).
+- `tests/t_i18n.py` checks the languages (complete files with intact placeholders, no German left in English/Russian/Japanese, long
+  labels fit); `tests/t_profile.py` the profile (levels, achievements, shop, skins, broken saves); `tests/mp/mp_lobby.py` the lobby list,
+  quick match, practising while waiting, skins/VS card online and the transfer code.
 - `tests/mp/mp_net.py` plays two pages against each other over local PeerJS/MQTT servers (quit, line drop, rejoin);
   `tests/mp/mp_recon.py` checks the ego movement online (no pull-backs on a clear walk or after a lag burst, knock-downs, a speed cheat).
 
 ## Release (maintainer's workflow)
 
 Build → `sh tests/run.sh` → commit (source and the generated `index.html` together) → push to `main` (GitHub Pages serves `index.html`).
+For the game portals: `node tools/portal.mjs` and upload `dist/rentner-gegen-wikinger.zip`.

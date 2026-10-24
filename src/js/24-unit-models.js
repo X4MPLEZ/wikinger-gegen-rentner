@@ -271,7 +271,8 @@ function withLowPoly(fn) {
 let UG_LO = null;
 const LO_TPL = new Map();
 function loTemplate(k) {
-  if (LO_TPL.has(k)) return LO_TPL.get(k);
+  const key = k + (UNIT_SKIN[k] ? '|' + UNIT_SKIN[k].id : ''); // one template per kind and skin
+  if (LO_TPL.has(key)) return LO_TPL.get(key);
   let U = null;
   try {
     withLowPoly(() => {
@@ -291,7 +292,7 @@ function loTemplate(k) {
     scene.remove(U.g);
     hpGroup.remove(U.hp);
   }
-  LO_TPL.set(k, U);
+  LO_TPL.set(key, U);
   return U;
 }
 const UB = { groups: new Map(), list: [] };
@@ -441,7 +442,7 @@ function hpBatch() {
   let n = 0;
   const { bg, fg, m, c, N } = HPB;
   for (const hp of hpGroup.children) {
-    if (!hp.visible || n >= N) continue;
+    if (!hp.visible || n >= N || V.noWords) continue; // (store pictures: no bars either)
     m.compose(hp.position, hp.quaternion, hp.scale);
     for (const ch of hp.children) {
       ch.updateMatrix();

@@ -201,7 +201,7 @@ function setPossessedLook(u, on) {
   }
   if (on && u.team !== V.myTeam && V.playing && !V.warnedPoss && !V.tut) {
     V.warnedPoss = true;
-    toast('Der Gegner steuert jetzt selbst einen Krieger! Erwisch ihn mit deinem eigenen für einen ' + rushName(V.myTeam) + '.', 4500);
+    toast(TR('Der Gegner steuert jetzt selbst einen Krieger! Erwisch ihn mit deinem eigenen für einen {0}.', rushName(V.myTeam)), 4500);
   }
 }
 function processSnap(s) {
@@ -266,8 +266,8 @@ function processSnap(s) {
       if (dz2 && !V.poss.dance)
         egoHint(
           matchMedia('(pointer:fine)').matches
-            ? 'Kein Entkommen! Leertaste oder Klick für Tanzmoves!'
-            : 'Kein Entkommen! Tippe den Tanz-Knopf für Tanzmoves!',
+            ? TR('Kein Entkommen! Leertaste oder Klick für Tanzmoves!')
+            : TR('Kein Entkommen! Tippe den Tanz-Knopf für Tanzmoves!'),
           2600
         );
       V.poss.dance = dz2;
@@ -276,7 +276,7 @@ function processSnap(s) {
     if (V.poss && V.poss.id === id) {
       const dn = (e[7] & 2) === 2;
       if (dn && !V.poss.down) {
-        egoHint('Umgehauen! Gleich stehst du wieder auf …', 1600);
+        egoHint(TR('Umgehauen! Gleich stehst du wieder auf …'), 1600);
         V.poss.dashT = 0;
       }
       V.poss.down = dn;
@@ -317,10 +317,11 @@ function processSnap(s) {
       if (V.geSeen !== undefined && e[1] === V.myTeam && V.poss) {
         if (e[2] > 0) {
           V.discoUntil = now() + 8000;
-          egoHint(e[2] > 1 ? e[2] + ' Gegner tanzen!' : 'Volltreffer, einer tanzt!', 1600);
+          egoHint(e[2] > 1 ? TR('{0} Gegner tanzen!', e[2]) : TR('Volltreffer, einer tanzt!'), 1600);
+          profEvent('dance', e[2]);
         } else {
           SFX.play('flop');
-          egoHint('Daneben … keiner tanzt.', 1400);
+          egoHint(TR('Daneben … keiner tanzt.'), 1400);
         }
       }
       V.geSeen = e[0];
@@ -351,7 +352,10 @@ function processSnap(s) {
         z = e[3] / 10,
         mine = e[1] === V.myTeam;
       if (!mine && FOG.on && !fogSeen(x, z)) continue;
-      word(mine ? 'KONTER!' : 'GEKONTERT!', x, groundY(x, z) + 3.4, z, { color: mine ? '#9fe8b8' : '#ff8a7a', scale: mine ? 1.05 : 0.9 });
+      word(mine ? TR('KONTER!') : TR('GEKONTERT!'), x, groundY(x, z) + 3.4, z, {
+        color: mine ? '#9fe8b8' : '#ff8a7a',
+        scale: mine ? 1.05 : 0.9,
+      });
       emitFX('hit', x, groundY(x, z) + 1.2, z, { n: 5, size: 0.6, col: mine ? 0x9fe8b8 : 0xff6a4a });
       const L = listenerPos();
       if (Math.hypot(x - L.x, z - L.z) < (V.poss ? 30 : 60)) SFX.play('konter', { x, z, vol: mine ? 0.8 : 0.5 });
@@ -364,22 +368,18 @@ function processSnap(s) {
       if (c[1] !== V.cbS) {
         V.cbS = c[1];
         SFX.play('combo', { vol: 1 });
-        egoHint('KOMBO ×3 – Spezialfähigkeit sofort wieder bereit!', 2200);
-        word('KOMBO ×3!', V.poss.x, unitY(V.poss.x, V.poss.z) + 5, V.poss.z, { color: '#ffd34d', scale: 1.5 });
+        egoHint(TR('KOMBO ×3 – Spezialfähigkeit sofort wieder bereit!'), 2200);
+        profEvent('combo');
+        word(TR('KOMBO ×3!'), V.poss.x, unitY(V.poss.x, V.poss.z) + 5, V.poss.z, { color: '#ffd34d', scale: 1.5 });
         shake(0.2);
         V.cbN = 0;
       } else if (c[0] !== V.cbN) {
         V.cbN = c[0];
         if (c[0] >= 1 && c[2] > 0) {
           egoHint(
-            'Kombo ×' +
-              c[0] +
-              ' – noch ' +
-              (3 - c[0]) +
-              (3 - c[0] === 1 ? ' Kill' : ' Kills') +
-              ' in ' +
-              Math.ceil(c[2]) +
-              ' s = Spezial sofort bereit',
+            3 - c[0] === 1
+              ? TR('Kombo ×{0} – noch 1 Kill in {1} s = Spezial sofort bereit', c[0], Math.ceil(c[2]))
+              : TR('Kombo ×{0} – noch {1} Kills in {2} s = Spezial sofort bereit', c[0], 3 - c[0], Math.ceil(c[2])),
             1800
           );
         }
@@ -436,7 +436,7 @@ function processSnap(s) {
         if ((Math.random() < 0.3 || u.isPoss) && u.dv !== 'drama' && u.dv !== 'gone') say(u, QUOTES[u.k].die);
         if (V.poss && V.poss.id === id) {
           exitEgo(false);
-          toast(u.heroOn ? 'HELDENTOD! Dein Krieger hat sich dem Sandwurm geopfert.' : 'Dein Krieger ist gefallen!', 2800);
+          toast(u.heroOn ? TR('HELDENTOD! Dein Krieger hat sich dem Sandwurm geopfert.') : TR('Dein Krieger ist gefallen!'), 2800);
         }
       }
   if (ps) {
@@ -480,7 +480,7 @@ function processSnap(s) {
   if (ps && V.playing && !V.tut && !V.siegeTip && s.b[1 - V.myTeam] < ps.b[1 - V.myTeam]) {
     V.siegeTip = true;
     if (!s.u.some(e => teamOfKind(e[1], s.fa) === V.myTeam && KINDS[e[1]].role === 'siege'))
-      setTimeout(() => toast('Tipp: Basen halten viel aus. Nur Katapulte treffen sie mit voller Wucht.', 4200), 600);
+      setTimeout(() => toast(TR('Tipp: Basen halten viel aus. Nur Katapulte treffen sie mit voller Wucht.'), 4200), 600);
   }
   V.prevMap = cur;
   V.prevSnap = s;
@@ -488,33 +488,33 @@ function processSnap(s) {
 const HIT_SFX = { 0: 'axe', 2: 'stick', 4: 'buttHit', 5: 'scooterHit', 8: 'bearHit', 9: 'bearHit' },
   SP_SFX = { 0: 'rage', 1: 'volley', 2: 'spin', 3: 'teethFan', 4: 'whoosh', 5: 'motor' };
 const KF_WEAPON = {
-    0: 'Axt',
-    1: 'Pfeil',
-    2: 'Stock',
-    3: 'Gebiss',
-    4: 'Bock',
-    5: 'E-Mobil',
-    6: 'Fels',
-    7: 'Torte',
-    8: 'Pranke',
-    9: 'Pranke',
-    10: 'Maul',
-    11: 'Maul',
+    0: TR('Axt'),
+    1: TR('Pfeil'),
+    2: TR('Stock'),
+    3: TR('Gebiss'),
+    4: TR('Bock'),
+    5: TR('E-Mobil'),
+    6: TR('Fels'),
+    7: TR('Torte'),
+    8: TR('Pranke'),
+    9: TR('Pranke'),
+    10: TR('Maul'),
+    11: TR('Maul'),
   },
   KF_CAUSE = {
-    11: 'verschlungen',
-    12: 'gebissen',
-    13: 'Heldentod',
-    1: 'plattgewalzt',
-    2: 'gerammt',
-    3: 'abgestürzt',
-    4: 'Kopfschuss',
-    5: 'Turm',
-    6: 'erfroren',
-    7: 'umgekegelt',
-    8: 'Felsbrocken',
-    9: 'Eisbär',
-    10: 'Kaktus',
+    11: TR('verschlungen'),
+    12: TR('gebissen'),
+    13: TR('Heldentod'),
+    1: TR('plattgewalzt'),
+    2: TR('gerammt'),
+    3: TR('abgestürzt'),
+    4: TR('Kopfschuss'),
+    5: TR('Turm'),
+    6: TR('erfroren'),
+    7: TR('umgekegelt'),
+    8: TR('Felsbrocken'),
+    9: TR('Eisbär'),
+    10: TR('Kaktus'),
   };
 function killFeed(e, s) {
   const el = $('#killFeed');
@@ -527,8 +527,14 @@ function killFeed(e, s) {
     ego = e[5] === 1;
   const col = t => (t < 0 ? '#ddd' : t === V.myTeam ? '#9fe8b8' : '#ff8a7a');
   const who =
-      ak >= 0 ? KINDS[ak].name : cause === 11 || cause === 12 || cause === 13 ? 'Sandwurm' : kt >= 0 ? FAC[V.facs[kt]].name : 'Die Welt',
-    how = cause === 0 ? KF_WEAPON[ak] || 'Treffer' : KF_CAUSE[cause] || '';
+      ak >= 0
+        ? KINDS[ak].name
+        : cause === 11 || cause === 12 || cause === 13
+          ? TR('Sandwurm')
+          : kt >= 0
+            ? FAC[V.facs[kt]].name
+            : TR('Die Welt'),
+    how = cause === 0 ? KF_WEAPON[ak] || TR('Treffer') : KF_CAUSE[cause] || '';
   const d = document.createElement('div');
   d.className = 'kl' + (ego ? ' ego' : '');
   d.innerHTML =
@@ -704,7 +710,7 @@ function onSpecial(u, cur) {
         }, i * 250);
       SFX.play('salvo', { x: p.x, z: p.z, vol: 1.1 });
     }
-    word('SALVE!', p.x, p.y + 5, p.z, { color: '#ff9b54', scale: 1.3 });
+    word(TR('SALVE!'), p.x, p.y + 5, p.z, { color: '#ff9b54', scale: 1.3 });
     return;
   }
   if (K.worm) {

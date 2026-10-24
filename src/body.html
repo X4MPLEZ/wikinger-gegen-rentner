@@ -29,12 +29,12 @@
         </div>
       </div>
       <div id="ctxHint" class="panel"></div>
-      <div class="ctl orders2">
+      <div class="ctl orders2" data-fit>
         <button class="chip panel" data-sel="all">Alle</button>
         <button class="chip panel" data-sel="melee">Nah</button>
         <button class="chip panel" data-sel="ranged">Fern</button>
         <button class="chip panel" data-sel="cav">Reiter</button>
-        <button class="chip panel" data-sel="none" aria-label="Auswahl aufheben"><svg class="si" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>Abwählen</button>
+        <button class="chip panel" data-sel="none" aria-label="Auswahl aufheben"><svg class="si" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg><span class="lbl">Abwählen</span></button>
         <button class="chip panel" id="rallyBtn" aria-pressed="false" aria-label="Sammelfahne versetzen" title="Sammelfahne versetzen"><span id="rallyIco"></span><span class="pcOnly">Fahne</span></button>
         <span id="selCount">0</span>
       </div>
@@ -92,6 +92,7 @@
   <div id="menu" class="screen">
     <div id="menuTR"><button class="ibtn panel fsBtn" aria-label="Vollbild"></button><button class="ibtn panel muteBtn" id="menuMute" aria-label="Ton an oder aus"></button></div>
     <div class="card">
+      <button id="profChip" class="profchip panel" aria-label="Profil"><img id="pcAv" alt=""><span class="pctx"><b id="pcName" data-nol></b><span class="pclv"><span id="pcLv" data-nol></span><i class="pbar"><i id="pcBar"></i></i></span></span><span class="gemtag"><span class="sic" data-si="gem"></span><b id="pcGems" data-nol>0</b></span></button>
       <h1 class="logo"><span class="b">Rentner</span><span class="vs">GEGEN</span><span class="a">Wikinger</span></h1>
       <p class="sub">Erobere die Fahnen. Reiß die Basis ein.</p>
       <div class="label">Deine Seite</div>
@@ -118,7 +119,7 @@
         </div>
       </div>
       <div class="label">Karte</div>
-      <div class="maps" role="group" aria-label="Karte">
+      <div class="maps" role="group" aria-label="Karte" data-fit="b, small">
         <button class="mcard m0" data-map="0" aria-pressed="false"><i class="sic" data-si="dice"></i><b>Zufällig</b><small>Überraschung</small></button>
         <button class="mcard m1" data-map="1" aria-pressed="false"><i class="sic" data-si="flower"></i><b>Wiesen</b><small>Insel &amp; Sprungpads</small></button>
         <button class="mcard m2" data-map="2" aria-pressed="false"><i class="sic" data-si="cactus"></i><b>Wüste</b><small>Kakteen &amp; Sandwürmer</small></button>
@@ -138,19 +139,19 @@
         <div class="online-actions" id="onlineActions" hidden><button class="btn small" id="btnCodeCopy">Code kopieren</button><button class="btn small" id="btnHostCancel">Abbrechen</button></div>
         <button class="btn small quick" id="btnPractice" hidden>Solange gegen den Computer üben</button>
       </div>
-      <div class="mfoot"><span></span><button class="linkbtn" id="btnGfx"><span class="sic" data-si="gfx"></span> Grafik</button><button class="linkbtn" id="btnSnd"><span class="sic" data-si="snd"></span> Sound</button><button class="linkbtn pcOnly" id="btnKeys"><span class="sic" data-si="keys"></span> Steuerung</button></div>
+      <div class="mfoot"><span></span><button class="linkbtn" id="btnGfx"><span class="sic" data-si="gfx"></span> Grafik</button><button class="linkbtn" id="btnSnd"><span class="sic" data-si="snd"></span> Sound</button><button class="linkbtn pcOnly" id="btnKeys"><span class="sic" data-si="keys"></span> Steuerung</button><button class="linkbtn" id="btnPriv">Datenschutz</button><button class="linkbtn" id="btnLang" aria-label="Sprache"><span class="sic" data-si="globe"></span> <span id="langNow" data-nol></span></button></div>
       <details class="help">
         <summary>So wird gespielt</summary>
-        <div class="counter"><div><b>Nahkampf</b>schlägt Reiter</div><div><b>Reiter</b>überrennen Fernkampf</div><div><b>Fernkampf</b>erledigt Nahkampf</div></div>
+        <div class="counter"><div data-l><b>Nahkampf</b>schlägt Reiter</div><div data-l><b>Reiter</b>überrennen Fernkampf</div><div data-l><b>Fernkampf</b>erledigt Nahkampf</div></div>
         <ul>
-          <li>Unten tippen bildet Krieger aus. <b>AUTO</b> bildet die Einheit laufend nach, solange das Geld reicht.</li>
-          <li><b>Alle / Nah / Fern / Reiter</b> wählt Truppen aus. Oder lange drücken und eine Schlinge ziehen.</li>
-          <li>Mit Auswahl auf den Boden tippen schickt die Truppe los. <b>Angreifen</b> kämpft unterwegs, <b>Laufen</b> ignoriert Gegner.</li>
-          <li>Mit dem <b>Fahnen</b>-Knopf versetzt du die Sammelfahne: Dort warten neue Krieger.</li>
-          <li>Wähle genau einen Krieger und tippe <b>Übernehmen</b>: Du steuerst ihn selbst, mit Großkopf, mehr Schaden und Spezialfähigkeit.</li>
-          <li>Fernkämpfer auf Hügeln schießen weiter. Über den Fluss geht es nur per Brücke oder Furt.</li>
-          <li>Wer weniger Fahnen hat, bekommt einen Aufholbonus. An der eigenen Basis heilen sich Krieger.</li>
-          <li>Besiegst du einen übernommenen Gegner mit deinem eigenen übernommenen Krieger, gibt es einen <b>Goldrausch</b> (bei den Rentnern: Pfandflaschenrausch).</li>
+          <li data-l>Unten tippen bildet Krieger aus. <b>AUTO</b> bildet die Einheit laufend nach, solange das Geld reicht.</li>
+          <li data-l><b>Alle / Nah / Fern / Reiter</b> wählt Truppen aus. Oder lange drücken und eine Schlinge ziehen.</li>
+          <li data-l>Mit Auswahl auf den Boden tippen schickt die Truppe los. <b>Angreifen</b> kämpft unterwegs, <b>Laufen</b> ignoriert Gegner.</li>
+          <li data-l>Mit dem <b>Fahnen</b>-Knopf versetzt du die Sammelfahne: Dort warten neue Krieger.</li>
+          <li data-l>Wähle genau einen Krieger und tippe <b>Übernehmen</b>: Du steuerst ihn selbst, mit Großkopf, mehr Schaden und Spezialfähigkeit.</li>
+          <li data-l>Fernkämpfer auf Hügeln schießen weiter. Über den Fluss geht es nur per Brücke oder Furt.</li>
+          <li data-l>Wer weniger Fahnen hat, bekommt einen Aufholbonus. An der eigenen Basis heilen sich Krieger.</li>
+          <li data-l>Besiegst du einen übernommenen Gegner mit deinem eigenen übernommenen Krieger, gibt es einen <b>Goldrausch</b> (bei den Rentnern: Pfandflaschenrausch).</li>
         </ul>
       </details>
     </div>
@@ -162,7 +163,7 @@
       <div class="faceWrap"><canvas id="faceCv" width="560" height="560"></canvas></div>
       <p class="note" id="faceMsg"></p>
       <label class="zoom"><button class="btn small" id="faceOutB" type="button">－</button><input type="range" id="faceZoom" min="0.15" max="1.2" step="0.005" value="0.5" style="direction:rtl;flex:1"><button class="btn small" id="faceIn" type="button">＋</button></label>
-      <div class="row"><button class="btn" id="faceCancel">Abbrechen</button><button class="btn gold" id="faceOk">Übernehmen</button></div>
+      <div class="row"><button class="btn" id="faceCancel">Abbrechen</button><button class="btn gold" id="faceOk">Fertig</button></div>
     </div>
   </div>
 
@@ -214,6 +215,46 @@
     </div>
   </div>
 
+  <div id="profScr" class="screen" hidden>
+    <div class="card profcard">
+      <div class="phead">
+        <button class="pav" id="pAvBtn" aria-label="Profilbild wählen"><img id="pAv" alt=""></button>
+        <div class="pinfo">
+          <div class="pname"><b id="pName" data-nol></b><button class="btn small" id="pReroll" aria-label="Neuer Name"><span class="sic" data-si="dice"></span></button></div>
+          <div class="plv"><b id="pLv" data-nol></b><i class="pbar"><i id="pBar"></i></i><small id="pXp" data-nol></small></div>
+        </div>
+        <div class="gemtag big"><span class="sic" data-si="gem"></span><b id="pGems" data-nol>0</b></div>
+      </div>
+      <div class="ptabs" role="tablist" data-fit>
+        <button data-tab="path" role="tab">Ruhmespfad</button><button data-tab="ach" role="tab">Erfolge</button><button data-tab="coll" role="tab">Sammlung</button><button data-tab="stats" role="tab">Statistik</button>
+      </div>
+      <p class="status pmsg" id="pMsg" role="status" hidden></p>
+      <div class="pbody" id="pBody" data-nol></div>
+      <p class="note">Du spielst als Gast: Dein Profil ist auf diesem Gerät gespeichert.</p>
+      <div class="row"><button class="btn" id="pXfer">Profil übertragen</button><button class="btn gold" id="pBack">Fertig</button></div>
+    </div>
+  </div>
+
+  <div id="privScr" class="screen" hidden>
+    <div class="card keyscard privcard">
+      <h2 class="h2">Datenschutz</h2>
+      <p>Dein Profil, deine Einstellungen und dein Foto speichert das Spiel nur auf deinem Gerät.</p>
+      <p>Online-Partien laufen direkt zwischen den beiden Geräten. Zum Verbinden nutzt das Spiel öffentliche Vermittlungsdienste (PeerJS, MQTT); diese sehen dabei deine IP-Adresse.</p>
+      <p id="privFace">In der Liste der offenen Spiele stehen nur dein Spielername, dein Profilbild und dein Level. Dein eigenes Foto bekommt nur, wer mit dir über einen Code spielt.</p>
+      <p>Wenn du dein Profil auf ein anderes Gerät überträgst, liegt es bis zu 10 Minuten auf diesen öffentlichen Diensten.</p>
+      <p>Das Spiel selbst setzt kein Tracking und keine Cookies ein.</p>
+      <div class="row"><button class="btn gold" id="privBack">Fertig</button></div>
+    </div>
+  </div>
+
+  <div id="langScr" class="screen" hidden>
+    <div class="card keyscard">
+      <h2 class="h2">Sprache</h2>
+      <div class="langs" id="langList" data-nol></div>
+      <div class="row"><button class="btn gold" id="langBack">Fertig</button></div>
+    </div>
+  </div>
+
   <div id="lobby" class="screen" hidden>
     <div class="card">
       <h2 class="h2" id="lobbyTitle">Spiel erstellt</h2>
@@ -241,6 +282,7 @@
       <p class="sub" id="endSub"></p>
       <div class="stats"><div><b id="stTime">0:00</b><span>Dauer</span></div><div><b id="stKills">0</b><span>Besiegt</span></div><div><b id="stFlags">0</b><span>Max. Fahnen</span></div></div>
       <div class="cmp" id="endCmp"></div>
+      <div class="rew" id="endRew" hidden></div>
       <button class="btn gold" id="btnAgain">Revanche auf neuer Karte</button>
       <button class="btn gold" id="btnRematch" hidden>Noch eine Runde!</button>
       <p class="note" id="rematchNote" hidden></p>

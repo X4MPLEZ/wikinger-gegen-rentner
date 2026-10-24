@@ -1,5 +1,49 @@
 /* 52-hud.js - HUD: updateHud() writes the numbers (only when they change), spawn buttons, the chips column (phase, event, perks) and the kill feed position,
    tips for new players (HINTS, remembered in store 'wvr-hints'), toast(). */
+// Long translations: an element marked data-fit (a row of buttons, a tab bar) gets class fit1, then fit2 while it is too wide - the CSS
+// decides what that means (smaller text, less padding, a label hidden behind its icon). A row whose CSS sets --fit-lines may use that
+// many lines; anything else must not cut off the text of its children (or of the elements data-fit="selector" names). Runs when such a
+// row is shown and on resize.
+function fitBad(el) {
+  const lines = parseInt(getComputedStyle(el).getPropertyValue('--fit-lines')) || 0;
+  const sel = el.dataset.fit;
+  const kids = [...(sel ? el.querySelectorAll(sel) : el.children.length ? el.children : [el])].filter(c => c.getClientRects().length);
+  if (lines) {
+    // count the lines: a child starting below everything of the line before opens a new one (small centred things stay in theirs)
+    let n = 0,
+      bottom = -Infinity;
+    for (const r of kids.map(c => c.getBoundingClientRect()).sort((a, b) => a.top - b.top))
+      if (r.top >= bottom - 2) {
+        n++;
+        bottom = r.bottom;
+      } else bottom = Math.max(bottom, r.bottom);
+    return n > lines;
+  }
+  return kids.some(c => {
+    if (c.scrollWidth > c.clientWidth) return true;
+    if (c.children.length) return false;
+    // (scrollWidth is rounded: measure the text itself, a part of a pixel already shows "…" or gets cut)
+    const r = document.createRange(),
+      cs = getComputedStyle(c);
+    r.selectNodeContents(c);
+    return r.getBoundingClientRect().width > c.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) + 0.5;
+  });
+}
+function fitText() {
+  for (const el of $$('[data-fit]')) {
+    el.classList.remove('fit1', 'fit2');
+    if (!el.getClientRects().length) continue; // hidden: done again when it is shown
+    for (const c of ['fit1', 'fit2']) {
+      if (!fitBad(el)) break;
+      el.classList.add(c);
+    }
+  }
+}
+let fitTimer = 0;
+addEventListener('resize', () => {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(fitText, 150);
+});
 let toastTimer = 0;
 function toast(msg, ms = 2500) {
   const t = $('#toast');
@@ -10,33 +54,44 @@ function toast(msg, ms = 2500) {
 }
 // Tips for new players, one at a time. Touch and mouse get their own words (text() is read when shown, so rebound keys are named right).
 // A tip that was done once stays done across matches (store 'wvr-hints'); the tutorial teaches everything again.
-const TAP = COARSE ? 'Tippe' : 'Klicke';
 const HINTS = [
   {
     id: 'spawn',
     text: () =>
       COARSE
-        ? 'Tippe unten auf einen Krieger, um ihn auszubilden. Lange drücken = AUTO: Er wird laufend nachgebildet.'
-        : 'Klicke unten auf einen Krieger, um ihn auszubilden. AUTO bildet ihn laufend nach.',
+        ? TR('Tippe unten auf einen Krieger, um ihn auszubilden. Lange drücken = AUTO: Er wird laufend nachgebildet.')
+        : TR('Klicke unten auf einen Krieger, um ihn auszubilden. AUTO bildet ihn laufend nach.'),
   },
-  { id: 'select', text: () => TAP + ' auf „Alle“ oder auf einen deiner Krieger, um ihn auszuwählen.' },
+  {
+    id: 'select',
+    text: () =>
+      COARSE
+        ? TR('Tippe auf „Alle“ oder auf einen deiner Krieger, um ihn auszuwählen.')
+        : TR('Klicke auf „Alle“ oder auf einen deiner Krieger, um ihn auszuwählen.'),
+  },
   {
     id: 'order',
     text: () =>
       COARSE
-        ? 'Tippe jetzt auf den Boden, zum Beispiel auf eine Fahne. Die Auswahl zieht dorthin.'
-        : kl('order') + ' auf den Boden, zum Beispiel auf eine Fahne: Die Auswahl zieht dorthin.',
+        ? TR('Tippe jetzt auf den Boden, zum Beispiel auf eine Fahne. Die Auswahl zieht dorthin.')
+        : TR('{0} auf den Boden, zum Beispiel auf eine Fahne: Die Auswahl zieht dorthin.', kl('order')),
   },
-  { id: 'poss', text: () => 'Wähle genau einen Krieger und ' + (COARSE ? 'tippe' : 'klicke') + ' „Übernehmen“, um selbst zu kämpfen.' },
-  { id: 'mode', text: () => '„Laufen“ ignoriert Gegner, praktisch für einen Rückzug. „Angreifen“ kämpft unterwegs.' },
+  {
+    id: 'poss',
+    text: () =>
+      COARSE
+        ? TR('Wähle genau einen Krieger und tippe „Übernehmen“, um selbst zu kämpfen.')
+        : TR('Wähle genau einen Krieger und klicke „Übernehmen“, um selbst zu kämpfen.'),
+  },
+  { id: 'mode', text: () => TR('„Laufen“ ignoriert Gegner, praktisch für einen Rückzug. „Angreifen“ kämpft unterwegs.') },
   {
     id: 'lasso',
     text: () =>
       COARSE
-        ? 'Profi-Trick: Finger lange halten und eine Schlinge um Krieger ziehen.'
-        : 'Profi-Trick: Mit gedrückter linker Maustaste eine Schlinge um Krieger ziehen.',
+        ? TR('Profi-Trick: Finger lange halten und eine Schlinge um Krieger ziehen.')
+        : TR('Profi-Trick: Mit gedrückter linker Maustaste eine Schlinge um Krieger ziehen.'),
   },
-  { id: 'home', text: () => 'Heimvorteil: Im gestrichelten Kreis um deine Basis nehmen deine Krieger 25 % weniger Schaden.' },
+  { id: 'home', text: () => TR('Heimvorteil: Im gestrichelten Kreis um deine Basis nehmen deine Krieger 25 % weniger Schaden.') },
 ];
 const hintState = { done: new Set(), shownAt: 0, cur: null };
 const hintsSaved = () => (store.get('wvr-hints') || '').split(',').filter(Boolean);
@@ -105,10 +160,10 @@ function setupHud() {
     b.querySelector('img').src = unitIcon(k);
     b.querySelector('.nm').textContent = K.name.replace('schützin', '­schützin');
     b.querySelector('.cost').innerHTML = ICON[F.icon] + K.cost;
-    b.querySelector('.beats').textContent = K.role === 'siege' ? 'Fläche · bricht Eis' : 'stark gg. ' + ROLE_NAME[BEATS[K.role]];
-    b.title = K.name + ': ' + (K.trait || (K.role === 'siege' ? 'langsam, mächtiger Flächenschaden, zerstört Basen und Eis' : ''));
-    b.querySelector('.main').setAttribute('aria-label', K.name + ' ausbilden, ' + K.cost + ' ' + F.res);
-    b.querySelector('.auto').setAttribute('aria-label', K.name + ' automatisch ausbilden');
+    b.querySelector('.beats').textContent = K.role === 'siege' ? TR('Fläche · bricht Eis') : TR('stark gg. {0}', ROLE_NAME[BEATS[K.role]]);
+    b.title = K.name + ': ' + (K.trait || (K.role === 'siege' ? TR('langsam, mächtiger Flächenschaden, zerstört Basen und Eis') : ''));
+    b.querySelector('.main').setAttribute('aria-label', TR('{0} ausbilden, {1} {2}', K.name, K.cost, F.res));
+    b.querySelector('.auto').setAttribute('aria-label', TR('{0} automatisch ausbilden', K.name));
   });
   setOrderMode('attack');
   setRallyMode(false);
@@ -160,7 +215,7 @@ function updateHud() {
   const mine = s.f.filter(f => f[0] === me).length,
     theirs = s.f.filter(f => f[0] === en).length;
   const inc = $('#inc');
-  txt(inc, '+' + String(s.in ? s.in[me] : CFG.baseInc).replace('.', ',') + '/s');
+  txt(inc, '+' + numL(s.in ? s.in[me] : CFG.baseInc) + '/s');
   inc.classList.toggle('bonus', mine > theirs);
   {
     const chip = $('#phaseChip'),
@@ -169,13 +224,13 @@ function updateHud() {
     let txt = '',
       cls = '';
     if (ph && !V.tut) {
-      if (ph[0] === 0 && ph[1] >= 0 && ph[1] <= 60) txt = 'Sturm in ' + fm(ph[1]);
+      if (ph[0] === 0 && ph[1] >= 0 && ph[1] <= 60) txt = TR('Sturm in {0}', fm(ph[1]));
       else if (ph[0] === 1) {
         cls = 'storm';
-        txt = ph[1] >= 0 && ph[1] <= 60 ? 'Endkampf in ' + fm(ph[1]) : 'STURM · Basisschaden ×1,5';
+        txt = ph[1] >= 0 && ph[1] <= 60 ? TR('Endkampf in {0}', fm(ph[1])) : TR('STURM · Basisschaden ×1,5');
       } else if (ph[0] === 2) {
         cls = 'final';
-        txt = s.t >= CFG.crumbleT ? 'ENDKAMPF · Basen bröckeln' : 'ENDKAMPF · Basisschaden ×2,2';
+        txt = s.t >= CFG.crumbleT ? TR('ENDKAMPF · Basen bröckeln') : TR('ENDKAMPF · Basisschaden ×2,2');
       }
     }
     if (chip.textContent !== txt) chip.textContent = txt;
@@ -186,14 +241,14 @@ function updateHud() {
     let et = '',
       ecl = '';
     if (ev && !V.tut) {
-      const nm = { 1: 'NEBELWAND', 2: 'GOLDWAGEN', 3: 'KLEINE ARMEE, GROSSER SOLD', 4: 'FAHNENWANDERUNG' }[ev[0]];
+      const nm = { 1: TR('NEBELWAND'), 2: TR('GOLDWAGEN'), 3: TR('KLEINE ARMEE, GROSSER SOLD'), 4: TR('FAHNENWANDERUNG') }[ev[0]];
       ecl = ev[0] === 1 ? 'fog' : ev[0] === 4 ? 'flags' : 'gold';
       et =
         nm +
         (ev[0] === 2 && s.wg
           ? s.wg[3]
-            ? ' · ' + (s.wg[3] - 1 === me ? 'du kassierst' : 'Gegner kassiert')
-            : ' · unbewacht'
+            ? ' · ' + (s.wg[3] - 1 === me ? TR('du kassierst') : TR('Gegner kassiert'))
+            : ' · ' + TR('unbewacht')
           : ev[0] !== 4
             ? ' · ' + fm(ev[1])
             : '');
@@ -235,21 +290,30 @@ function updateHud() {
     });
   }
   txt($('#selCount'), V.selected.size);
-  hid($('#selCount'), !V.selected.size);
+  if ($('#selCount').hidden === !!V.selected.size) {
+    hid($('#selCount'), !V.selected.size);
+    fitText(); // (the count takes room in the row of order chips)
+  }
   {
     const n = V.selected.size,
-      one = n === 1 && V.units.get([...V.selected][0]),
-      t = COARSE ? 'Tippe' : 'Klicke',
-      ord = COARSE ? 'Tippe' : 'Rechtsklick';
+      one = n === 1 && V.units.get([...V.selected][0]);
     const h = V.tut
       ? ''
       : V.rallyMode
-        ? t + ' auf den Boden: Dort sammeln sich neue Krieger'
+        ? COARSE
+          ? TR('Tippe auf den Boden: Dort sammeln sich neue Krieger')
+          : TR('Klicke auf den Boden: Dort sammeln sich neue Krieger')
         : n === 0
-          ? '<b>' + t + '</b> auf einen Krieger oder „Alle“ zum Auswählen · <b style="color:#ff6b62">rot umrandet</b> = Gegner'
+          ? COARSE
+            ? TR('<b>Tippe</b> auf einen Krieger oder „Alle“ zum Auswählen · <b style="color:#ff6b62">rot umrandet</b> = Gegner')
+            : TR('<b>Klicke</b> auf einen Krieger oder „Alle“ zum Auswählen · <b style="color:#ff6b62">rot umrandet</b> = Gegner')
           : one
-            ? '<b>' + ord + '</b> auf Ziel oder Gegner · <b>Übernehmen</b>: selbst steuern'
-            : '<b>' + n + ' gewählt</b> · ' + ord + ' auf Boden, Gegner oder Basis' + (COARSE ? ' · „Abwählen“ für Einzelauswahl' : '');
+            ? COARSE
+              ? TR('<b>Tippe</b> auf Ziel oder Gegner · <b>Übernehmen</b>: selbst steuern')
+              : TR('<b>Rechtsklick</b> auf Ziel oder Gegner · <b>Übernehmen</b>: selbst steuern')
+            : COARSE
+              ? TR('<b>{0} gewählt</b> · Tippe auf Boden, Gegner oder Basis · „Abwählen“ für Einzelauswahl', n)
+              : TR('<b>{0} gewählt</b> · Rechtsklick auf Boden, Gegner oder Basis', n);
     const el = $('#ctxHint');
     if (el._h !== h) {
       el._h = h;
@@ -271,10 +335,10 @@ function updateHud() {
   const cd = $('#countdown');
   let cdTxt = null;
   if (s.cd > 0 && s.o < 0) cdTxt = String(Math.ceil(s.cd));
-  else if (s.t < 0.8 && s.o < 0) cdTxt = 'LOS!';
+  else if (s.t < 0.8 && s.o < 0) cdTxt = TR('LOS!');
   if (cdTxt !== V.cdLast) {
     V.cdLast = cdTxt;
-    if (cdTxt) SFX.play(cdTxt === 'LOS!' ? 'go' : 'count');
+    if (cdTxt) SFX.play(cdTxt === TR('LOS!') ? 'go' : 'count');
   }
   hid(cd, !cdTxt);
   if (cdTxt) txt(cd, cdTxt);
@@ -293,17 +357,17 @@ function spawnSlot(i) {
     const pop = s.u.filter(e => teamOfKind(e[1], s.fa) === me).length + s.q[me].length;
     if (s.g[me] < KINDS[k].cost) {
       SFX.play('error');
-      toast('Zu wenig ' + FAC[V.facs[me]].res + '. Fahnen bringen mehr!', 1600);
+      toast(TR('Zu wenig {0}. Fahnen bringen mehr!', FAC[V.facs[me]].res), 1600);
       return;
     }
     if (pop >= CFG.pop) {
       SFX.play('error');
-      toast('Deine Armee ist voll (' + CFG.pop + ').', 1600);
+      toast(TR('Deine Armee ist voll ({0}).', CFG.pop), 1600);
       return;
     }
     if (s.q[me].length >= CFG.queueMax) {
       SFX.play('error');
-      toast('Warteschlange ist voll.', 1400);
+      toast(TR('Warteschlange ist voll.'), 1400);
       return;
     }
     if (
@@ -313,7 +377,7 @@ function spawnSlot(i) {
         CFG.siegeMax
     ) {
       SFX.play('error');
-      toast('Höchstens ' + CFG.siegeMax + ' Katapulte gleichzeitig.', 1600);
+      toast(TR('Höchstens {0} Katapulte gleichzeitig.', CFG.siegeMax), 1600);
       return;
     }
   }
@@ -321,7 +385,7 @@ function spawnSlot(i) {
   hintDone('spawn');
   if (COARSE && !(V.kindSeen || (V.kindSeen = {}))[k]) {
     V.kindSeen[k] = 1;
-    toast(KINDS[k].name + ' · ' + b.querySelector('.beats').textContent + ' · lange drücken = AUTO', 2200);
+    toast(TR('{0} · {1} · lange drücken = AUTO', KINDS[k].name, b.querySelector('.beats').textContent), 2200);
   }
 }
 $$('.spawn').forEach((b, i) => {
@@ -365,9 +429,9 @@ $$('.spawn').forEach((b, i) => {
     toast(
       on
         ? nOn > 1
-          ? 'AUTO: Die markierten Einheiten werden abwechselnd ausgebildet.'
-          : KINDS[+b.dataset.k].name + ' wird automatisch nachgebildet.'
-        : 'Automatik aus.',
+          ? TR('AUTO: Die markierten Einheiten werden abwechselnd ausgebildet.')
+          : TR('{0} wird automatisch nachgebildet.', KINDS[+b.dataset.k].name)
+        : TR('Automatik aus.'),
       1800
     );
   });

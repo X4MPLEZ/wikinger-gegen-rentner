@@ -48,7 +48,7 @@ function wormStateFx(v, prev, vis) {
   if (vis === 'warn') {
     if (near) SFX.play('rumble', { x, z, vol: 1.1 });
     const P = V.poss;
-    if (P && Math.hypot(P.x - x, P.z - z) < WORM.grabR + 2.5 && !(v.team === V.myTeam)) egoHint('Der Sand bebt – lauf weg!', 1100);
+    if (P && Math.hypot(P.x - x, P.z - z) < WORM.grabR + 2.5 && !(v.team === V.myTeam)) egoHint(TR('Der Sand bebt – lauf weg!'), 1100);
   }
   if (vis === 'strike') {
     if (near) {
@@ -203,7 +203,7 @@ function wormFrameFx(v, dt) {
       if (near) {
         SFX.play('gulp', { x, z, vol: 1.1 });
         if (v.held && v.held.some(Boolean))
-          word(pick(['HAPP!', 'SCHLUCK!', 'MAHLZEIT!']), x, groundY(x, z) + 8, z, { color: '#ffd38a', scale: 1.3 });
+          word(pick([TR('HAPP!'), TR('SCHLUCK!'), TR('MAHLZEIT!')]), x, groundY(x, z) + 8, z, { color: '#ffd38a', scale: 1.3 });
       }
     }
   }
@@ -294,7 +294,7 @@ function wormEgoRing(P) {
     on = worm && !!P.tun;
   if (worm) {
     const sn = $('#spName'),
-      want = on ? 'Auftauchen' : 'Eingraben';
+      want = on ? TR('Auftauchen') : TR('Eingraben');
     if (sn && sn.textContent !== want) sn.textContent = want;
     $('#egoSp').classList.toggle('emerge', on);
   }
@@ -363,7 +363,8 @@ function wormWorldView(dt) {
       v.lastBite = b[15];
       v.atkT = 0;
       SFX.play('chomp', { x, z, vol: 1 });
-      if (Math.random() < 0.4) word(pick(['SSSS!', 'HAPP!', 'ZACK!']), x, v.g.position.y + 6.5, z, { color: '#ffffff', scale: 0.9 });
+      if (Math.random() < 0.4)
+        word(pick([TR('SSSS!'), TR('HAPP!'), TR('ZACK!')]), x, v.g.position.y + 6.5, z, { color: '#ffffff', scale: 0.9 });
     }
     if (b[7]) {
       // beaten: it sinks, glows in the winner's colour and turns
@@ -403,8 +404,8 @@ function wormWorldView(dt) {
         d = P ? Math.hypot(P.x - x, P.z - z) : Math.hypot(camS.x - x, camS.z - z);
       if (d < (P ? 16 : 26) && now() - (WW.hintT || -1e9) > (P ? 25000 : 60000)) {
         WW.hintT = now();
-        if (P) egoHint('Sandwurm verwundbar! Besiege ihn, dann kämpft er für dich.', 2400);
-        else toast('Ein Sandwurm! Besiegt ihn, solange er aus dem Sand ragt – dann kämpft er für euch.', 3200);
+        if (P) egoHint(TR('Sandwurm verwundbar! Besiege ihn, dann kämpft er für dich.'), 2400);
+        else toast(TR('Ein Sandwurm! Besiegt ihn, solange er aus dem Sand ragt – dann kämpft er für euch.'), 3200);
       }
     }
     v.hp.visible = hpP < 100 && W.ws !== 'under' && W.ws !== 'warn' && !b[7] && fogSeen(x, z);
@@ -463,7 +464,7 @@ function grabTick(dt) {
       P.tunHint = 0;
       if (!EG.tunTold) {
         EG.tunTold = true;
-        egoHint('Unter dem Sand! Steuere zu den Gegnern – nochmal Spezial: auftauchen und alle im Kreis verschlingen', 3200);
+        egoHint(TR('Unter dem Sand! Steuere zu den Gegnern – nochmal Spezial: auftauchen und alle im Kreis verschlingen'), 3200);
       }
     }
   }
@@ -483,13 +484,13 @@ function grabTick(dt) {
       u.wasGrab = true;
       u.grabY = u.g.position.y;
       if (Math.random() < 0.7 || u.isPoss)
-        word(pick(['HILFE!', 'AAAH!', 'LASS LOS!', 'NEEEIN!']), u.g.position.x, u.g.position.y + 2.6, u.g.position.z, {
+        word(pick([TR('HILFE!'), TR('AAAH!'), TR('LASS LOS!'), TR('NEEEIN!')]), u.g.position.x, u.g.position.y + 2.6, u.g.position.z, {
           color: '#ffffff',
           scale: 0.9,
         });
       SFX.play('grunt', { x: u.g.position.x, z: u.g.position.z, k: u.k });
       if (P && P.id === u.id) {
-        egoHint('GEPACKT! Der Sandwurm hat dich in den Greifern …', 1600);
+        egoHint(TR('GEPACKT! Der Sandwurm hat dich in den Greifern …'), 1600);
         EG.kick = Math.max(EG.kick, 0.4);
       }
     }

@@ -90,7 +90,7 @@ function tutSteps(nar, adv) {
     camS.dist = camera.aspect < 1 ? 46 : 38;
     applyCam();
   };
-  const rush = fac === 'viking' ? 'Goldrausch' : 'Pfandflaschenrausch',
+  const rush = fac === 'viking' ? TR('Goldrausch') : TR('Pfandflaschenrausch'),
     pc = !COARSE;
   const kOf = r => ks.find(k => KINDS[k].role === r),
     dir = 1,
@@ -144,8 +144,8 @@ function tutSteps(nar, adv) {
     }
   };
   const dead = () => TUT.dIds.length > 0 && TUT.dIds.every(id => !G.units.some(u => u.id === id));
-  const atk = pc ? kl('attack') : 'Schwert-Knopf',
-    spc = pc ? kl('special') : 'Stern';
+  const atk = pc ? kl('attack') : TR('Schwert-Knopf'),
+    spc = pc ? kl('special') : TR('Stern');
   const camTo = (p, d) => {
     TUT.cam = { x: p.x, z: p.z + 2, d, t0: now() };
   };
@@ -260,11 +260,11 @@ function tutSteps(nar, adv) {
   };
   if (adv)
     return [
-      { t: `Willkommen in der Profi-Schule! Hier zeig ich dir die Tricks, mit denen man wirklich gewinnt.`, next: true },
+      { t: TR('Willkommen in der Profi-Schule! Hier zeig ich dir die Tricks, mit denen man wirklich gewinnt.'), next: true },
       {
         t: pc
-          ? 'Trick 1: Zieh mit gedrückter linker Maustaste einen Rahmen um deine Krieger.'
-          : 'Trick 1: Finger kurz gedrückt halten, dann eine Schlinge um deine Krieger ziehen.',
+          ? TR('Trick 1: Zieh mit gedrückter linker Maustaste einen Rahmen um deine Krieger.')
+          : TR('Trick 1: Finger kurz gedrückt halten, dann eine Schlinge um deine Krieger ziehen.'),
         start: () => {
           army(['melee', 'melee', 'melee', 'ranged', 'ranged', 'cav']);
           const f = frontOf(me, 10);
@@ -273,18 +273,23 @@ function tutSteps(nar, adv) {
         done: () => TUT.flags.lasso,
       },
       {
-        t: 'Mit „Nah“, „Fern“ und „Reiter“ wählst du nur eine Sorte. Tippe auf „Fern“.',
+        t: TR('Mit „Nah“, „Fern“ und „Reiter“ wählst du nur eine Sorte. Tippe auf „Fern“.'),
         hl: '[data-sel="ranged"]',
         done: () => TUT.flags.sel === 'ranged',
       },
       {
-        t: `Je mehr Krieger an einer Fahne stehen, desto schneller gehört sie dir. Schick ALLE zur Fahne mit dem Pfeil – zähl mit, wie schnell das geht!`,
+        t: TR(
+          'Je mehr Krieger an einer Fahne stehen, desto schneller gehört sie dir. Schick ALLE zur Fahne mit dem Pfeil – zähl mit, wie schnell das geht!'
+        ),
         world: () => FLAGS[nf],
         start: () => flagZoom(FLAGS[nf]),
         done: () => G.flags[nf].owner === me,
       },
       {
-        t: `Reiter sind die Schnellsten. Schick die zwei neuen „${nm('cav')}“ zur fernen Fahne – so sicherst du früh Einkommen, bevor der Gegner da ist.`,
+        t: TR(
+          'Reiter sind die Schnellsten. Schick die zwei neuen „{0}“ zur fernen Fahne – so sicherst du früh Einkommen, bevor der Gegner da ist.',
+          nm('cav')
+        ),
         world: () => FLAGS[4],
         start: () => {
           army(['cav', 'cav']);
@@ -297,8 +302,14 @@ function tutSteps(nar, adv) {
       {
         id: 'moveMode',
         t: pc
-          ? `Praktisch üben: Wähle deine Truppen, wechsle mit „Laufen“ (${kl('mode')}) in den Laufmodus und gib dann ${kl('order')} auf die Fahne beim Pfeil. Im Laufmodus gehen sie direkt dorthin.`
-          : 'Praktisch üben: Wähle deine Truppen, tippe auf „Laufen“ und anschließend auf die Fahne beim Pfeil. Im Laufmodus gehen sie direkt dorthin.',
+          ? TR(
+              'Praktisch üben: Wähle deine Truppen, wechsle mit „Laufen“ ({0}) in den Laufmodus und gib dann {1} auf die Fahne beim Pfeil. Im Laufmodus gehen sie direkt dorthin.',
+              kl('mode'),
+              kl('order')
+            )
+          : TR(
+              'Praktisch üben: Wähle deine Truppen, tippe auf „Laufen“ und anschließend auf die Fahne beim Pfeil. Im Laufmodus gehen sie direkt dorthin.'
+            ),
         hlFn: () => (!V.selected.size ? '[data-sel="all"]' : V.orderMode !== 'move' ? '#modeMv' : null),
         world: () => FLAGS[nf],
         start: () => {
@@ -325,15 +336,19 @@ function tutSteps(nar, adv) {
           flagZoom(FLAGS[nf]);
           $('#tutText').textContent =
             c.m !== 1 || V.orderMode !== 'move'
-              ? 'Das war der Angriffsmodus. Wir starten diesen Versuch neu: erst Truppen wählen, dann „Laufen“, dann die Fahne beim Pfeil als Ziel.'
-              : 'Das war nicht die Fahne beim Pfeil. Versuch neu: Truppen wählen, „Laufen“, dann genau diese Fahne als Ziel.';
+              ? TR(
+                  'Das war der Angriffsmodus. Wir starten diesen Versuch neu: erst Truppen wählen, dann „Laufen“, dann die Fahne beim Pfeil als Ziel.'
+                )
+              : TR('Das war nicht die Fahne beim Pfeil. Versuch neu: Truppen wählen, „Laufen“, dann genau diese Fahne als Ziel.');
           SFX.play('error');
           return false;
         },
         done: () => tutMovementDone(FLAGS[nf]),
       },
       {
-        t: 'Die Sammelfahne bestimmt, wo neue Krieger warten. Setz sie nah an die Front, dann sind Verstärkungen schneller da. Fahnen-Knopf, dann Boden.',
+        t: TR(
+          'Die Sammelfahne bestimmt, wo neue Krieger warten. Setz sie nah an die Front, dann sind Verstärkungen schneller da. Fahnen-Knopf, dann Boden.'
+        ),
         hlFn: () => (V.rallyMode ? null : '#rallyBtn'),
         start: () => setOrderMode('attack'),
         done: () => TUT.flags.rally,
@@ -341,8 +356,16 @@ function tutSteps(nar, adv) {
       {
         id: 'twoAuto',
         t: COARSE
-          ? `Schalte AUTO bei „${nm('melee')}“ und „${nm('ranged')}“ ein: beide runden Knöpfe lange gedrückt halten. Leuchten beide grün, werden diese zwei Sorten abwechselnd nachgebildet.`
-          : `Schalte AUTO bei „${nm('melee')}“ und „${nm('ranged')}“ ein. Beide leuchtenden AUTO-Knöpfe müssen aktiv sein – dann werden diese zwei Sorten abwechselnd nachgebildet.`,
+          ? TR(
+              'Schalte AUTO bei „{0}“ und „{1}“ ein: beide runden Knöpfe lange gedrückt halten. Leuchten beide grün, werden diese zwei Sorten abwechselnd nachgebildet.',
+              nm('melee'),
+              nm('ranged')
+            )
+          : TR(
+              'Schalte AUTO bei „{0}“ und „{1}“ ein. Beide leuchtenden AUTO-Knöpfe müssen aktiv sein – dann werden diese zwei Sorten abwechselnd nachgebildet.',
+              nm('melee'),
+              nm('ranged')
+            ),
         hlMany: COARSE
           ? ['.spawn[data-slot="0"] .main', '.spawn[data-slot="1"] .main']
           : ['.spawn[data-slot="0"] .auto', '.spawn[data-slot="1"] .auto'],
@@ -356,12 +379,20 @@ function tutSteps(nar, adv) {
       {
         id: 'counterRule',
         t: COARSE
-          ? `Beim Ausbilden zeigt dir eine Meldung, gegen wen die Einheit stark ist. Merke: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah.`
-          : `Unten bei der Einheit steht, gegen welche sie stark ist. Schau auf die Anzeige unter den Einheitenkarten: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Reiter zerlegen auch Katapulte. Konter sind sichtbar: Reiter rennen Fernkämpfer um, Nahkämpfer hauen Reiter vom Sattel, Pfeile bremsen Nahkämpfer – dann steht „KONTER!“ da. Gesteuert macht ein Konter riesigen Schaden: zwei saubere Treffer reichen.`,
+          ? TR(
+              'Beim Ausbilden zeigt dir eine Meldung, gegen wen die Einheit stark ist. Merke: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah.'
+            )
+          : TR(
+              'Unten bei der Einheit steht, gegen welche sie stark ist. Schau auf die Anzeige unter den Einheitenkarten: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Reiter zerlegen auch Katapulte. Konter sind sichtbar: Reiter rennen Fernkämpfer um, Nahkämpfer hauen Reiter vom Sattel, Pfeile bremsen Nahkämpfer – dann steht „KONTER!“ da. Gesteuert macht ein Konter riesigen Schaden: zwei saubere Treffer reichen.'
+            ),
         next: true,
       },
       {
-        t: `Gegnerisches Katapult! Übernimm den „${nm('cav')}“ und ramm es mit der Spezialfähigkeit (${spc}) – der Dash zerbricht Katapulte sofort.`,
+        t: TR(
+          'Gegnerisches Katapult! Übernimm den „{0}“ und ramm es mit der Spezialfähigkeit ({1}) – der Dash zerbricht Katapulte sofort.',
+          nm('cav'),
+          spc
+        ),
         start: () => {
           prep(kOf('cav'), [[0, 12, E.kinds[3]]], 1);
           TUT.enterAt = now() + 400;
@@ -370,7 +401,10 @@ function tutSteps(nar, adv) {
         done: dead,
       },
       {
-        t: `Klippen-Trick! Der Reiter-Dash schleudert Gegner vor allem nach VORNE. Schau auf die Puppen vor der Kante und dash sofort (${spc}) – die Puppen fliegen in die Schlucht!`,
+        t: TR(
+          'Klippen-Trick! Der Reiter-Dash schleudert Gegner vor allem nach VORNE. Schau auf die Puppen vor der Kante und dash sofort ({0}) – die Puppen fliegen in die Schlucht!',
+          spc
+        ),
         start: cliffStep,
         after: () => {
           egoKeep();
@@ -382,8 +416,8 @@ function tutSteps(nar, adv) {
             cliffStep();
             TUT.cliffT = now();
             $('#tutText').textContent = fell
-              ? 'Uups – selbst in die Schlucht gedasht! Nochmal von vorn.'
-              : 'Nicht alle erwischt – nochmal! Schau gerade auf die Puppen vor der Kante und dash sofort.';
+              ? TR('Uups – selbst in die Schlucht gedasht! Nochmal von vorn.')
+              : TR('Nicht alle erwischt – nochmal! Schau gerade auf die Puppen vor der Kante und dash sofort.');
             SFX.play('error');
           }
         },
@@ -391,14 +425,18 @@ function tutSteps(nar, adv) {
         done: dead,
       },
       {
-        t: 'Merke: Gesteuerte Reiter und Stock-Opas können Gegner von Klippen stoßen – der Computer weiß das auch! Halte dich von Kanten fern.',
+        t: TR(
+          'Merke: Gesteuerte Reiter und Stock-Opas können Gegner von Klippen stoßen – der Computer weiß das auch! Halte dich von Kanten fern.'
+        ),
         start: () => {
           clearTut();
         },
         next: true,
       },
       {
-        t: `Ein wilder Eisbär! Er greift alles in der Nähe an und ist stark gegen Nahkämpfer und Reiter – aber Pfeile tun ihm richtig weh. Übernimm die Bogenschützin und erleg ihn!`,
+        t: TR(
+          'Ein wilder Eisbär! Er greift alles in der Nähe an und ist stark gegen Nahkämpfer und Reiter – aber Pfeile tun ihm richtig weh. Übernimm die Bogenschützin und erleg ihn!'
+        ),
         start: () => {
           prep(kOf('ranged'), [], 0);
           const u = G.units.find(x => x.id === TUT.egoId);
@@ -426,7 +464,7 @@ function tutSteps(nar, adv) {
         done: () => (G.bevS || 0) !== TUT.bev0 && G.units.some(u => u.team === me && KINDS[u.k].bear && !(u.taming > 0)),
       },
       {
-        t: `Besiegte Eisbären laufen zu dir über! Übernimm deinen Bären und zerfetz die Puppen mit Bärenklauen (${spc}).`,
+        t: TR('Besiegte Eisbären laufen zu dir über! Übernimm deinen Bären und zerfetz die Puppen mit Bärenklauen ({0}).', spc),
         start: () => {
           if (V.poss) exitEgo(true, true);
           const bu = G.units.filter(u => u.team === me && KINDS[u.k].bear).pop();
@@ -452,8 +490,12 @@ function tutSteps(nar, adv) {
       },
       {
         t: pc
-          ? 'Mit der Bogenschützin zählen Kopfschüsse vierfach. Triff den Riesenkopf am Kopf – ein gesteuerter Gegner bringt einen Rausch!'
-          : 'Mit der Bogenschützin zählen Kopfschüsse vierfach. Ziel auf den Kopf des Riesenkopfs – ein gesteuerter Gegner bringt einen Rausch!',
+          ? TR(
+              'Mit der Bogenschützin zählen Kopfschüsse vierfach. Triff den Riesenkopf am Kopf – ein gesteuerter Gegner bringt einen Rausch!'
+            )
+          : TR(
+              'Mit der Bogenschützin zählen Kopfschüsse vierfach. Ziel auf den Kopf des Riesenkopfs – ein gesteuerter Gegner bringt einen Rausch!'
+            ),
         start: () => {
           prep(kOf('ranged'), [], 0);
           const d = cavDummy();
@@ -472,7 +514,9 @@ function tutSteps(nar, adv) {
         done: () => T().rush !== TUT.r0,
       },
       {
-        t: `Neu im Spiel: Am Kartenrand tauchen Geldsäcke und Discogranaten auf – öfter bei dem, der weniger Einkommen hat. Nur Ego-Krieger können sie einsammeln. Hol dir beide!`,
+        t: TR(
+          'Neu im Spiel: Am Kartenrand tauchen Geldsäcke und Discogranaten auf – öfter bei dem, der weniger Einkommen hat. Nur Ego-Krieger können sie einsammeln. Hol dir beide!'
+        ),
         start: () => {
           const P = G.units.find(u => u.id === TUT.egoId) || { x: arena().x, z: arena().z };
           [
@@ -494,8 +538,13 @@ function tutSteps(nar, adv) {
       },
       {
         t: pc
-          ? `Jetzt die Granate: ${kl('nade')} gedrückt halten – mit der Maus hoch/runter stellst du die Weite ein – loslassen. Da vorne steht ein ganzer Haufen – alle im Kreis müssen tanzen!`
-          : 'Jetzt die Granate: Granaten-Knopf gedrückt halten, mit dem Finger hoch/runter die Weite einstellen, loslassen. Da vorne steht ein ganzer Haufen – alle im Kreis müssen tanzen!',
+          ? TR(
+              'Jetzt die Granate: {0} gedrückt halten – mit der Maus hoch/runter stellst du die Weite ein – loslassen. Da vorne steht ein ganzer Haufen – alle im Kreis müssen tanzen!',
+              kl('nade')
+            )
+          : TR(
+              'Jetzt die Granate: Granaten-Knopf gedrückt halten, mit dem Finger hoch/runter die Weite einstellen, loslassen. Da vorne steht ein ganzer Haufen – alle im Kreis müssen tanzen!'
+            ),
         start: () => {
           const P = G.units.find(u => u.id === TUT.egoId) || { x: arena().x, z: arena().z };
           TUT.dIds = [
@@ -521,7 +570,7 @@ function tutSteps(nar, adv) {
           if (!(T().nades > 0) && !(G.gr && G.gr.length) && !((G.geS || 0) !== TUT.ge0 && G.ge && G.ge[G.ge.length - 1][2] > 0)) {
             T().nades = 1;
             if ((G.geS || 0) !== TUT.ge0)
-              $('#tutText').textContent = 'Daneben! Hier ist noch eine. Schau etwas höher, um weiter zu werfen, tiefer für kürzer.';
+              $('#tutText').textContent = TR('Daneben! Hier ist noch eine. Schau etwas höher, um weiter zu werfen, tiefer für kürzer.');
           }
         },
         world: () => {
@@ -531,7 +580,11 @@ function tutSteps(nar, adv) {
         done: () => (G.geS || 0) !== TUT.ge0 && G.ge && G.ge[G.ge.length - 1][2] > 0,
       },
       {
-        t: `Sie tanzen und wehren sich nicht! Hau jetzt alle um, bevor die Musik aufhört (${atk}, ${spc} für die Spezialfähigkeit).`,
+        t: TR(
+          'Sie tanzen und wehren sich nicht! Hau jetzt alle um, bevor die Musik aufhört ({0}, {1} für die Spezialfähigkeit).',
+          atk,
+          spc
+        ),
         start: () => {
           TUT.enterAt = now() + 200;
           for (const id of TUT.dIds) {
@@ -550,8 +603,13 @@ function tutSteps(nar, adv) {
       },
       {
         t: pc
-          ? `Merke: Die Basis schießt auf gesteuerte Krieger doppelt so weit. Allein stürmen ist Selbstmord – geh mit Armee! Zurück mit ${kl('exit')}.`
-          : 'Merke: Die Basis schießt auf gesteuerte Krieger doppelt so weit. Allein stürmen ist Selbstmord – geh mit Armee! Tippe „Verlassen“.',
+          ? TR(
+              'Merke: Die Basis schießt auf gesteuerte Krieger doppelt so weit. Allein stürmen ist Selbstmord – geh mit Armee! Zurück mit {0}.',
+              kl('exit')
+            )
+          : TR(
+              'Merke: Die Basis schießt auf gesteuerte Krieger doppelt so weit. Allein stürmen ist Selbstmord – geh mit Armee! Tippe „Verlassen“.'
+            ),
         hl: '#egoExit',
         start: () => {
           TUT.egoId = null;
@@ -560,28 +618,47 @@ function tutSteps(nar, adv) {
       },
       {
         t: pc
-          ? `Feldherr im Ego-Modus: ${kl('cmdHere')} ruft alle Krieger zu dir, ${kl('cmdAtk')} lässt alle angreifen, was du gerade anschaust, ${kl('swap')} springt zum nächsten Krieger. Und: Drei Kills in Folge laden deine Spezialfähigkeit sofort wieder auf!`
-          : 'Feldherr im Ego-Modus: Rechts oben rufst du mit „Zu mir“ alle Krieger zu dir, „Angriff!“ lässt alle angreifen, was du gerade anschaust, „Wechseln“ springt zum nächsten Krieger. Und: Drei Kills in Folge laden deine Spezialfähigkeit sofort wieder auf!',
+          ? TR(
+              'Feldherr im Ego-Modus: {0} ruft alle Krieger zu dir, {1} lässt alle angreifen, was du gerade anschaust, {2} springt zum nächsten Krieger. Und: Drei Kills in Folge laden deine Spezialfähigkeit sofort wieder auf!',
+              kl('cmdHere'),
+              kl('cmdAtk'),
+              kl('swap')
+            )
+          : TR(
+              'Feldherr im Ego-Modus: Rechts oben rufst du mit „Zu mir“ alle Krieger zu dir, „Angriff!“ lässt alle angreifen, was du gerade anschaust, „Wechseln“ springt zum nächsten Krieger. Und: Drei Kills in Folge laden deine Spezialfähigkeit sofort wieder auf!'
+            ),
         next: true,
       },
       {
-        t: 'Heimvorteil und Sturm: Im gestrichelten Kreis um deine Basis nehmen deine Krieger weniger Schaden. Ab Minute 7 kommt der Sturm, dann nehmen Basen mehr Schaden, ab Minute 9½ der Endkampf. Spätestens dann wird entschieden!',
+        t: TR(
+          'Heimvorteil und Sturm: Im gestrichelten Kreis um deine Basis nehmen deine Krieger weniger Schaden. Ab Minute 7 kommt der Sturm, dann nehmen Basen mehr Schaden, ab Minute 9½ der Endkampf. Spätestens dann wird entschieden!'
+        ),
         next: true,
       },
       {
-        t: 'Überraschungen: Alle paar Minuten passiert etwas – eine Nebelwand (du siehst nur um deine Krieger und deine Basis), ein Goldwagen (wer ihn eskortiert, kassiert), „Kleine Armee, großer Sold“ (60 s lang bringt eine kleine Truppe mehr Gold) oder die Fahnenwanderung (alle Fahnen ziehen um). Oben links steht, was gerade läuft.',
+        t: TR(
+          'Überraschungen: Alle paar Minuten passiert etwas – eine Nebelwand (du siehst nur um deine Krieger und deine Basis), ein Goldwagen (wer ihn eskortiert, kassiert), „Kleine Armee, großer Sold“ (60 s lang bringt eine kleine Truppe mehr Gold) oder die Fahnenwanderung (alle Fahnen ziehen um). Oben links steht, was gerade läuft.'
+        ),
         next: true,
       },
       {
-        t: 'Karten-Wissen: Auf Arktis brechen Katapult-Treffer das Eis auf, wer dort steht, kracht ein. In der Wüste schießen Fernkämpfer weiter. Auf Klippen stößt dein Reiter Gegner in die Tiefe.',
+        t: TR(
+          'Karten-Wissen: Auf Arktis brechen Katapult-Treffer das Eis auf, wer dort steht, kracht ein. In der Wüste schießen Fernkämpfer weiter. Auf Klippen stößt dein Reiter Gegner in die Tiefe.'
+        ),
         next: true,
       },
       {
-        t: 'Im Chaos-Modus wählst du alle paar Minuten einen Perk. Der Gegner sieht, was du nimmst – und du siehst seinen. Plane deine Konter danach!',
+        t: TR(
+          'Im Chaos-Modus wählst du alle paar Minuten einen Perk. Der Gegner sieht, was du nimmst – und du siehst seinen. Plane deine Konter danach!'
+        ),
         next: true,
       },
       {
-        t: `Abschlussprüfung! ${E.base} wird von Kriegern und einem Katapult verteidigt und bildet nach. Kleine Truppe, wenig ${F.res}: Konter, Reiter gegen das Katapult, Sammelfahne, AUTO und Ego-Krieger – du brauchst alles!`,
+        t: TR(
+          'Abschlussprüfung! {0} wird von Kriegern und einem Katapult verteidigt und bildet nach. Kleine Truppe, wenig {1}: Konter, Reiter gegen das Katapult, Sammelfahne, AUTO und Ego-Krieger – du brauchst alles!',
+          E.base,
+          F.res
+        ),
         free: true,
         world: () => BASES[1],
         start: () => {
@@ -632,13 +709,21 @@ function tutSteps(nar, adv) {
     ];
   const steps = [
     {
-      t: `Moin! Ich bin ${nar.name}. In drei Minuten machst du aus ${E.name} Kleinholz. Merk dir nur eins: Hier fliegt alles, was man umrennt. Los geht's!`,
+      t: TR(
+        "Moin! Ich bin {0}. In drei Minuten machst du aus {1} Kleinholz. Merk dir nur eins: Hier fliegt alles, was man umrennt. Los geht's!",
+        nar.name,
+        E.name
+      ),
       next: true,
     },
     {
       t: COARSE
-        ? `Unten siehst du die runden Knöpfe: Bild = Einheit, Zahl = Preis. Tippe zweimal auf „${nm('melee')}“ – ${F.res} hab ich dir zugesteckt.`
-        : `Bilde 2× „${nm('melee')}“ aus. ${F.res} hab ich dir zugesteckt.`,
+        ? TR(
+            'Unten siehst du die runden Knöpfe: Bild = Einheit, Zahl = Preis. Tippe zweimal auf „{0}“ – {1} hab ich dir zugesteckt.',
+            nm('melee'),
+            F.res
+          )
+        : TR('Bilde 2× „{0}“ aus. {1} hab ich dir zugesteckt.', nm('melee'), F.res),
       allow: ['spawn0'],
       hl: '.spawn[data-slot="0"] .main',
       start: () => {
@@ -651,8 +736,12 @@ function tutSteps(nar, adv) {
     {
       id: 'firstFlag',
       t: pc
-        ? `Wähle „Alle“ (${kl('selAll')}), dann ${kl('order')} auf die Fahne mit dem Pfeil. Deine beiden Krieger müssen erst dorthin laufen.`
-        : `Tippe „Alle“ und dann auf die Fahne mit dem Pfeil. Deine beiden Krieger müssen erst dorthin laufen.`,
+        ? TR(
+            'Wähle „Alle“ ({0}), dann {1} auf die Fahne mit dem Pfeil. Deine beiden Krieger müssen erst dorthin laufen.',
+            kl('selAll'),
+            kl('order')
+          )
+        : TR('Tippe „Alle“ und dann auf die Fahne mit dem Pfeil. Deine beiden Krieger müssen erst dorthin laufen.'),
       allow: ['order'],
       hlFn: () => (V.selected.size ? null : '[data-sel="all"]'),
       world: () => FLAGS[nf],
@@ -663,18 +752,26 @@ function tutSteps(nar, adv) {
       },
       command: c => {
         if (tutMovementOrder(c, FLAGS[nf], 2)) return true;
-        toast('Wähle beide Krieger und schick sie zur Fahne mit dem Pfeil.', 1800);
+        toast(TR('Wähle beide Krieger und schick sie zur Fahne mit dem Pfeil.'), 1800);
         return false;
       },
       done: () => tutMovementDone(FLAGS[nf]) && G.flags[nf].owner === me,
     },
     {
-      t: `Jede Fahne bringt mehr ${F.res} pro Sekunde. Je mehr Fahnen du hast, desto mehr Einkommen – schau oben links!`,
+      t: TR('Jede Fahne bringt mehr {0} pro Sekunde. Je mehr Fahnen du hast, desto mehr Einkommen – schau oben links!', F.res),
       hl: '#inc',
       next: true,
     },
     {
-      t: `Konter: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Drei Fernkämpfer stehen an der mittleren Fahne. Bilde 2 „${nm('cav')}“ aus und ${COARSE ? 'tippe' : 'rechtsklicke'} mit Auswahl auf die Gegner!`,
+      t: COARSE
+        ? TR(
+            'Konter: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Drei Fernkämpfer stehen an der mittleren Fahne. Bilde 2 „{0}“ aus und tippe mit Auswahl auf die Gegner!',
+            nm('cav')
+          )
+        : TR(
+            'Konter: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Drei Fernkämpfer stehen an der mittleren Fahne. Bilde 2 „{0}“ aus und rechtsklicke mit Auswahl auf die Gegner!',
+            nm('cav')
+          ),
       allow: ['spawn2', 'order'],
       hl: '.spawn[data-slot="2"] .main',
       world: () => FLAGS[mid],
@@ -697,8 +794,11 @@ function tutSteps(nar, adv) {
     },
     {
       t: COARSE
-        ? `Faul sein erlaubt: Halte den runden Knopf von „${nm('ranged')}“ lange gedrückt – das schaltet AUTO ein (grüner Ring). Dann wird sie von selbst nachgebildet, solange das Geld reicht.`
-        : `Faul sein erlaubt: Tippe bei „${nm('ranged')}“ auf AUTO. Dann wird sie von selbst nachgebildet, solange das Geld reicht.`,
+        ? TR(
+            'Faul sein erlaubt: Halte den runden Knopf von „{0}“ lange gedrückt – das schaltet AUTO ein (grüner Ring). Dann wird sie von selbst nachgebildet, solange das Geld reicht.',
+            nm('ranged')
+          )
+        : TR('Faul sein erlaubt: Tippe bei „{0}“ auf AUTO. Dann wird sie von selbst nachgebildet, solange das Geld reicht.', nm('ranged')),
       allow: ['auto'],
       hl: COARSE ? '.spawn[data-slot="1"] .main' : '.spawn[data-slot="1"] .auto',
       start: () => gold(120),
@@ -712,10 +812,10 @@ function tutSteps(nar, adv) {
         [2.2, 6],
       ],
       0.3,
-      `Jetzt der Clou: Tippe auf deinen „${nm('melee')}“ beim Pfeil und dann auf „Übernehmen“.`
+      TR('Jetzt der Clou: Tippe auf deinen „{0}“ beim Pfeil und dann auf „Übernehmen“.', nm('melee'))
     ),
     {
-      t: `Du steckst drin! Hau die drei Puppen um. ${atk} = Schlag, ${spc} = Raserei.`,
+      t: TR('Du steckst drin! Hau die drei Puppen um. {0} = Schlag, {1} = Raserei.', atk, spc),
       hl: '#egoAtk',
       start: () => {
         TUT.enterAt = now() + 1500;
@@ -724,7 +824,7 @@ function tutSteps(nar, adv) {
       done: dead,
     },
     {
-      t: `„${nm('ranged')}“: Ziel mit dem Kreuz und schieß die drei da hinten ab! ${spc} = Fächerschuss.`,
+      t: TR('„{0}“: Ziel mit dem Kreuz und schieß die drei da hinten ab! {1} = Fächerschuss.', nm('ranged'), spc),
       start: () =>
         prep(
           kOf('ranged'),
@@ -739,7 +839,12 @@ function tutSteps(nar, adv) {
       done: dead,
     },
     {
-      t: `„${nm('cav')}“! Der Riesenkopf wird von einem Spieler gesteuert. Ramm ihn mit ${spc} um: Wer fliegt, kegelt alle um, die im Weg stehen. Erwisch ihn für einen ${rush}!`,
+      t: TR(
+        '„{0}“! Der Riesenkopf wird von einem Spieler gesteuert. Ramm ihn mit {1} um: Wer fliegt, kegelt alle um, die im Weg stehen. Erwisch ihn für einen {2}!',
+        nm('cav'),
+        spc,
+        rush
+      ),
       start: () => {
         prep(kOf('cav'), [], 0);
         cavDummy();
@@ -749,7 +854,7 @@ function tutSteps(nar, adv) {
         egoKeep();
         if (TUT.dummy && !G.units.some(u => u.id === TUT.dummy) && T().rush === TUT.r0) {
           cavDummy();
-          $('#tutText').textContent = 'Den musst DU erwischen! Da kommt der Nächste.';
+          $('#tutText').textContent = TR('Den musst DU erwischen! Da kommt der Nächste.');
         }
       },
       world: () => {
@@ -759,7 +864,15 @@ function tutSteps(nar, adv) {
       done: () => T().rush !== TUT.r0,
     },
     {
-      t: `Und jetzt das „${nm('siege')}“: Der rote Kreis zeigt, wo es einschlägt. ${atk} schießt, ${spc} = Dreifach-Salve. ${myFac === 'viking' ? 'Der Fels rollt danach weiter und walzt alles um.' : 'Die Torte hinterlässt eine Sahnepfütze, in der jeder klebt.'}`,
+      t: TR(
+        'Und jetzt das „{0}“: Der rote Kreis zeigt, wo es einschlägt. {1} schießt, {2} = Dreifach-Salve. {3}',
+        nm('siege'),
+        atk,
+        spc,
+        myFac === 'viking'
+          ? TR('Der Fels rollt danach weiter und walzt alles um.')
+          : TR('Die Torte hinterlässt eine Sahnepfütze, in der jeder klebt.')
+      ),
       start: () => {
         prep(
           kOf('siege'),
@@ -777,8 +890,8 @@ function tutSteps(nar, adv) {
     },
     {
       t: pc
-        ? `Klasse! Mit ${kl('exit')} oder „Verlassen“ geht's zurück in die Feldherren-Ansicht.`
-        : 'Klasse! Tippe auf „Verlassen“, um zurückzukehren.',
+        ? TR("Klasse! Mit {0} oder „Verlassen“ geht's zurück in die Feldherren-Ansicht.", kl('exit'))
+        : TR('Klasse! Tippe auf „Verlassen“, um zurückzukehren.'),
       allow: ['exit'],
       hl: '#egoExit',
       start: () => {
@@ -787,7 +900,7 @@ function tutSteps(nar, adv) {
       done: () => !V.poss,
     },
     {
-      t: `Finale! Ich hab dir eine Armee geschickt. „Alle“ wählen und ${E.base} angreifen!`,
+      t: TR('Finale! Ich hab dir eine Armee geschickt. „Alle“ wählen und {0} angreifen!', E.base),
       free: true,
       world: () => BASES[1],
       start: () => {
@@ -823,7 +936,7 @@ function startTutorial(adv) {
   beginMatch('ai', facs, 0, tsd);
   pushSnap(snapOf(G));
   startSim(false);
-  const nar = myFac === 'viking' ? { name: 'Jarl Knut', k: 0 } : { name: 'Opa Heinz', k: 2 };
+  const nar = myFac === 'viking' ? { name: 'Jarl Knut', k: 0 } : { name: TR('Opa Heinz'), k: 2 };
   Object.assign(TUT, {
     on: true,
     i: -1,
@@ -1014,7 +1127,7 @@ function tutTick() {
   }
   if (!st.next && st.done && st.done()) {
     SFX.play('ding');
-    $('#tutText').textContent = pick(['Sehr gut!', 'Prima!', 'Genau so!', 'Läuft bei dir!', 'Wie ein Profi!']);
+    $('#tutText').textContent = pick([TR('Sehr gut!'), TR('Prima!'), TR('Genau so!'), TR('Läuft bei dir!'), TR('Wie ein Profi!')]);
     $('#tutNext').hidden = true;
     TUT.wait = now() + 1000;
   }

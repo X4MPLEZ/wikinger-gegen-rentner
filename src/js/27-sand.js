@@ -388,11 +388,14 @@ function spriteMat(key, make) {
 let lastBubble = 0;
 function word(text, x, y, z, opt = {}) {
   if (FOG.on && !fogSeen(x, z)) return; // nothing pops out of the fog wall
+  if (V.noWords) return; // (store pictures: no text in the scene)
   if (!opt.bubble && !opt.prio && fx.words.length >= (V.poss ? 5 : 14)) return; // a few at a time; a pile of shouts just covers the fight (own hits always show)
   const key = (opt.bubble ? 'b:' : 'w:') + text + (opt.color || '');
   const sm = spriteMat(key, () => textCanvas(text, opt.bubble ? { bubble: true, tail: true, size: 46 } : { size: 72, color: opt.color }));
   const s = new THREE.Sprite(sm.mat.clone()),
-    h = (opt.bubble ? 1.5 : 1.6) * (opt.scale || 1) * (V.poss ? 0.55 : 1);
+    // big words: smaller on an upright phone and when long (some languages need many letters), so they stay on screen
+    big = (opt.scale || 1) > 1.3 ? Math.min(1, 13 / text.length) * (innerWidth < innerHeight ? 0.78 : 1) : 1,
+    h = (opt.bubble ? 1.5 : 1.6) * (opt.scale || 1) * big * (V.poss ? 0.55 : 1);
   s.material.fog = false;
   s.scale.set(h * sm.ar, h, 1);
   s.position.set(x, y, z);

@@ -352,6 +352,7 @@ svg.i {
 }
 .mfoot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -421,10 +422,28 @@ svg.i {
   font-size: clamp(0.74rem, 3.3vw, 0.98rem);
   white-space: nowrap;
   letter-spacing: 0.02em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* long map names in some languages (fitText in 52-hud.js) */
+.maps.fit1 .mcard b {
+  font-size: clamp(0.6rem, 2.7vw, 0.84rem);
+  letter-spacing: 0;
+}
+.maps.fit1 .mcard small {
+  font-size: clamp(0.5rem, 2.1vw, 0.6rem);
+}
+.maps.fit2 .mcard b {
+  font-size: clamp(0.54rem, 2.3vw, 0.72rem);
+}
+.maps.fit2 .mcard small {
+  font-size: clamp(0.48rem, 2vw, 0.56rem);
 }
 .mcard small {
   font-size: clamp(0.56rem, 2.3vw, 0.64rem);
   line-height: 1.1;
+  hyphens: auto; /* long single words in some languages (where the browser knows how to split them) */
   opacity: 0.92;
   text-align: center;
 }
@@ -455,6 +474,23 @@ svg.i {
 }
 .mcard:hover {
   filter: none;
+}
+.privcard p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+.langs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+.langs .btn[aria-pressed='true'] {
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(240, 191, 76, 0.35);
 }
 .linkbtn {
   background: none;
@@ -1177,6 +1213,18 @@ body.egoOn #killFeed {
 .hud-orders .ctl.orders2 {
   flex-wrap: wrap;
   justify-content: center;
+  --fit-lines: 1;
+}
+/* long translations (fitText in 52-hud.js): tighter chips, then the "deselect" chip shows only its cross */
+.hud-orders .ctl.orders2.fit1 {
+  gap: 4px;
+}
+.hud-orders .ctl.orders2.fit1 .chip {
+  padding: 6px 7px;
+  font-size: 0.74rem;
+}
+.hud-orders .ctl.orders2.fit2 .chip .lbl {
+  display: none;
 }
 @media (max-width: 420px) {
   .hud-orders .chip {
@@ -2867,6 +2915,7 @@ kbd.kb {
     flex-direction: row;
     flex-wrap: wrap;
     max-width: 200px;
+    --fit-lines: 2;
   }
   #ctxHint {
     text-align: left;
@@ -3117,4 +3166,475 @@ body.touchUi .hud-orders {
   #rush.go .ra {
     animation: none;
   }
+}
+
+/* ---------- profile (65-profile.js, 66-profile-ui.js): menu chip, profile screen, rewards on the end screen, VS card ---------- */
+.profchip {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 999px;
+  color: var(--text);
+  text-align: left;
+  width: 100%;
+}
+.profchip img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: block;
+}
+.pctx {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.pctx b {
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pclv {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--dim);
+  font-weight: 600;
+}
+.pbar {
+  position: relative;
+  display: block;
+  flex: 1;
+  height: 6px;
+  min-width: 40px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.pbar > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #f6cc63, #e7ad33);
+  transition: width 0.9s ease-out;
+}
+.gemtag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  color: #b8f0ff;
+  font-variant-numeric: tabular-nums;
+}
+.gemtag .si {
+  width: 1.2em;
+  height: 1.2em;
+}
+.gemtag.big {
+  font-size: 1.15rem;
+}
+.profcard {
+  max-width: 560px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  gap: 10px;
+}
+.profcard > * {
+  flex-shrink: 0; /* the card scrolls; its parts never squeeze over each other */
+}
+@media (max-width: 560px) {
+  .profchip {
+    width: calc(100% - 104px); /* clear of the fullscreen and sound buttons in the top right corner */
+  }
+}
+.phead {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+.pav {
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 50%;
+}
+.pav img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: block;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.pinfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.pname {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.pname b {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pname .btn {
+  padding: 0.3em 0.4em;
+  flex: none;
+}
+.pname .si {
+  width: 1.2em;
+  height: 1.2em;
+}
+.plv {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+.plv small {
+  color: var(--dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.ptabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  background: rgba(8, 14, 27, 0.6);
+  border-radius: 12px;
+  padding: 4px;
+}
+.ptabs button {
+  border: none;
+  background: none;
+  color: var(--dim);
+  font-weight: 600;
+  font-size: 0.78rem;
+  padding: 0.55em 0.2em;
+  border-radius: 9px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ptabs.fit1 button {
+  font-size: 0.7rem;
+  padding-inline: 0.1em;
+}
+.ptabs.fit2 button {
+  font-size: 0.62rem;
+  letter-spacing: -0.02em;
+  white-space: normal; /* still too long: two lines */
+  line-height: 1.1;
+}
+.ptabs button[aria-selected='true'] {
+  background: var(--panel-2);
+  color: var(--gold);
+}
+.pmsg {
+  text-align: center;
+  margin: 0;
+  color: var(--gold);
+  font-size: 0.85rem;
+}
+.pbody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 120px;
+}
+.ppath {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lvrow {
+  display: grid;
+  grid-template-columns: 52px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(8, 14, 27, 0.5);
+  border: 1px solid var(--line);
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+.lvrow.done {
+  opacity: 1;
+}
+.lvrow.cur {
+  opacity: 1;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(240, 191, 76, 0.35);
+}
+.lvrow .lvn {
+  color: var(--gold);
+}
+.lvrow .lvt {
+  min-width: 0;
+}
+.lvp {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.lvp img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+.lvok {
+  color: var(--ok);
+  font-weight: 700;
+}
+.swatch {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  flex: none;
+}
+.achs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+}
+.ach {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto auto;
+  column-gap: 8px;
+  align-items: start;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(8, 14, 27, 0.5);
+  border: 1px solid var(--line);
+  opacity: 0.55;
+  filter: grayscale(0.8);
+}
+.ach.got {
+  opacity: 1;
+  filter: none;
+  border-color: rgba(240, 191, 76, 0.5);
+}
+.ach .ai {
+  grid-row: 1 / 4;
+}
+.ach .ai .si {
+  width: 30px;
+  height: 30px;
+}
+.ach b {
+  font-size: 0.82rem;
+}
+.ach small {
+  font-size: 0.7rem;
+  color: var(--dim);
+  line-height: 1.3;
+}
+.ach .ag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  color: #b8f0ff;
+  font-weight: 700;
+}
+.ach .ag .si,
+.ctile .cg .si {
+  width: 1em;
+  height: 1em;
+}
+.cgrid {
+  display: grid;
+  gap: 6px;
+}
+.cgrid.av {
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+}
+.cgrid.sk {
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+}
+.ctile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
+  border-radius: 12px;
+  background: rgba(8, 14, 27, 0.5);
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+.ctile img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+}
+.ctile:not(.own) img,
+.ctile:not(.own) .swatch {
+  filter: grayscale(0.85) brightness(0.7);
+}
+.ctile .swatch {
+  width: 40px;
+  height: 40px;
+}
+.ctile .cn {
+  font-size: 0.78rem;
+}
+.ctile .cs {
+  font-size: 0.66rem;
+  color: var(--dim);
+  text-align: center;
+  line-height: 1.25;
+}
+.ctile .cg {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #b8f0ff;
+  font-weight: 700;
+}
+.ctile.eq {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(240, 191, 76, 0.4);
+}
+.ctile.eq .cs {
+  color: var(--gold);
+}
+.ctile .clock {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+.ctile .clock .si {
+  width: 16px;
+  height: 16px;
+}
+.pstats {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
+}
+.pstats span {
+  color: var(--dim);
+}
+.pstats b {
+  text-align: right;
+}
+.xcode {
+  font-size: 2.2rem;
+}
+.xrow {
+  grid-template-columns: 1.6fr 1fr;
+}
+.rew {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+.rtop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rxp {
+  color: var(--gold);
+  font-size: 1.05rem;
+}
+.rlv {
+  font-weight: 600;
+  color: var(--dim);
+}
+.rgem,
+.rach {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rgem {
+  color: #b8f0ff;
+  font-weight: 600;
+}
+.rgem .si,
+.rach .si {
+  width: 1.3em;
+  height: 1.3em;
+  flex: none;
+}
+.rlvup {
+  color: var(--gold);
+  font-weight: 600;
+}
+#vsCard {
+  position: absolute;
+  left: 50%;
+  top: 18%;
+  transform: translateX(-50%);
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  animation: mapCard 3.6s ease forwards;
+  pointer-events: none;
+  max-width: calc(100% - 24px);
+  box-sizing: border-box;
+}
+#vsCard .vsP {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+#vsCard img {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+}
+#vsCard b {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#vsCard small {
+  color: var(--dim);
+  font-size: 0.72rem;
+}
+#vsCard .vs {
+  font-family: var(--display);
+  color: var(--gold);
+  font-size: 1.1rem;
 }

@@ -25,8 +25,9 @@ const QSTART = (() => {
 try {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: QSTART < 4, powerPreference: 'high-performance' });
 } catch (e) {
-  document.body.innerHTML =
-    '<p style="padding:24px;font:16px system-ui;color:#fff;background:#0d1526">Dieses Gerät kann die 3D-Grafik nicht anzeigen (WebGL fehlt).</p>';
+  document.body.innerHTML = TR(
+    '<p style="padding:24px;font:16px system-ui;color:#fff;background:#0d1526">Dieses Gerät kann die 3D-Grafik nicht anzeigen (WebGL fehlt).</p>'
+  );
   return;
 }
 const COARSE = matchMedia('(pointer:coarse)').matches;
@@ -141,7 +142,11 @@ THREE.MeshLambertMaterial = (Lam =>
     m.isLitFlat = true;
     return m;
   })(THREE.MeshLambertMaterial); // every Lambert in the file becomes cel-shaded
-const lam = c => matCache[c] || (matCache[c] = new THREE.MeshLambertMaterial({ color: lin(c) }));
+let LAM_MAP = null; // a skin's colour swaps, set only while a unit model is built (buildUnit in 25-worm-model.js)
+const lam = c => {
+  if (LAM_MAP && LAM_MAP.has(c)) c = LAM_MAP.get(c);
+  return matCache[c] || (matCache[c] = new THREE.MeshLambertMaterial({ color: lin(c) }));
+};
 /* ---------- fog wall (map event "Nebelwand"). Every fogged material also reads one shared visibility map (white = clear around the own
    warriors and the own base). In the commander view everything outside those clearings drowns in a thick, slowly drifting fog up to ~18 m:
    enemies fade into it and out of it instead of popping in and out of existence. In the ego view a dense fog closes in around the camera. ---------- */

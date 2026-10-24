@@ -32,7 +32,7 @@ function perkUi() {
         .map((id, i) => {
           const P = PERKS[id],
             T = TIERS[P.t];
-          return `<button class="pcard t${P.t}${i === 0 ? ' pre' : ''}" data-perk="${id}" style="--tc:${T.c}"><span class="tier">${T.n}</span>${i === 0 ? '<span class="preb">Vorauswahl</span>' : ''}<span class="pi">${P.ic}</span><b>${P.n}</b><span class="pd">${P.d}</span></button>`;
+          return `<button class="pcard t${P.t}${i === 0 ? ' pre' : ''}" data-perk="${id}" style="--tc:${T.c}"><span class="tier">${T.n}</span>${i === 0 ? '<span class="preb">' + TR('Vorauswahl') + '</span>' : ''}<span class="pi">${P.ic}</span><b>${P.n}</b><span class="pd">${P.d}</span></button>`;
         })
         .join('');
       if (!COARSE)
@@ -54,7 +54,8 @@ function perkUi() {
               lockPointer();
             } catch (_) {}
           }
-          $('#perkCards').innerHTML = `<div class="pwait">${PERKS[id].ic} <b>${PERKS[id].n}</b> gewählt.<br>Gleich geht es weiter …</div>`;
+          $('#perkCards').innerHTML =
+            '<div class="pwait">' + TR('{0} <b>{1}</b> gewählt.<br>Gleich geht es weiter …', PERKS[id].ic, PERKS[id].n) + '</div>';
           SFX.play('pick');
         })
       );
@@ -75,12 +76,12 @@ function perkUi() {
   if (!box.hidden) {
     $('#perkTimer').style.width = Math.min(1, s.pz / PERK_TIME) * 100 + '%';
     $('#perkInfo').textContent =
-      'Runde ' + s.on + ' von ' + PERK_MAX + ' · ' + s.pz + ' s' + (s.ou && s.ou[me] ? ' · Aufholjagd: bessere Karten' : '');
+      TR('Runde {0} von {1} · {2} s', s.on, PERK_MAX, s.pz) + (s.ou && s.ou[me] ? ' · ' + TR('Aufholjagd: bessere Karten') : '');
   }
   const html =
     Object.keys(mine)
       .map(id => `<span class="pb" style="--tc:${TIERS[PERKS[id].t].c}">${PERKS[id].ic}</span>`)
-      .join('') + (s.on < PERK_MAX && s.no > 0 && !paused ? `<span class="pb next">Perk in ${s.no} s</span>` : '');
+      .join('') + (s.on < PERK_MAX && s.no > 0 && !paused ? '<span class="pb next">' + TR('Perk in {0} s', s.no) + '</span>' : '');
   if (bar.dataset.h !== html) {
     bar.dataset.h = html;
     bar.innerHTML = html;
@@ -91,7 +92,7 @@ function perkUi() {
         const id = s.lp[t],
           P = PERKS[id];
         if (t !== me) (V.foeQ || (V.foeQ = [])).push(id);
-        else if (V.pkPicked !== V.pkKey) toast('Automatisch gewählt: ' + P.n, 2200);
+        else if (V.pkPicked !== V.pkKey) toast(TR('Automatisch gewählt: {0}', P.n), 2200);
       }
   V.lastPn = s.pn.slice();
   const fp = $('#foePerk');
@@ -106,7 +107,10 @@ function perkUi() {
     const P = PERKS[V.foeQ.shift()],
       T = TIERS[P.t];
     fp.style.setProperty('--tc', T.c);
-    fp.innerHTML = `<span class="fl">${FAC[V.facs[1 - me]].name || 'Gegner'} hat gewählt</span><span class="fi">${P.ic}</span><b>${P.n}<small>${T.n}</small></b><span class="fd">${P.d}</span>`;
+    fp.innerHTML =
+      '<span class="fl">' +
+      TR('{0} hat gewählt', FAC[V.facs[1 - me]].name || TR('Gegner')) +
+      `</span><span class="fi">${P.ic}</span><b>${P.n}<small>${T.n}</small></b><span class="fd">${P.d}</span>`;
     fp.classList.remove('out');
     fp.hidden = false;
     fp.style.animation = 'none';
@@ -311,7 +315,7 @@ function updateGoo(dt) {
         scene.add(grp);
         v = { g: grp, x, z, r: g[3] / 10, t0: g[5] / 10 };
         goView.set(g[0], v);
-        word('SAHNE!', x, grp.position.y + 1.5, z, { color: '#ffd6e6', scale: 1.1 });
+        word(TR('SAHNE!'), x, grp.position.y + 1.5, z, { color: '#ffd6e6', scale: 1.1 });
         setTimeout(() => SFX.play('squelch', { x, z, vol: 0.9 }), 250);
       }
       v.t = g[4] / 10;
@@ -386,7 +390,7 @@ function updateFireballs(dt) {
         );
       }
       emitFX('explosion', v.tx, v.ty + 0.5, v.tz, { size: 1.6 });
-      word('BUMM!', v.tx, v.ty + 3.5, v.tz, { color: '#ff9b54', scale: 1.4 });
+      word(TR('BUMM!'), v.tx, v.ty + 3.5, v.tz, { color: '#ff9b54', scale: 1.4 });
       SFX.play('boom', { x: v.tx, z: v.tz, vol: 1.3 });
       scene.remove(v.g);
       fbView.delete(id);
@@ -572,7 +576,7 @@ function crumbleBase(i) {
     fx.debris.push({ m: heap, grow: true, t: 0, delay: 0.55, keep: true });
   }
   scene.remove(bv.g);
-  word('EINGESTÜRZT!', B.x, gy + 9, B.z, { color: '#ff9b54', scale: 2.2 });
+  word(TR('EINGESTÜRZT!'), B.x, gy + 9, B.z, { color: '#ff9b54', scale: 2.2 });
   SFX.play('collapse');
   setTimeout(() => SFX.play('crash', { vol: 1.2 }), 380);
   setTimeout(() => SFX.play('base', { vol: 1.1 }), 650);
@@ -803,7 +807,7 @@ function baseBars(s) {
     }
     const hp = s ? s.b[i] : CFG.baseHp;
     bv.bar.position.set(BASES[i].x, bv.y + 10.5, BASES[i].z);
-    bv.bar.visible = !!s && V.playing && !V.ending;
+    bv.bar.visible = !!s && V.playing && !V.ending && !V.noWords;
     {
       const d = camera.position.distanceTo(bv.bar.position),
         k = clamp(d * 0.11, 7, 22);
@@ -821,7 +825,7 @@ function baseBars(s) {
     x.lineWidth = 5;
     x.strokeStyle = 'rgba(8,14,27,.9)';
     x.fillStyle = '#fff';
-    const label = (mine ? 'Deine Basis' : FAC[V.facs[i]].base) + '  ' + Math.ceil(hp);
+    const label = (mine ? TR('Deine Basis') : FAC[V.facs[i]].base) + '  ' + Math.ceil(hp);
     x.strokeText(label, 128, 24);
     x.fillText(label, 128, 24);
     x.fillStyle = 'rgba(8,14,27,.88)';
@@ -877,7 +881,7 @@ function setChicken(u, on) {
     u.chickM.visible = true;
     u.rig.visible = false;
     puff(u.g.position.x, u.g.position.y + 1, u.g.position.z, 0xffffff, 10, 0.7);
-    word('GACK!', u.g.position.x, u.g.position.y + 2.6, u.g.position.z, { color: '#ffffff' });
+    word(TR('GACK!'), u.g.position.x, u.g.position.y + 2.6, u.g.position.z, { color: '#ffffff' });
     SFX.play('chicken', { x: u.g.position.x, z: u.g.position.z });
   } else {
     if (u.chickM) u.chickM.visible = false;
@@ -891,7 +895,7 @@ function updateStatusFx(u, dt, x, y, z) {
     u.chickM.rotation.z = Math.sin(clock * 20) * 0.08;
     u.chickM.rotation.x = u.atkT < 0.35 ? Math.sin((u.atkT / 0.35) * Math.PI) * 0.7 : 0;
     if (Math.random() < dt * 0.7) {
-      word(Math.random() < 0.5 ? 'GACK!' : 'BOCK!', x, y + 2.6, z, { color: '#ffffff', scale: 0.8 });
+      word(Math.random() < 0.5 ? TR('GACK!') : TR('BOCK!'), x, y + 2.6, z, { color: '#ffffff', scale: 0.8 });
       SFX.play('chicken', { x, z, vol: 0.6 });
     }
     if (Math.random() < dt * 3) puff(x, y + 0.8, z, 0xffffff, 1, 0.3);
@@ -1118,7 +1122,7 @@ function updateGrenades(dt) {
           1.1
         );
       }
-      word('DISCO!', v.x, ty + 3, v.z, { color: '#ff6bd5', scale: 1.6 });
+      word(TR('DISCO!'), v.x, ty + 3, v.z, { color: '#ff6bd5', scale: 1.6 });
       SFX.play('pop', { x: v.x, z: v.z, vol: 1.2 });
       scene.remove(v.m);
       disposeTree(v.m);
@@ -1143,7 +1147,7 @@ const bottleGeo = new THREE.LatheGeometry(
 ).translate(0, -0.3, 0);
 const coinMat = new THREE.MeshLambertMaterial({ color: lin(0xf4c64f), emissive: lin(0x5a3a00) });
 const bottleMat = new THREE.MeshLambertMaterial({ color: lin(0x48b06c), emissive: lin(0x0c3a1a) });
-const rushName = team => (V.facs[team] === 'viking' ? 'Goldrausch' : 'Pfandflaschenrausch');
+const rushName = team => (V.facs[team] === 'viking' ? TR('Goldrausch') : TR('Pfandflaschenrausch'));
 function rushFx(team, x, z) {
   const gold = V.facs[team] === 'viking',
     y = groundY(x, z);
@@ -1165,15 +1169,15 @@ function rushFx(team, x, z) {
       life: 2.6 + Math.random() * 0.8,
     });
   }
-  word(gold ? 'GOLDRAUSCH!' : 'PFANDRAUSCH!', x, y + 5.8, z, { color: gold ? '#ffd34d' : '#86e3a6', scale: V.poss ? 2.4 : 1.7 });
+  word(gold ? TR('GOLDRAUSCH!') : TR('PFANDRAUSCH!'), x, y + 5.8, z, { color: gold ? '#ffd34d' : '#86e3a6', scale: V.poss ? 2.4 : 1.7 });
   SFX.play('rush');
   if (team === V.myTeam) rushBanner(gold);
-  else toast('Der Gegner hat einen ' + rushName(team) + '!', 2600);
+  else toast(TR('Der Gegner hat einen {0}!', rushName(team)), 2600);
 }
 function rushBanner(gold) {
   const el = $('#rush'),
     t = $('#rushT');
-  t.textContent = gold ? 'GOLDRAUSCH!' : 'PFANDFLASCHENRAUSCH!';
+  t.textContent = gold ? TR('GOLDRAUSCH!') : TR('PFANDFLASCHENRAUSCH!');
   t.className = 'rt ' + (gold ? 'g' : 'p');
   $('#rushA').innerHTML = ICON[gold ? 'coin' : 'bottle'] + '+' + CFG.rush;
   el.hidden = false;
@@ -1232,9 +1236,9 @@ function updateFlag(i, owner, p, changed) {
         toast(
           owner === V.myTeam
             ? !V.tut && flagSide(i) === 1 - V.myTeam
-              ? 'Fahne in Feindesland erobert! Bringt etwas weniger und verblasst ohne Wache.'
-              : 'Fahne erobert! Mehr Einkommen.'
-            : 'Der Gegner hat eine Fahne erobert.',
+              ? TR('Fahne in Feindesland erobert! Bringt etwas weniger und verblasst ohne Wache.')
+              : TR('Fahne erobert! Mehr Einkommen.')
+            : TR('Der Gegner hat eine Fahne erobert.'),
           2400
         );
       puff(FLAGS[i].x, F.g.position.y + 4, FLAGS[i].z, owner < 0 ? 0xffffff : FAC[V.facs[owner]].col, 8);

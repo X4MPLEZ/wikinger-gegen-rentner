@@ -1,6 +1,13 @@
 /* 62-screens.js - SCREENS: menu, lobby, pause (Aufgeben asks twice; online it tells the opponent: quitMatch), graphics/sound/keys settings, the menu scene. */
 function showScreen(id) {
-  ['menu', 'lobby', 'pause', 'end', 'faceScr', 'keysScr', 'gfxScr', 'sndScr'].forEach(s => ($('#' + s).hidden = s !== id));
+  ['menu', 'lobby', 'pause', 'end', 'faceScr', 'keysScr', 'gfxScr', 'sndScr', 'langScr', 'profScr', 'privScr'].forEach(
+    s => ($('#' + s).hidden = s !== id)
+  );
+  fitText();
+  if (id === 'menu')
+    try {
+      profChipUi(); // (not yet while the page loads: the profile comes later in the file order)
+    } catch (_) {}
 }
 let gfxFrom = 'menu';
 function gfxUi() {
@@ -10,19 +17,19 @@ function gfxUi() {
   $$('#gfxQ button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.q === m)));
   const pr = renderer.getPixelRatio(),
     T = QS.tier();
-  $('#gfxNow').textContent =
-    (m === 'auto'
-      ? 'Passt sich laufend an dein Gerät an. Zurzeit: ' + T.name + (LADDER[QS.lvl].m < 1 ? ' mit etwas geringerer Auflösung' : '') + '.'
-      : 'Feste Stufe: ' + T.name + '.') +
-    ' Bild: ' +
-    (() => {
-      const v = renderer.getDrawingBufferSize(new THREE.Vector2());
-      return v.x + ' × ' + v.y;
-    })() +
-    ' Pixel' +
-    (sun.castShadow ? ', Schatten ' + sun.shadow.mapSize.x : ', ohne Echtzeit-Schatten') +
-    (QS.cap ? ', Bildrate auf ' + QS.cap + ' begrenzt' : '') +
-    '.';
+  const px = renderer.getDrawingBufferSize(new THREE.Vector2());
+  $('#gfxNow').textContent = [
+    m === 'auto'
+      ? LADDER[QS.lvl].m < 1
+        ? TR('Passt sich laufend an dein Gerät an. Zurzeit: {0} mit etwas geringerer Auflösung.', T.name)
+        : TR('Passt sich laufend an dein Gerät an. Zurzeit: {0}.', T.name)
+      : TR('Feste Stufe: {0}.', T.name),
+    TR('Bild: {0} × {1} Pixel', px.x, px.y),
+    sun.castShadow ? TR('Schatten {0}', sun.shadow.mapSize.x) : TR('ohne Echtzeit-Schatten'),
+    QS.cap ? TR('Bildrate auf {0} begrenzt', QS.cap) : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
   $('#gfxSh').value = SET.gfxSh || 'auto';
   $('#gfxFx').value = SET.gfxFx || 'auto';
   $('#gfxRes').value = SET.gfxRes || 'auto';
@@ -36,6 +43,40 @@ function gfxUi() {
   })
 );
 $('#gfxBack').addEventListener('click', () => showScreen(gfxFrom));
+// language: the native names; a choice is saved and the page reloads (texts built while loading follow the language, see 00-i18n.js)
+$('#langNow').textContent = (LANGS.find(l => l[0] === LANG) || LANGS[1])[1];
+$('#btnLang').addEventListener('click', () => {
+  const box = $('#langList');
+  box.textContent = '';
+  for (const [c, n] of LANGS) {
+    const b = document.createElement('button');
+    b.className = 'btn small';
+    b.lang = c;
+    b.textContent = n;
+    b.setAttribute('aria-pressed', String(c === LANG));
+    b.addEventListener('click', () => {
+      if (c === LANG) return showScreen('menu');
+      store.set('wvr-lang', c);
+      try {
+        const u = new URL(location.href);
+        u.searchParams.delete('lang');
+        location.replace(u.href);
+      } catch (_) {
+        location.reload();
+      }
+    });
+    box.appendChild(b);
+  }
+  showScreen('langScr');
+});
+$('#langBack').addEventListener('click', () => showScreen('menu'));
+$('#btnPriv').addEventListener('click', () => showScreen('privScr'));
+// the portal version never sends the player's photo (faceChunkPatch in 61-net.js): say so
+if (window.WVR_PORTAL)
+  $('#privFace').textContent = TR(
+    'In der Liste der offenen Spiele stehen nur dein Spielername, dein Profilbild und dein Level. Dein eigenes Foto verlässt dein Gerät nie.'
+  );
+$('#privBack').addEventListener('click', () => showScreen('menu'));
 let sndFrom = 'menu';
 const volShow = r => {
   r.style.setProperty('--p', r.value + '%');
@@ -151,17 +192,17 @@ function showLobby(isHost, code, status, busy) {
   if (isHost) {
     setHostMenu(true);
     $('#codeIn').value = code;
-    $('#onlineNote').textContent = 'Dein Gegner gibt diesen Code bei „Beitreten“ ein. Die Partie startet, sobald er verbunden ist.';
+    $('#onlineNote').textContent = TR('Dein Gegner gibt diesen Code bei „Beitreten“ ein. Die Partie startet, sobald er verbunden ist.');
     setLobbyStatus(status, busy);
     showScreen('menu');
     return;
   }
-  $('#lobbyTitle').textContent = isHost ? 'Spiel erstellt' : 'Beitreten';
+  $('#lobbyTitle').textContent = isHost ? TR('Spiel erstellt') : TR('Beitreten');
   $('#lobbyCode').textContent = code;
   $('#lobbyCodeWrap').hidden = !isHost;
   $('#lobbyNote').textContent = isHost
-    ? 'Dein Gegner öffnet dieses Spiel auf seinem Gerät und tippt den Code bei „Beitreten“ ein.'
-    : 'Code: ' + code;
+    ? TR('Dein Gegner öffnet dieses Spiel auf seinem Gerät und tippt den Code bei „Beitreten“ ein.')
+    : TR('Code: {0}', code);
   setLobbyStatus(status, busy);
   showScreen('lobby');
 }
@@ -176,7 +217,7 @@ function netBadgeTick() {
   const on = V.playing && (V.mode === 'host' || V.mode === 'guest');
   b.hidden = !on;
   if (!on) return;
-  const via = NET.via === 'relay' ? 'Server' : NET.via === 'claude' ? 'Claude' : 'Direkt',
+  const via = NET.via === 'relay' ? TR('Server') : NET.via === 'claude' ? 'Claude' : TR('Direkt'),
     ms = NET.rtt ? Math.round(NET.rtt) : null;
   b.textContent = via + (ms !== null ? ' · ' + ms + ' ms' : '');
   b.classList.toggle('slow', ms !== null && ms > 150);
@@ -188,7 +229,7 @@ function netWarn(t) {
 }
 function toastMenu(t) {
   const s = $('.sub');
-  const o = 'Erobere die Fahnen. Reiß die Basis ein.';
+  const o = TR('Erobere die Fahnen. Reiß die Basis ein.');
   s.textContent = t;
   setTimeout(() => (s.textContent = o), 2200);
 }
@@ -205,9 +246,9 @@ $$('.sic').forEach(e => {
       '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="#f3efe6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
   const sync = () =>
     $$('.fsBtn').forEach(b => {
-      b.hidden = !can;
+      b.hidden = !can || !!window.WVR_PORTAL; // portals bring their own fullscreen button (CrazyGames forbids a second one)
       b.innerHTML = isFs() ? icoOut : icoIn;
-      b.setAttribute('aria-label', isFs() ? 'Vollbild beenden' : 'Vollbild');
+      b.setAttribute('aria-label', isFs() ? TR('Vollbild beenden') : TR('Vollbild'));
     });
   $$('.fsBtn').forEach(b =>
     b.addEventListener('click', e => {
@@ -261,7 +302,7 @@ $('#btnTutPro').addEventListener('click', () => startTutorial(true));
 $('#tutSkip').addEventListener('click', () => {
   if (TUT.confirm) return;
   TUT.confirm = { text: $('#tutText').textContent, next: !$('#tutNext').hidden };
-  $('#tutText').textContent = 'Tutorial wirklich beenden?';
+  $('#tutText').textContent = TR('Tutorial wirklich beenden?');
   $('#tutNext').hidden = true;
   $('#tutNo').hidden = false;
   $('#tutYes').hidden = false;
@@ -308,8 +349,8 @@ $('#btnCodeCopy').addEventListener('click', async () => {
     } catch (_) {}
   }
   $('#onlineNote').textContent = copied
-    ? 'Code kopiert: ' + code + '. Dein Gegner gibt ihn bei „Beitreten“ ein.'
-    : 'Code markiert: ' + code + '. Mit „Kopieren“ oder Strg/Cmd+C kopieren.';
+    ? TR('Code kopiert: {0}. Dein Gegner gibt ihn bei „Beitreten“ ein.', code)
+    : TR('Code markiert: {0}. Mit „Kopieren“ oder Strg/Cmd+C kopieren.', code);
 });
 $('#btnJoin').addEventListener('click', () => joinOnline($('#codeIn').value));
 $('#codeIn').addEventListener('keydown', e => {
@@ -322,8 +363,8 @@ $('#btnLobbyBack').addEventListener('click', toMenu);
 $('#menuBtn').addEventListener('click', () => {
   if (V.mode === 'ai') paused = true;
   const online = V.mode === 'host' || V.mode === 'guest';
-  $('#pauseTitle').textContent = online ? 'Menü – das Spiel läuft weiter!' : 'Pause';
-  $('#btnResume').textContent = V.mode === 'ai' ? 'Weiter' : 'Zurück zum Spiel';
+  $('#pauseTitle').textContent = online ? TR('Menü – das Spiel läuft weiter!') : TR('Pause');
+  $('#btnResume').textContent = V.mode === 'ai' ? TR('Weiter') : TR('Zurück zum Spiel');
   quitArm(false);
   showScreen('pause');
 });
@@ -337,7 +378,7 @@ function quitArm(on) {
   clearTimeout(QUIT.t);
   QUIT.on = on;
   const b = $('#btnQuit');
-  b.textContent = on ? 'Wirklich aufgeben?' : 'Aufgeben';
+  b.textContent = on ? TR('Wirklich aufgeben?') : TR('Aufgeben');
   b.classList.toggle('danger', on);
   if (on) QUIT.t = setTimeout(() => quitArm(false), 3000);
 }
@@ -351,6 +392,7 @@ $('#btnQuit').addEventListener('click', () => {
 });
 // Online, the other player is told first (presence quit: 1), so he gets his win screen instead of waiting for you (oppQuit, 61-net.js).
 function quitMatch() {
+  profQuit();
   if ((V.mode === 'host' || V.mode === 'guest') && NET.r && V.playing) {
     const r = NET.r;
     NET.r = null; // leaveNet must not close the room before the message is out
@@ -420,7 +462,8 @@ function syncLvl() {
   const ai = $('#aiInfo');
   if (ai)
     ai.textContent =
-      'gegen den Computer · ' + AI_LVL[aiLvl].name + (gameMode === 'chaos' ? ' · Chaos' : gameMode === 'fog' ? ' · Nebel' : '');
+      TR('gegen den Computer · {0}', AI_LVL[aiLvl].name) +
+      (gameMode === 'chaos' ? ' · ' + TR('Chaos') : gameMode === 'fog' ? ' · ' + TR('Nebel') : '');
 }
 $$('.lvl button[data-lvl]').forEach(b =>
   b.addEventListener('click', () => {
@@ -475,6 +518,7 @@ function menuScene() {
   loadMap(newSeed());
   V.facs = [myFac, FAC[myFac].other];
   V.myTeam = 0;
+  setSkins(V.facs, [PLAYER.sk[myFac], null]);
   buildBases(V.facs);
   FLAGS.forEach((_, i) => updateFlag(i, -1, 0, false));
   menuPose();
@@ -482,6 +526,7 @@ function menuScene() {
 function menuPose() {
   menuUnits.forEach(disposeUnit);
   menuUnits = [];
+  setSkins([myFac, FAC[myFac].other], [PLAYER.sk[myFac], null]); // the menu shows your army in your skin
   const B = BASES[0];
   FAC[myFac].kinds.forEach((k, i) => {
     const u = Object.assign(buildUnit(k), { wob: 0, wobV: 0, atkT: 9 + i, walk: i, speed: 0, flash: 0 });
