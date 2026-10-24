@@ -35,6 +35,7 @@ if [ "$MP" = 1 ]; then
   sleep 2
   run mp_net python3 tests/mp/mp_net.py
   run mp_recon python3 tests/mp/mp_recon.py
+  run mp_lobby python3 tests/mp/mp_lobby.py
   kill $P1 $P2 2>/dev/null
 fi
 exit $fail

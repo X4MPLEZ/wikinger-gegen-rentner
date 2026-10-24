@@ -48,7 +48,8 @@ with sync_playwright() as p:
         g.click('#menuBtn'); g.wait_for_timeout(300)
         res['pauseTitle']=g.inner_text('#pauseTitle')
         g.click('#btnQuit'); g.wait_for_timeout(300); res['armed']=g.inner_text('#btnQuit')
-        g.click('#btnQuit')
+        # the second tap must come within the 3 s arming window: on a loaded test machine Playwright's own click can be slower than that
+        g.evaluate("document.querySelector('#btnQuit').click()")
         for k in range(20):
             h.wait_for_timeout(400)
             if h.is_visible('#end'): break
@@ -61,7 +62,7 @@ with sync_playwright() as p:
     res['conn2']=ok
     if ok:
         g.wait_for_timeout(4000); h.evaluate("__wvr.G.cd=0")
-        h.click('#menuBtn'); h.wait_for_timeout(200); h.click('#btnQuit'); h.wait_for_timeout(200); h.click('#btnQuit')
+        h.click('#menuBtn'); h.wait_for_timeout(200); h.click('#btnQuit'); h.wait_for_timeout(200); h.evaluate("document.querySelector('#btnQuit').click()")
         for k in range(20):
             g.wait_for_timeout(400)
             if g.is_visible('#end'): break

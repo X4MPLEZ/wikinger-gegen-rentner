@@ -341,8 +341,8 @@ function robotFaceLv(c, x, L) {
   x.restore();
   return c;
 }
-function playAi() {
-  leaveNet();
+function playAi(keepNet = false) {
+  if (!keepNet) leaveNet(); // keepNet: practising while a public game waits for an opponent (64-lobby.js)
   FACE.other = { crop: robotFace(), url: null };
   const facs = [myFac, FAC[myFac].other],
     seed = newSeed();

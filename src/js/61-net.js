@@ -779,6 +779,9 @@ function leaveNet() {
   NET.connectAttempt = (NET.connectAttempt || 0) + 1;
   NET.inlineLobby = false;
   setHostMenu(false);
+  lobbyHostStop();
+  foundBan(false);
+  $('#btnPractice').hidden = true;
   if (NET.connecting) {
     try {
       NET.connecting.leave();
@@ -793,6 +796,11 @@ function leaveNet() {
     } catch (_) {}
   }
   Object.assign(NET, {
+    pub: false,
+    practice: false,
+    found: 0,
+    declined: false,
+    quick: null,
     verWarn: false,
     via: null,
     r: null,
@@ -815,7 +823,7 @@ function leaveNet() {
 // face exchange via presence chunks
 const FC_SIZE = 700;
 function faceChunkPatch(otherPresence) {
-  if (!FACE.mine || NET.fcDone === FACE.mine.id) return null;
+  if (NET.pub || !FACE.mine || NET.fcDone === FACE.mine.id) return null; // public games: no photos between strangers
   if (otherPresence && otherPresence.fgot === FACE.mine.id) {
     NET.fcDone = FACE.mine.id;
     return { fc: null };
@@ -830,6 +838,7 @@ function faceChunkPatch(otherPresence) {
 function faceChunkRecv(p) {
   const fc = p && p.fc;
   if (
+    NET.pub ||
     !fc ||
     typeof fc.id !== 'string' ||
     !Number.isInteger(fc.n) ||
@@ -871,12 +880,14 @@ function genCode() {
   else for (let i = 0; i < digits.length; i++) digits[i] = Math.floor(Math.random() * 256);
   return Array.from(digits, n => String(n % 10)).join('');
 }
-async function hostOnline() {
+async function hostOnline(pub = false) {
   leaveNet();
   FACE.other = null;
+  NET.pub = !!pub; // a public game: listed under "Offene Spiele", no photos
   const attempt = NET.connectAttempt;
   const code = genCode();
   showLobby(true, code, 'Verbinde', true);
+  if (pub) $('#onlineNote').textContent = 'Gleich steht dein Spiel bei „Offene Spiele“. Die Partie startet, sobald jemand beitritt.';
   let r;
   try {
     r = await openMulti(code, 'host');
@@ -896,11 +907,18 @@ async function hostOnline() {
   NET.code = code;
   NET.role = 'host';
   const facs = [myFac, FAC[myFac].other],
-    seed = newSeed();
-  G = newGame(facs, seed, gameMode === 'chaos', { fog: gameMode === 'fog' });
+    seed = newSeed(),
+    mode = gameMode,
+    fresh = () => newGame(facs, seed, mode === 'chaos', { fog: mode === 'fog' });
+  G = fresh();
   await r.presence({ role: 'host', code, v: NET_VER, fa: facs, sd: seed, st: 'wait', gp: null }).catch(() => {});
   if (attempt !== NET.connectAttempt) return;
-  setLobbyStatus('Warte auf deinen Gegner', true);
+  setLobbyStatus(pub ? 'Warte auf einen Gegner' : 'Warte auf deinen Gegner', true);
+  if (pub) {
+    lobbyHostStart({ c: code, f: myFac, m: mode, p: MAPTYPE_KEYS.indexOf(seedMapType(seed)), n: lobbyNameIdx(), t: Date.now() });
+    $('#onlineNote').textContent = 'Dein Spiel steht jetzt bei „Offene Spiele“. Die Partie startet, sobald jemand beitritt.';
+    $('#btnPractice').hidden = false;
+  }
   if (NET.local) $('#onlineNote').textContent = 'Testmodus: Verbindung nur zwischen zwei Tabs in diesem Browser.';
   NET.poll = setInterval(() => {
     if (V.mode === 'host') return;
@@ -911,7 +929,35 @@ async function hostOnline() {
       NET.verWarn = true;
       setLobbyStatus('Dein Gegner hat eine andere Spielversion. Bitte beide Geräte neu laden.', false);
     }
+    if (guest && NET.declined) return;
+    if (!guest && NET.found) {
+      NET.found = 0; // the joining player left again during the countdown
+      foundBan(false);
+    }
+    if (guest && V.mode === 'ai') {
+      // practising while waiting: a short countdown on screen, the player may decline ("Weiter üben", 64-lobby.js)
+      if (!NET.found) {
+        NET.found = now();
+        foundBan(true);
+        SFX.play('ding');
+      }
+      const left = 5 - (now() - NET.found) / 1000;
+      if (left > 0) {
+        $('#foundTxt').textContent = 'Online-Partie in ' + Math.ceil(left) + ' …';
+        return;
+      }
+      foundBan(false);
+      stopSim();
+      SFX.music(false);
+      if (V.poss) exitEgo(false);
+      V.playing = false;
+      NET.practice = false;
+      FACE.other = null;
+      G = fresh();
+    }
     if (guest) {
+      lobbyHostStop();
+      $('#btnPractice').hidden = true;
       if (r.lockTo) r.lockTo(guest);
       NET.guestPeer = guest.peer;
       NET.guestSid = guest.presence.sid;
@@ -1050,7 +1096,7 @@ function hostBroadcast() {
   }
   NET.r.presence(patch).catch(() => {});
 }
-async function joinOnline(code) {
+async function joinOnline(code, opt = {}) {
   code = String(code || '').replace(/\s/g, '');
   if (!new RegExp('^[0-9]{' + CODE_LENGTH + '}$').test(code)) {
     $('#codeIn').focus();
@@ -1062,6 +1108,8 @@ async function joinOnline(code) {
   }
   leaveNet();
   FACE.other = null;
+  NET.pub = !!opt.pub;
+  NET.quick = opt.quick || null; // "Schnelles Spiel": the codes tried so far
   const attempt = NET.connectAttempt;
   showLobby(false, code, 'Suche Spiel', true);
   let r;
@@ -1120,8 +1168,18 @@ async function joinOnline(code) {
     }
     if (P.gp && NET.myPeer && P.gp !== NET.myPeer && V.mode !== 'guest') {
       setLobbyStatus('Dieses Spiel ist schon voll.', false);
+      if (NET.quick && NET.quick.length < 4) {
+        const skip = NET.quick;
+        toMenu();
+        quickMatch(skip); // someone else was faster: the next open game, or an own one
+      }
       return;
     }
+    if (V.mode !== 'guest' && P.st === 'no') {
+      setLobbyStatus('Dein Gegner übt lieber noch weiter. Such dir ein anderes Spiel.', false);
+      return;
+    }
+    if (V.mode !== 'guest' && P.st === 'wait' && P.pr) setLobbyStatus('Gegner gefunden! Er beendet gerade sein Übungsspiel …', true);
     // start the match; after an end screen also the next round, in case the rematch poll gave up too early
     const next = V.mode === 'guest' && !V.playing && !NET.endPoll && NET.endSeed && P.sd !== NET.endSeed;
     if ((V.mode !== 'guest' || next) && P.st === 'play' && P.gp === NET.myPeer && Array.isArray(P.fa) && Number.isFinite(P.sd)) {

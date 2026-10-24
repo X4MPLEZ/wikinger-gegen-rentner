@@ -112,13 +112,18 @@ function genMap(seed0) {
   m.seed = seed0;
   return m;
 }
+// The map type a seed stands for: seed % 8 = 1..4 picks it (the menu's map choice), anything else draws it from the seed.
+// rs is the map's theme generator (its first number decides the type); the lobby asks without one.
+function seedMapType(seed0, rs = rng(seed0 * 31 + 17)) {
+  const code = ((seed0 % 8) + 8) % 8;
+  return code >= 1 && code <= 4 ? MAPTYPE_KEYS[code - 1] : MAPTYPE_KEYS[Math.floor(rs() * 4)];
+}
 function tryMap(seed, noForest, force, nf = 5, seed0 = seed) {
   const r = rng(seed),
     rs = rng(seed0 * 31 + 17),
     tut = seed0 === 4242;
   const m = { rA: 4 + r() * 5, rk: TAU / (80 + r() * 50), rA2: r() * 1.6, RW: 3.2 + r() * 1.1, bridgeX: 12 + r() * 10, ford: 6 };
-  const code = ((seed0 % 8) + 8) % 8;
-  m.type = tut ? 'wiesen' : code >= 1 && code <= 4 ? MAPTYPE_KEYS[code - 1] : MAPTYPE_KEYS[Math.floor(rs() * 4)];
+  m.type = tut ? 'wiesen' : seedMapType(seed0, rs);
   m.theme =
     m.type === 'wiesen'
       ? tut

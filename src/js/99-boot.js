@@ -231,6 +231,10 @@ window.__wvr = {
   faceTexFromCrop,
   headBox,
   NET,
+  LOBBY,
+  quickMatch,
+  lobbyFresh,
+  hostOnline,
   projGeo,
   THREE_: THREE,
 };

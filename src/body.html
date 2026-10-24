@@ -84,6 +84,7 @@
   </div>
   <div id="tutRing" hidden></div>
 
+  <div id="foundBan" class="panel" role="alert" hidden><b>Ein Gegner ist da!</b><span id="foundTxt"></span><button class="btn small" id="foundNo">Weiter üben</button></div>
   <div id="alarm" hidden><span class="sic" data-si="warn"></span> Deine Basis wird angegriffen!</div>
   <div id="rush" hidden><div class="rt" id="rushT"></div><div class="ra" id="rushA"></div></div>
   <div id="coinLayer"></div>
@@ -127,11 +128,15 @@
       <button class="btn gold big" id="btnAi"><span class="lg"><span class="sic" data-si="swords"></span> Los geht's</span> <small id="aiInfo"></small></button>
       <div class="row tutrow"><button class="btn" id="btnTut"><span id="tutBadge" class="badge" hidden>Neu hier?</span><span>Tutorial</span><small>Grundlagen</small></button><button class="btn" id="btnTutPro" title="Profi-Tutorial: alle Tricks"><span>Profi</span><small>Tutorial</small></button></div>
       <div class="online panel">
-        <div class="olabel">Online zu zweit</div>
+        <div class="olabel">Online spielen</div>
+        <button class="btn quick" id="btnQuick"><span class="sic" data-si="swords"></span> Schnelles Spiel</button>
+        <div class="lobbylist" id="lobbyList" aria-live="polite"></div>
+        <div class="olabel">Mit Freunden (Code)</div>
         <div class="orow"><button class="btn" id="btnHost">Erstellen</button><input class="code" id="codeIn" maxlength="4" placeholder="CODE" inputmode="numeric" pattern="[0-9]{4}" autocomplete="off" spellcheck="false" aria-label="Vierstelliger Spielcode"><button class="btn" id="btnJoin">Beitreten</button></div>
         <p class="status" id="onlineStatus" role="status" aria-live="polite" hidden></p>
         <p class="note" id="onlineNote" hidden></p>
         <div class="online-actions" id="onlineActions" hidden><button class="btn small" id="btnCodeCopy">Code kopieren</button><button class="btn small" id="btnHostCancel">Abbrechen</button></div>
+        <button class="btn small quick" id="btnPractice" hidden>Solange gegen den Computer üben</button>
       </div>
       <div class="mfoot"><span></span><button class="linkbtn" id="btnGfx"><span class="sic" data-si="gfx"></span> Grafik</button><button class="linkbtn" id="btnSnd"><span class="sic" data-si="snd"></span> Sound</button><button class="linkbtn pcOnly" id="btnKeys"><span class="sic" data-si="keys"></span> Steuerung</button></div>
       <details class="help">

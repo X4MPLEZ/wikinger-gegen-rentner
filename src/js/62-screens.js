@@ -140,6 +140,7 @@ function setHostMenu(active) {
   $('#codeIn').readOnly = active;
   $('#btnHost').disabled = active;
   $('#btnJoin').disabled = active;
+  $('#btnQuick').disabled = active;
   $('#onlineStatus').hidden = !active;
   $('#onlineNote').hidden = !active;
   $('#onlineActions').hidden = !active;
@@ -254,7 +255,7 @@ $$('.fac').forEach(b =>
     }
   })
 );
-$('#btnAi').addEventListener('click', playAi);
+$('#btnAi').addEventListener('click', () => playAi());
 $('#btnTut').addEventListener('click', () => startTutorial(false));
 $('#btnTutPro').addEventListener('click', () => startTutorial(true));
 $('#tutSkip').addEventListener('click', () => {
@@ -284,7 +285,7 @@ $('#tutNext').addEventListener('click', () => {
   if (!TUT.wait) tutGo(TUT.i + 1);
 });
 $('#tutBadge').hidden = store.get('wvr-tut') === '1';
-$('#btnHost').addEventListener('click', hostOnline);
+$('#btnHost').addEventListener('click', () => hostOnline(false));
 $('#btnHostCancel').addEventListener('click', () => leaveNet());
 $('#btnCodeCopy').addEventListener('click', async () => {
   const input = $('#codeIn'),
@@ -372,7 +373,7 @@ addEventListener('popstate', () => {
   } catch (_) {}
   if ($('#pause').hidden && !V.ending) $('#menuBtn').click();
 });
-$('#btnAgain').addEventListener('click', playAi);
+$('#btnAgain').addEventListener('click', () => playAi(!!NET.practice));
 $('#btnMenu').addEventListener('click', toMenu);
 $('#btnNetQuit').addEventListener('click', toMenu);
 $('#rallyIco').innerHTML = ICON.flag;
