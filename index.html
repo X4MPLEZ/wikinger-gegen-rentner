@@ -4273,28 +4273,30 @@ body.touchUi .hud-orders {
   }
 }
 
-/* ---------- DESIGN LAYER "Comic Pop" (v52) ----------
-   The look of every control and panel: paper-coloured surfaces with a thick ink outline and a hard offset shadow, skewed buttons and
-   tabs (the skew lives on a ::before box, so the text stays upright), halftone dots on headers and active tabs, dotted rules between
-   settings. Paper surfaces re-scope the colour variables (--text, --dim, --panel, --line), so everything inside turns dark on light
-   without touching the rules above. Dark stages (3D showcase) and HUD information panels keep the dark glass. */
+/* ---------- DESIGN LAYER "Comic Pop" (v52, dark since v53) ----------
+   The look of every control and panel: deep plum "card" surfaces (--paper, translucent so the 3D scene shows through) with a thick
+   ink outline and a hard offset shadow, skewed buttons and tabs (the skew lives on a ::before box, so the text stays upright), halftone
+   dots on headers and active tabs, dotted rules between settings, bright pop colours (yellow, pink, blue, green) for actions and states.
+   Card surfaces re-scope the colour variables (--text, --dim, --panel, --line), so everything inside follows without touching the rules
+   above. The variable names kept their v52 meaning: --paper = main surface, --paper-2 = raised tile, --paper-3 = track/well, --tink =
+   text on a surface. */
 :root {
-  --ink2: #221a3a; /* outlines and hard shadows */
-  --paper: #fff8ee;
-  --paper-2: #f4ecdd;
-  --paper-3: #e6dbc8;
-  --tink: #2a2140; /* text on paper */
-  --tdim: #6f6684;
+  --ink2: #0b0818; /* outlines and hard shadows */
+  --paper: #231c45; /* main surface (cards get it translucent) */
+  --paper-2: #2f2760; /* raised tiles and secondary buttons */
+  --paper-3: #3b3375; /* tracks, wells, pressed */
+  --tink: #f6f1e8; /* text on a surface */
+  --tdim: #b4b9cf;
   --pop: #ffcf3d;
-  --pop-deep: #b8860b;
+  --pop-deep: #ffd75c; /* gold text on dark */
   --pink: #ff6fa8;
-  --pink-deep: #c93a76;
+  --pink-deep: #ff8fbf; /* pink text on dark */
   --blue: #5aa9e6;
-  --blue-deep: #2f74b8;
+  --blue-deep: #8ac6f2;
   --green: #74d672;
-  --green-deep: #2e7d32;
-  --gemc: #1d86c8;
-  --dots: radial-gradient(circle, rgba(34, 26, 58, 0.22) 1.2px, transparent 1.7px);
+  --green-deep: #8be08b; /* green text on dark */
+  --gemc: #7fdcff;
+  --dots: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1.2px, transparent 1.7px);
   --dots-light: radial-gradient(circle, rgba(255, 255, 255, 0.32) 1.3px, transparent 1.8px);
 }
 /* paper scopes */
@@ -4307,7 +4309,7 @@ body.touchUi .hud-orders {
 #netwarn .card {
   --text: var(--tink);
   --dim: var(--tdim);
-  --line: rgba(34, 26, 58, 0.22);
+  --line: rgba(255, 255, 255, 0.14);
   --panel: var(--paper-2);
   --panel-2: var(--paper-2);
   --gold: var(--pop-deep);
@@ -4324,10 +4326,13 @@ body.touchUi .hud-orders {
   color: var(--text);
 }
 .screen {
-  background: linear-gradient(180deg, rgba(34, 26, 58, 0.28) 0%, rgba(34, 26, 58, 0.62) 55%, rgba(34, 26, 58, 0.78) 100%);
+  /* light veil only: the 3D scene behind the menu stays visible */
+  background: linear-gradient(180deg, rgba(11, 8, 24, 0.1) 0%, rgba(11, 8, 24, 0.32) 60%, rgba(11, 8, 24, 0.5) 100%);
 }
 .card {
-  background: var(--paper);
+  background: rgba(35, 28, 69, 0.56);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
   border: 3px solid var(--ink2);
   border-radius: 16px;
   padding: 14px 14px 16px;
@@ -4392,7 +4397,7 @@ details.help,
   align-self: flex-start;
   margin: 8px 0 -2px 4px;
   padding: 3px 12px 3px 10px;
-  color: #fff;
+  color: #2a1c04;
   font-size: 0.66rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -4404,7 +4409,7 @@ details.help,
   content: '';
   position: absolute;
   inset: 0;
-  background: var(--ink2);
+  background: var(--pop);
   transform: skewX(-12deg);
   border-radius: 3px;
   z-index: -1;
@@ -4816,13 +4821,13 @@ details.help,
   color: #ff6fa8;
 }
 .logo .vs {
-  color: var(--tink);
+  color: var(--pop);
   font-weight: 800;
 }
 /* ----- form rows: dotted rules, paper inputs ----- */
 .krow,
 .vrow {
-  border-bottom: 3px dotted rgba(34, 26, 58, 0.35);
+  border-bottom: 3px dotted rgba(255, 255, 255, 0.22);
   padding: 8px 2px;
   margin: 0;
 }
@@ -4840,7 +4845,7 @@ details.help,
   font-weight: 700;
 }
 .code {
-  box-shadow: inset 3px 3px 0 rgba(34, 26, 58, 0.12);
+  box-shadow: inset 3px 3px 0 rgba(0, 0, 0, 0.3);
 }
 .card input[type='checkbox'] {
   width: 22px;
@@ -4906,7 +4911,7 @@ details.help ul {
   color: var(--tink);
   background: var(--paper);
   border: 3px solid var(--ink2);
-  box-shadow: inset 4px 4px 0 rgba(34, 26, 58, 0.12);
+  box-shadow: inset 4px 4px 0 rgba(0, 0, 0, 0.3);
 }
 #lobbyCodeWrap {
   padding: 10px;
@@ -4947,10 +4952,10 @@ details.help ul {
 }
 /* ----- the profile page ----- */
 .screen.pscreen {
-  background: linear-gradient(180deg, rgba(34, 26, 58, 0.5), rgba(34, 26, 58, 0.78));
+  background: linear-gradient(180deg, rgba(11, 8, 24, 0.3), rgba(11, 8, 24, 0.55));
 }
 .ppage {
-  background: var(--paper);
+  background: rgba(35, 28, 69, 0.86);
   gap: 10px;
 }
 @media (min-width: 700px) {
@@ -4984,7 +4989,7 @@ details.help ul {
   text-shadow: 1px 1px 0 var(--ink2);
   padding: 4px 10px;
   border-radius: 8px;
-  background: rgba(34, 26, 58, 0.35);
+  background: rgba(11, 8, 24, 0.45);
   border: 2px solid var(--ink2);
 }
 .pscreen .phead {
@@ -5025,12 +5030,12 @@ details.help ul {
   border-color: var(--ink2);
   background:
     var(--dots) 0 0 / 7px 7px,
-    #fff3c4;
+    #4a3d2a;
 }
 .quest.done {
   background:
     var(--dots) 0 0 / 7px 7px,
-    #dff5d6;
+    #27452f;
   border-color: var(--ink2);
 }
 .quest.bonus {
@@ -5063,7 +5068,7 @@ details.help ul {
 .godbar {
   background:
     var(--dots) 0 0 / 7px 7px,
-    #fff3c4;
+    #4a3d2a;
 }
 .godbar b {
   color: var(--pop-deep);
@@ -5102,7 +5107,7 @@ details.help ul {
 .bpnode.sel {
   background:
     var(--dots) 0 0 / 7px 7px,
-    #fff3c4;
+    #4a3d2a;
   transform: translateY(-4px);
   box-shadow: 5px 7px 0 var(--ink2);
 }
@@ -5361,7 +5366,7 @@ details.help ul {
 /* statistics: dotted rules between the rows */
 .pstats span,
 .pstats b {
-  border-bottom: 2px dotted rgba(34, 26, 58, 0.3);
+  border-bottom: 2px dotted rgba(255, 255, 255, 0.22);
   padding: 3px 0;
 }
 .pstats span {
@@ -5391,6 +5396,14 @@ details.help ul {
   --text: #f3efe6;
   --dim: #c9d2e3;
   color: #fff;
+}
+.gfx-lite .card {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: rgba(35, 28, 69, 0.74);
+}
+.gfx-lite .ppage {
+  background: rgba(35, 28, 69, 0.92);
 }
 </style>
 <div id="game">
@@ -22297,6 +22310,7 @@ function perkUi() {
   if (bar.dataset.h !== html) {
     bar.dataset.h = html;
     bar.innerHTML = html;
+    killFeedTop(); // the pills may wrap into a second row: move the kill feed down right now, not at the next HUD tick
   }
   if (V.lastPn)
     for (let t = 0; t < 2; t++)
@@ -26269,23 +26283,17 @@ function killFeedTop() {
   const hud = $('#hud'),
     land = innerWidth > innerHeight && innerHeight <= 600,
     chips = $('.hud-chips'),
-    key = [
-      chips.childElementCount,
-      $('#phaseChip').textContent,
-      $('#evChip').textContent,
-      $('#perkBar').childElementCount,
-      innerWidth,
-      innerHeight,
-    ].join('|');
+    r = land ? $('.hud-tr').getBoundingClientRect() : chips.getBoundingClientRect(),
+    // the measured edge is part of the key: the perk pills wrap into a second row a moment after they appear
+    key = [chips.childElementCount, $('#perkBar').childElementCount, Math.round(r.bottom), Math.round(r.top), innerWidth, innerHeight].join(
+      '|'
+    );
   if (hud.hidden || key === KFT.key) return;
   KFT.key = key;
   const kf = $('#killFeed');
   let top;
-  if (land) top = $('.hud-tr').getBoundingClientRect().bottom + 6;
-  else {
-    const r = chips.getBoundingClientRect();
-    top = r.height > 2 ? r.bottom + 6 : r.top;
-  }
+  if (land) top = r.bottom + 6;
+  else top = r.height > 2 ? r.bottom + 6 : r.top;
   if (top > 20) kf.style.setProperty('--kfTop', Math.round(top) + 'px');
 }
 function setupHud() {

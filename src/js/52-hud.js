@@ -128,23 +128,17 @@ function killFeedTop() {
   const hud = $('#hud'),
     land = innerWidth > innerHeight && innerHeight <= 600,
     chips = $('.hud-chips'),
-    key = [
-      chips.childElementCount,
-      $('#phaseChip').textContent,
-      $('#evChip').textContent,
-      $('#perkBar').childElementCount,
-      innerWidth,
-      innerHeight,
-    ].join('|');
+    r = land ? $('.hud-tr').getBoundingClientRect() : chips.getBoundingClientRect(),
+    // the measured edge is part of the key: the perk pills wrap into a second row a moment after they appear
+    key = [chips.childElementCount, $('#perkBar').childElementCount, Math.round(r.bottom), Math.round(r.top), innerWidth, innerHeight].join(
+      '|'
+    );
   if (hud.hidden || key === KFT.key) return;
   KFT.key = key;
   const kf = $('#killFeed');
   let top;
-  if (land) top = $('.hud-tr').getBoundingClientRect().bottom + 6;
-  else {
-    const r = chips.getBoundingClientRect();
-    top = r.height > 2 ? r.bottom + 6 : r.top;
-  }
+  if (land) top = r.bottom + 6;
+  else top = r.height > 2 ? r.bottom + 6 : r.top;
   if (top > 20) kf.style.setProperty('--kfTop', Math.round(top) + 'px');
 }
 function setupHud() {

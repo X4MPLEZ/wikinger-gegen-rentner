@@ -85,6 +85,7 @@ function perkUi() {
   if (bar.dataset.h !== html) {
     bar.dataset.h = html;
     bar.innerHTML = html;
+    killFeedTop(); // the pills may wrap into a second row: move the kill feed down right now, not at the next HUD tick
   }
   if (V.lastPn)
     for (let t = 0; t < 2; t++)
