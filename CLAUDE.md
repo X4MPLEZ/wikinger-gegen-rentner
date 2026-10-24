@@ -105,6 +105,7 @@ Every file starts with a short header comment saying what is in it.
 | 80-animation | procedural poses | `humanRig`, `animateRig` |
 | 81-quality | graphics quality levels, auto-quality, profiler | `QS`, `perfTick`, `applyQuality` |
 | 82-frame | **the frame loop** | `frame`, `renderUnits` |
+| 83-post | post effects of the tier „Sehr hoch“ (WebGL2): ambient occlusion, depth of field, glow, grading | `postSet`, `postRender`, `POST` |
 | 99-boot | start; `window.__wvr` (internals for tests) | – |
 
 ## How it runs
@@ -147,6 +148,14 @@ Every file starts with a short header comment saying what is in it.
 - **Client randomness:** visuals both players should see the same (e.g. puddle decoration) use `rng(seed)` from snapshot data.
 - **Mobile first:** check portrait 390×844 and landscape 844×390 (`tests/t_hud_layout.py` asserts that HUD parts do not overlap).
 - **German wording:** "Discogranate", "Sammelfahne", "Basisschaden", "Ego-Krieger", "Den Helden spielen", "Aufgeben".
+- **Look:** soft toon ramp (`drawRamp`, 21-scene), figures with rim light and sheen (`figMat`/`FIG`); unit geometries get more segments
+  while a full model is built (`withHiPoly`, 24-unit-models) and fewer for the low-detail model (`withLowPoly`) – the two stay paired.
+  Graphics tiers in `GTIERS` + `ULTRA` (81-quality); `QS.ultra` switches the post effects (83-post.js) – never chosen by AUTO.
+- **UI design ("Comic Pop"):** the last section of src/style.css is a design layer that restyles every control: paper surfaces
+  (`--paper`), ink outlines and hard offset shadows (`--ink2`), skewed boxes on `::before` (text stays upright – keep the pseudo inside
+  the layout box, `inset: 0 3px`, or fitText shrinks labels), halftone dots (`--dots`). Paper containers (`.card`, `.ppage`, `.pscard`,
+  `.tut-card`) re-scope `--text/--dim/--panel/--line`, so anything inside turns dark on light without new rules; dark islands (`.bpshow`,
+  `.psstage`, `.pcard`, `.mcard`) scope them back. HUD information stays dark glass, HUD controls are paper. Icons use `currentColor`.
 - **Skins** are colour swaps plus extra pieces applied while a unit model is built: `setSkins()` fills `UNIT_SKIN[k]`, `buildUnit` →
   `buildSkinned(k, id)` sets `LAM_MAP` (so `lam(color)` returns the swapped colour) and `SKIN_NOW` (so `skinExtras()` in 25-worm-model
   adds capes, crowns, glasses …); caches of built models key on the skin. Extras must not use randomness (the low-detail model is built

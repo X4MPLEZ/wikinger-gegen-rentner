@@ -118,14 +118,14 @@ const ICON = {
     '<svg class="i" viewBox="0 0 24 24"><rect x="9.7" y="1" width="4.6" height="2.2" rx=".6" fill="#d7dde3"/><path d="M10.1 3.1h3.8v2.7c0 .7.3 1.3.8 1.8 1.2 1.2 1.8 2.5 1.8 4V21a2 2 0 0 1-2 2H9.5a2 2 0 0 1-2-2v-9.4c0-1.5.6-2.8 1.8-4 .5-.5.8-1.1.8-1.8z" fill="#3c9a5c"/><rect x="7.5" y="12.4" width="9" height="5.6" fill="#f3eedf"/><path d="M13.5 14.2a1.9 1.9 0 1 1-1.2-.4" stroke="#3c9a5c" stroke-width="1.1" fill="none" stroke-linecap="round"/><path d="M12.6 13.2l.7.6-.8.4" stroke="#3c9a5c" stroke-width="1" fill="none" stroke-linecap="round"/><path d="M9.6 9.4v1.8M9.6 19v1.4" stroke="#bfe9cc" stroke-width="1.1" stroke-linecap="round" opacity=".8"/></svg>',
   army: '<svg class="i" viewBox="0 0 24 24" fill="#d8dde6"><circle cx="8" cy="7" r="3"/><circle cx="16" cy="7" r="3"/><path d="M2.5 19c0-3.3 2.5-6 5.5-6s5.5 2.7 5.5 6zM10.5 19c0-3.3 2.5-6 5.5-6s5.5 2.7 5.5 6z"/></svg>',
   pause:
-    '<svg class="i" viewBox="0 0 24 24" fill="#f3efe6"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+    '<svg class="i" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
   sword:
     '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 19L18 6l1-3-3 1L3 17"/><path d="M7 14l3 3M4 20l2-2"/></svg>',
   star: '<svg class="i" viewBox="0 0 24 24" fill="#f0bf4c"><path d="M12 2l2.9 6.4 7 .7-5.3 4.7 1.6 6.9L12 17.3 5.8 20.7l1.6-6.9L2.1 9.1l7-.7z"/></svg>',
-  exit: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="#f3efe6" stroke-width="2" stroke-linecap="round"><path d="M9 4H5v16h4M15 8l4 4-4 4M19 12H9"/></svg>',
+  exit: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 4H5v16h4M15 8l4 4-4 4M19 12H9"/></svg>',
   sound:
-    '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="#f3efe6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="#f3efe6"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
-  mute: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="#f3efe6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="#f3efe6"/><path d="M17 9l5 6M22 9l-5 6"/></svg>',
+    '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
+  mute: '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6"/></svg>',
   flag: '<svg class="i" viewBox="0 0 24 24"><path d="M6 2.5v19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M7 3.5h11l-2.6 4 2.6 4H7z" fill="#f0bf4c" stroke="#2a1c04" stroke-width="1" stroke-linejoin="round"/></svg>',
   enter:
     '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="#2a1c04" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>',

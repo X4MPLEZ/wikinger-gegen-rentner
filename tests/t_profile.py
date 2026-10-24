@@ -64,6 +64,10 @@ with sync_playwright() as p:
       out.godSaved = localStorage.getItem('wvr-prof') === before;
       W.godSet(false);
       out.godBack = [W.GOD.on, W.profOwns('v3'), W.PLAYER.sk.viking];
+      // the recruit icons follow the skin (they were cached per kind only: after a skin change the old skin stayed on the buttons)
+      const ico = s => { W.setSkins(['viking', 'rentner'], [s, null]); return [4, 6].map(k => W.unitIcon(k)).join(); };
+      const i3 = ico('v3'), i2 = ico('v2');
+      out.icons = [i3 !== i2, ico('v3') === i3];
       return out;
     }""")
     print(json.dumps(r))
@@ -79,7 +83,7 @@ with sync_playwright() as p:
           and r['shop'][:3] == [False, False, True] and r['shop'][3] == 9499 and r['shop'][4]
           and r['quests'][0] == [] and r['quests'][1] == ['win2', 'kills40'] and r['quests'][2] == ['play3', 'bonus'] and r['quests'][4] == [1, 1, 1] and r['quests'][5] == 1
           and r['questGems'] >= r['questOnly']
-          and r['god'][:3] == [True, True, 99999] and r['god'][3] == 25 and r['godSaved'] and r['godBack'] == [False, False, 'v0'] and not errs)
+          and r['god'][:3] == [True, True, 99999] and r['god'][3] == 25 and r['godSaved'] and r['godBack'] == [False, False, 'v0'] and r['icons'] == [True, True] and not errs)
     print('ERRS', errs[:3])
     print('PROFILE', 'OK' if ok else 'FAIL')
     b.close()

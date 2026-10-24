@@ -1139,8 +1139,9 @@ function possSpecial(G, u, byId) {
         hit(G, c.e.id, 22, u.team, byId, u.k, true);
         c.e.kbT = G.t;
         c.e.kbTeam = u.team;
-        knockFly(c.e, 0, 0, 10, fx0, fz0, 4.8);
+        if (knockFly(c.e, 0, 0, 10, fx0, fz0, 4.8) && c.e.air) c.e.air.by = u.id; // the thrower himself is never bowled by his own throw
       });
+    u.kbImm = Math.max(u.kbImm || 0, G.t + 0.5);
   } // Viking throw: whoever stands in front is hurled away and bowls through his friends
   else if ((u.k === 1 || u.k === 3) && u.aim) {
     const vl = pkL(G, u.team, 'volley'),

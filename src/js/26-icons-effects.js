@@ -1,6 +1,6 @@
 /* 26-icons-effects.js - Recruit icons (the real 3D model rendered once per kind: unitIcon), and the particle puffs (puff, emitFX, puffTick). */
 /* ---------- recruit icons: the real 3D model rendered once per kind ---------- */
-const UNIT_ICON = [];
+const UNIT_ICON = {}; // recruit icons by kind and skin (the icon shows the unit in the skin it will spawn with)
 function roleGlyph(o, role, cx, cy) {
   o.save();
   o.translate(cx, cy);
@@ -74,8 +74,9 @@ const UNIT_HEAD = [],
 // the head of unit kind k, rendered once in 3D (transparent 192 px canvas; always the classic colours, no skin)
 function headRaw(k) {
   if (HEAD_RAW[k]) return HEAD_RAW[k];
-  const S = 192,
-    rt = new THREE.WebGLRenderTarget(S, S);
+  const S = 288,
+    rt = renderer.capabilities.isWebGL2 ? new THREE.WebGLMultisampleRenderTarget(S, S) : new THREE.WebGLRenderTarget(S, S);
+  if (rt.isWebGLMultisampleRenderTarget) rt.samples = Math.min(4, renderer.capabilities.maxSamples || 4);
   rt.texture.encoding = THREE.sRGBEncoding;
   const sc = new THREE.Scene();
   sc.add(new THREE.HemisphereLight(lin(0xf4f7ff), lin(0x6a5a4a), 0.9));
@@ -147,7 +148,8 @@ function unitHead(k) {
   return (UNIT_HEAD[k] = out.toDataURL());
 }
 function unitIcon(k) {
-  if (UNIT_ICON[k]) return UNIT_ICON[k];
+  const ik = k + '|' + (UNIT_SKIN[k] ? UNIT_SKIN[k].id : '');
+  if (UNIT_ICON[ik]) return UNIT_ICON[ik];
   try {
     const S = 256,
       rt = new THREE.WebGLRenderTarget(S, S);
@@ -221,7 +223,7 @@ function unitIcon(k) {
     o.lineWidth = 3;
     o.stroke();
     roleGlyph(o, KINDS[k].role, 104, 104);
-    return (UNIT_ICON[k] = out.toDataURL());
+    return (UNIT_ICON[ik] = out.toDataURL());
   } catch (e) {
     return PORTRAIT[k];
   }

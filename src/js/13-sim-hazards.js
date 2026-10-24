@@ -9,7 +9,19 @@ function bowlStep(G) {
     if (sp < 4) continue;
     const ru = KINDS[u.k].r;
     for (const e of G.units) {
-      if (e === u || e.hp <= 0 || e.air || e.pj || e.grab || e.bur || e.down > 0 || e.kbImm > G.t || (e.tutDummy && !e.tutPush)) continue;
+      if (
+        e === u ||
+        e.id === a.by ||
+        e.hp <= 0 ||
+        e.air ||
+        e.pj ||
+        e.grab ||
+        e.bur ||
+        e.down > 0 ||
+        e.kbImm > G.t ||
+        (e.tutDummy && !e.tutPush)
+      )
+        continue;
       if (KINDS[e.k].role === 'siege' || e.dashUntil > G.t) continue; // a ramming rider ploughs through flying bodies (only another rider's ram can stop him)
       const dx = e.x - u.x,
         dz = e.z - u.z,

@@ -779,11 +779,44 @@ function buildUnitRaw0(k) {
     mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.015, 10).rotateX(Math.PI / 2), chrome, -0.3, 1.16, 0.34, rol); // mirror
     mesh(rbox(0.34, 0.2, 0.24, 0.03, 4), cream, 0, 1.0, 0.56, rol);
     mesh(new THREE.BoxGeometry(0.36, 0.03, 0.26), lam(0xc9b98a), 0, 1.1, 0.56, rol); // basket and rim
-    const bg = mesh(new THREE.CylinderGeometry(0.032, 0.028, 0.34, 8), lam(0xd9a35a), -0.07, 1.2, 0.54, rol);
-    bg.rotation.set(0.25, 0, 0.45); // a baguette
-    mesh(new THREE.SphereGeometry(0.045, 8, 6), lam(0xd0413a), 0.1, 1.14, 0.5, rol);
-    const lk = mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.26, 6), lam(0x7fb84a), 0.06, 1.2, 0.62, rol);
-    lk.rotation.set(-0.35, 0, -0.25); // apple, leek
+    // the shopping: a loaf of bread with score cuts, a bunch of spring onions, a tomato with its stem
+    {
+      const loaf = new THREE.Group();
+      loaf.position.set(-0.11, 1.22, 0.5);
+      loaf.rotation.set(-1.15, 0, 0.75); // a long loaf leaning out of the basket to the left
+      rol.add(loaf);
+      mesh(new THREE.SphereGeometry(0.062, 12, 9).scale(1, 0.85, 3.2), lam(0xc98a4a), 0, 0, 0, loaf); // crust
+      mesh(new THREE.SphereGeometry(0.062, 12, 9).scale(0.85, 0.66, 3.0), lam(0xe3b878), 0, 0.028, 0, loaf); // lighter top
+      [-0.12, -0.04, 0.04, 0.12].forEach(
+        z => (mesh(new THREE.BoxGeometry(0.08, 0.012, 0.016), lam(0x8a5a2b), 0, 0.053, z, loaf).rotation.y = 0.5)
+      ); // score cuts
+      const on = new THREE.Group();
+      on.position.set(0.09, 1.12, 0.62);
+      on.rotation.set(-0.45, 0, -0.35);
+      rol.add(on);
+      [
+        [-0.03, 0, 0.1],
+        [0.03, 0.01, -0.05],
+        [0, -0.02, -0.15],
+      ].forEach(([x, z, tilt]) => {
+        mesh(new THREE.SphereGeometry(0.028, 8, 6).scale(1, 1.25, 1), lam(0xf6f1e4), x, 0, z, on); // bulb
+        mesh(new THREE.CylinderGeometry(0.014, 0.02, 0.1, 6).translate(0, 0.07, 0), lam(0xf6f1e4), x, 0, z, on).rotation.z = tilt;
+        const st = mesh(new THREE.CylinderGeometry(0.009, 0.014, 0.22, 6).translate(0, 0.22, 0), lam(0x5fae3e), x, 0, z, on);
+        st.rotation.z = tilt * 1.6;
+        mesh(new THREE.ConeGeometry(0.011, 0.07, 5).translate(0, 0.36, 0), lam(0x3f8f2e), x, 0, z, on).rotation.z = tilt * 2.2; // tips
+      });
+      mesh(new THREE.TorusGeometry(0.045, 0.007, 5, 12), lam(0xc8302f), 0, 0.12, -0.02, on); // the band around the bunch
+      const tom = new THREE.Group();
+      tom.position.set(0.04, 1.12, 0.46);
+      rol.add(tom);
+      mesh(new THREE.SphereGeometry(0.052, 12, 9).scale(1, 0.88, 1), lam(0xd9362c), 0, 0, 0, tom);
+      mesh(new THREE.CylinderGeometry(0.006, 0.009, 0.03, 5), lam(0x3f8f2e), 0, 0.055, 0, tom); // stem
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * TAU,
+          lf = mesh(new THREE.BoxGeometry(0.035, 0.006, 0.014).translate(0.017, 0, 0), lam(0x4fa33a), 0, 0.046, 0, tom);
+        lf.rotation.set(0, a, -0.3); // the calyx
+      }
+    }
     mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 12).rotateX(Math.PI / 2), chrome, 0, 0.43, 0.64, rol);
     mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 12).rotateX(Math.PI / 2), lam(0xfff1a8), 0, 0.43, 0.67, rol); // headlight
     [-1, 1].forEach(sx => mesh(new THREE.BoxGeometry(0.08, 0.04, 0.02), lam(0xe0302a), sx * 0.22, 0.31, -0.535, rol));

@@ -715,58 +715,160 @@ function avatarURL(id) {
   if (ok) AV_URL[id] = url;
   return url;
 }
-// [canvas 128 px, rendered completely]
+// [canvas 256 px, rendered completely]. A badge: ink ring, coloured rim with a highlight, halftone backdrop, the unit's head large,
+// its decoration drawn with gradients and ink outlines (the same comic-pop language as the buttons).
 function avatarCanvas(id) {
   const A = AV_BY[id] || AVATARS[0],
-    c = cnv(128, 128),
-    o = c.getContext('2d');
-  const gr = o.createRadialGradient(56, 40, 6, 64, 64, 66);
-  gr.addColorStop(0, A.bg[0]);
-  gr.addColorStop(1, A.bg[1]);
+    S = 256,
+    C = S / 2,
+    c = cnv(S, S),
+    o = c.getContext('2d'),
+    gold = A.deco === 'crown' || A.deco === 'medal' || A.deco === 'halo',
+    rim = gold ? ['#ffe08a', '#c98a12'] : [mixHex(A.bg[0], '#ffffff', 0.35), mixHex(A.bg[1], '#000000', 0.15)];
+  // outer ink ring and the rim
+  o.fillStyle = '#1b1430';
+  o.beginPath();
+  o.arc(C, C, C - 1, 0, TAU);
+  o.fill();
+  const rg = o.createLinearGradient(40, 20, 220, 240);
+  rg.addColorStop(0, rim[0]);
+  rg.addColorStop(1, rim[1]);
+  o.fillStyle = rg;
+  o.beginPath();
+  o.arc(C, C, C - 7, 0, TAU);
+  o.fill();
+  o.fillStyle = '#1b1430';
+  o.beginPath();
+  o.arc(C, C, C - 17, 0, TAU);
+  o.fill();
+  // the inner disc: gradient, halftone dots, light sweep
   o.save();
   o.beginPath();
-  o.arc(64, 64, 62, 0, TAU);
+  o.arc(C, C, C - 20, 0, TAU);
   o.clip();
+  const gr = o.createRadialGradient(C - 30, C - 50, 10, C, C, C);
+  gr.addColorStop(0, A.bg[0]);
+  gr.addColorStop(1, A.bg[1]);
   o.fillStyle = gr;
-  o.fillRect(0, 0, 128, 128);
-  if (A.deco === 'stars' || A.deco === 'snow' || A.deco === 'fire') avDeco(o, A.deco, true);
+  o.fillRect(0, 0, S, S);
+  o.fillStyle = 'rgba(255,255,255,0.16)';
+  for (let y = 0; y < S; y += 11)
+    for (let x = (y / 11) % 2 ? 5.5 : 0; x < S; x += 11) {
+      const r = 1.2 + 2.4 * clamp((x + y - 60) / 300, 0, 1); // dots grow towards the bottom right
+      o.beginPath();
+      o.arc(x, y, r, 0, TAU);
+      o.fill();
+    }
+  const sw = o.createLinearGradient(0, 0, S, S);
+  sw.addColorStop(0, 'rgba(255,255,255,0.28)');
+  sw.addColorStop(0.45, 'rgba(255,255,255,0)');
+  sw.addColorStop(1, 'rgba(0,0,0,0.22)');
+  o.fillStyle = sw;
+  o.fillRect(0, 0, S, S);
+  if (A.deco === 'stars' || A.deco === 'snow' || A.deco === 'fire' || A.deco === 'party') avDeco(o, A.deco, true);
+  // ground shadow under the head, then the head
+  o.fillStyle = 'rgba(0,0,0,0.22)';
+  o.beginPath();
+  o.ellipse(C + 6, S - 26, 78, 22, 0, 0, TAU);
+  o.fill();
   let ok = true;
   try {
-    o.drawImage(headRaw(A.k), -4, -2, 136, 136);
+    o.drawImage(headRaw(A.k), 2, 12, 252, 252);
   } catch (_) {
     ok = false; // the 3D head cannot be rendered yet (page still loading): draw it again next time
   }
   o.restore();
   if (A.deco) avDeco(o, A.deco, false);
-  o.strokeStyle = A.deco === 'crown' ? '#f6cc63' : 'rgba(255,255,255,.55)';
-  o.lineWidth = A.deco === 'crown' ? 5 : 3;
+  // a glossy arc at the top left, like enamel
+  o.save();
   o.beginPath();
-  o.arc(64, 64, 61, 0, TAU);
-  o.stroke();
+  o.arc(C, C, C - 20, 0, TAU);
+  o.clip();
+  const gl = o.createLinearGradient(0, 0, 0, S * 0.5);
+  gl.addColorStop(0, 'rgba(255,255,255,0.22)');
+  gl.addColorStop(1, 'rgba(255,255,255,0)');
+  o.fillStyle = gl;
+  o.beginPath();
+  o.ellipse(C - 10, 30, 100, 54, -0.2, 0, TAU);
+  o.fill();
+  o.restore();
   return [c, ok];
+}
+function mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16),
+    pb = parseInt(b.slice(1), 16),
+    ch = sh => Math.round(lerp((pa >> sh) & 255, (pb >> sh) & 255, t));
+  return '#' + [16, 8, 0].map(sh => ch(sh).toString(16).padStart(2, '0')).join('');
+}
+// decoration helpers: every piece gets a fill (gradient), an ink outline and a highlight
+function inkPath(o, fill, line = '#1b1430', w = 3) {
+  o.fillStyle = fill;
+  o.fill();
+  o.lineWidth = w;
+  o.strokeStyle = line;
+  o.lineJoin = 'round';
+  o.stroke();
 }
 function avDeco(o, d, back) {
   o.save();
   if (back) {
-    // behind the head: sparkles, snowflakes, flames
+    // behind the head: sparkles, snowflakes, flames, confetti
     const r = rng(d.length * 977);
-    for (let i = 0; i < 14; i++) {
-      const x = 8 + r() * 112,
-        y = 6 + r() * 70,
-        s = 2 + r() * 4;
+    for (let i = 0; i < (d === 'party' ? 26 : 16); i++) {
+      const x = 16 + r() * 224,
+        y = 10 + r() * 150,
+        s = 4 + r() * 8;
       if (d === 'fire') {
-        o.fillStyle = r() < 0.5 ? 'rgba(255,214,90,.75)' : 'rgba(255,120,40,.7)';
+        const fg = o.createLinearGradient(x, y + s * 3, x, y - s * 3);
+        fg.addColorStop(0, 'rgba(255,90,30,0.85)');
+        fg.addColorStop(0.6, 'rgba(255,170,40,0.85)');
+        fg.addColorStop(1, 'rgba(255,240,150,0.9)');
+        o.fillStyle = fg;
         o.beginPath();
         o.moveTo(x, y + s * 3);
-        o.quadraticCurveTo(x - s * 1.6, y + s, x, y - s * 2.2);
-        o.quadraticCurveTo(x + s * 1.6, y + s, x, y + s * 3);
+        o.bezierCurveTo(x - s * 2.2, y + s, x - s * 0.4, y - s * 0.5, x, y - s * 3);
+        o.bezierCurveTo(x + s * 0.4, y - s * 0.5, x + s * 2.2, y + s, x, y + s * 3);
         o.fill();
+      } else if (d === 'party') {
+        o.fillStyle = ['#ff5fa2', '#ffe066', '#6be3ff', '#8dff7a', '#ffffff'][i % 5];
+        o.save();
+        o.translate(x, y);
+        o.rotate(r() * TAU);
+        o.fillRect(-s * 0.5, -s * 0.2, s, s * 0.4);
+        o.restore();
+      } else if (d === 'snow') {
+        o.strokeStyle = 'rgba(255,255,255,0.9)';
+        o.lineWidth = 1.6;
+        o.lineCap = 'round';
+        for (let k = 0; k < 3; k++) {
+          const a = (k / 3) * Math.PI;
+          o.beginPath();
+          o.moveTo(x - Math.cos(a) * s, y - Math.sin(a) * s);
+          o.lineTo(x + Math.cos(a) * s, y + Math.sin(a) * s);
+          o.stroke();
+          for (const t of [-1, 1]) {
+            const px = x + Math.cos(a) * s * 0.55 * t,
+              py = y + Math.sin(a) * s * 0.55 * t;
+            o.beginPath();
+            o.moveTo(px + Math.cos(a + 0.9) * s * 0.3 * t, py + Math.sin(a + 0.9) * s * 0.3 * t);
+            o.lineTo(px, py);
+            o.lineTo(px + Math.cos(a - 0.9) * s * 0.3 * t, py + Math.sin(a - 0.9) * s * 0.3 * t);
+            o.stroke();
+          }
+        }
       } else {
-        o.fillStyle = d === 'snow' ? 'rgba(255,255,255,.85)' : 'rgba(255,240,170,.9)';
+        const sg = o.createRadialGradient(x, y, 0, x, y, s);
+        sg.addColorStop(0, 'rgba(255,250,210,1)');
+        sg.addColorStop(1, 'rgba(255,240,170,0)');
+        o.fillStyle = sg;
+        o.beginPath();
+        o.arc(x, y, s, 0, TAU);
+        o.fill();
+        o.fillStyle = 'rgba(255,255,255,0.95)';
         o.beginPath();
         for (let k = 0; k < 8; k++) {
           const a = (k / 8) * TAU,
-            rr = k % 2 ? s * 0.35 : s;
+            rr = k % 2 ? s * 0.22 : s * 0.9;
           o.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
         }
         o.fill();
@@ -777,104 +879,163 @@ function avDeco(o, d, back) {
   }
   o.lineJoin = 'round';
   if (d === 'crown') {
-    o.fillStyle = '#f6cc63';
-    o.strokeStyle = '#8a5a00';
-    o.lineWidth = 2.5;
+    const g = o.createLinearGradient(0, 10, 0, 70);
+    g.addColorStop(0, '#fff0a8');
+    g.addColorStop(0.5, '#f6cc63');
+    g.addColorStop(1, '#c98a12');
     o.beginPath();
-    o.moveTo(38, 30);
-    o.lineTo(42, 8);
-    o.lineTo(53, 21);
-    o.lineTo(64, 4);
-    o.lineTo(75, 21);
-    o.lineTo(86, 8);
-    o.lineTo(90, 30);
+    o.moveTo(72, 66);
+    o.lineTo(80, 18);
+    o.lineTo(104, 44);
+    o.lineTo(128, 8);
+    o.lineTo(152, 44);
+    o.lineTo(176, 18);
+    o.lineTo(184, 66);
+    o.quadraticCurveTo(128, 78, 72, 66);
     o.closePath();
-    o.fill();
-    o.stroke();
-    o.fillStyle = '#d0213a';
-    [53, 64, 75].forEach((x, i) => {
+    inkPath(o, g, '#5a3a06', 4);
+    o.fillStyle = 'rgba(255,255,255,0.5)';
+    o.fillRect(84, 52, 86, 5);
+    [
+      [104, 44, '#d0213a'],
+      [128, 30, '#2a9df4'],
+      [152, 44, '#3fc46a'],
+    ].forEach(([x, y, col]) => {
       o.beginPath();
-      o.arc(x, 24 - (i === 1 ? 2 : 0), 3.2, 0, TAU);
+      o.arc(x, y + 14, 6, 0, TAU);
+      inkPath(o, col, '#5a3a06', 2.5);
+      o.fillStyle = 'rgba(255,255,255,0.7)';
+      o.beginPath();
+      o.arc(x - 2, y + 12, 2, 0, TAU);
       o.fill();
     });
   } else if (d === 'halo') {
+    o.shadowColor = 'rgba(255,240,150,0.9)';
+    o.shadowBlur = 16;
+    o.lineWidth = 11;
     o.strokeStyle = '#ffe066';
-    o.lineWidth = 5;
-    o.shadowColor = '#fff3a0';
-    o.shadowBlur = 8;
     o.beginPath();
-    o.ellipse(64, 12, 26, 7, 0, 0, TAU);
+    o.ellipse(128, 26, 54, 14, 0, 0, TAU);
+    o.stroke();
+    o.shadowBlur = 0;
+    o.lineWidth = 4;
+    o.strokeStyle = '#fff8d0';
+    o.beginPath();
+    o.ellipse(128, 24, 54, 13, 0, Math.PI * 1.1, Math.PI * 1.9);
     o.stroke();
   } else if (d === 'party') {
-    o.fillStyle = '#ff5fa2';
-    o.strokeStyle = '#7a1f4a';
-    o.lineWidth = 2;
+    const g = o.createLinearGradient(140, 70, 200, 0);
+    g.addColorStop(0, '#ff5fa2');
+    g.addColorStop(1, '#ff8fc0');
     o.beginPath();
-    o.moveTo(70, 30);
-    o.lineTo(96, 0);
-    o.lineTo(104, 36);
+    o.moveTo(136, 70);
+    o.lineTo(190, 0);
+    o.lineTo(212, 80);
     o.closePath();
-    o.fill();
-    o.stroke();
+    inkPath(o, g, '#5a1a3a', 4);
+    o.save();
+    o.clip();
     o.strokeStyle = '#ffe066';
-    o.lineWidth = 3;
-    o.beginPath();
-    o.moveTo(80, 22);
-    o.lineTo(99, 18);
-    o.moveTo(76, 30);
-    o.lineTo(102, 28);
-    o.stroke();
-    o.fillStyle = '#6be3ff';
-    o.beginPath();
-    o.arc(96, 2, 5, 0, TAU);
-    o.fill();
-  } else if (d === 'shades') {
-    o.fillStyle = '#15161c';
-    o.strokeStyle = '#15161c';
-    o.lineWidth = 3;
-    o.beginPath();
-    o.roundRect ? o.roundRect(40, 50, 21, 13, 5) : o.rect(40, 50, 21, 13);
-    o.roundRect ? o.roundRect(67, 50, 21, 13, 5) : o.rect(67, 50, 21, 13);
-    o.fill();
-    o.beginPath();
-    o.moveTo(60, 54);
-    o.lineTo(68, 54);
-    o.stroke();
-    o.fillStyle = 'rgba(255,255,255,.45)';
-    o.fillRect(44, 52, 6, 3);
-    o.fillRect(71, 52, 6, 3);
-  } else if (d === 'flower') {
-    const fl = (x, y, s, c) => {
-      o.fillStyle = c;
-      for (let k = 0; k < 5; k++) {
-        o.beginPath();
-        o.arc(x + Math.cos((k / 5) * TAU) * s, y + Math.sin((k / 5) * TAU) * s, s * 0.8, 0, TAU);
-        o.fill();
-      }
-      o.fillStyle = '#f4c64f';
+    o.lineWidth = 8;
+    for (let i = 0; i < 4; i++) {
       o.beginPath();
-      o.arc(x, y, s * 0.7, 0, TAU);
+      o.moveTo(120, 30 + i * 18);
+      o.lineTo(230, 12 + i * 18);
+      o.stroke();
+    }
+    o.restore();
+    o.beginPath();
+    o.arc(190, 2, 11, 0, TAU);
+    inkPath(o, '#6be3ff', '#1b1430', 3);
+  } else if (d === 'shades') {
+    // sunglasses on the face (the head looks a little to the right)
+    const lens = (x, y, w, h) => {
+      o.beginPath();
+      o.roundRect ? o.roundRect(x, y, w, h, 10) : o.rect(x, y, w, h);
+      const g = o.createLinearGradient(x, y, x + w, y + h);
+      g.addColorStop(0, '#2a2d3a');
+      g.addColorStop(0.5, '#0f1016');
+      g.addColorStop(1, '#2a2d3a');
+      inkPath(o, g, '#0a0a10', 3);
+      o.fillStyle = 'rgba(255,255,255,0.5)';
+      o.beginPath();
+      o.roundRect ? o.roundRect(x + 7, y + 5, w * 0.35, 7, 3) : o.rect(x + 7, y + 5, w * 0.35, 7);
       o.fill();
     };
-    fl(36, 26, 7, '#ffffff');
-    fl(54, 16, 6, '#ff8fb8');
-    fl(74, 16, 6, '#ffffff');
-    fl(92, 26, 7, '#ff8fb8');
-  } else if (d === 'medal') {
-    o.fillStyle = '#d0213a';
+    lens(78, 122, 46, 30);
+    lens(140, 120, 50, 30);
+    o.strokeStyle = '#0a0a10';
+    o.lineWidth = 5;
+    o.lineCap = 'round';
     o.beginPath();
-    o.moveTo(56, 96);
-    o.lineTo(64, 112);
-    o.lineTo(72, 96);
-    o.closePath();
-    o.fill();
-    o.fillStyle = '#f6cc63';
-    o.strokeStyle = '#8a5a00';
-    o.lineWidth = 2;
-    o.beginPath();
-    o.arc(64, 112, 10, 0, TAU);
-    o.fill();
+    o.moveTo(124, 134);
+    o.lineTo(140, 133);
+    o.moveTo(78, 132);
+    o.lineTo(64, 138);
     o.stroke();
+  } else if (d === 'flower') {
+    // a wreath over the hair: leaves behind, blossoms in front
+    o.strokeStyle = '#3f8f2e';
+    o.lineWidth = 7;
+    o.lineCap = 'round';
+    o.beginPath();
+    o.moveTo(56, 70);
+    o.quadraticCurveTo(128, 10, 200, 70);
+    o.stroke();
+    const leaf = (x, y, a) => {
+      o.save();
+      o.translate(x, y);
+      o.rotate(a);
+      o.beginPath();
+      o.ellipse(0, 0, 13, 6, 0, 0, TAU);
+      inkPath(o, '#5fae3e', '#2d6e1f', 2.5);
+      o.restore();
+    };
+    leaf(70, 54, -0.9);
+    leaf(110, 28, -0.3);
+    leaf(150, 28, 0.3);
+    leaf(190, 54, 0.9);
+    const fl = (x, y, s, c1, c2) => {
+      for (let k = 0; k < 6; k++) {
+        o.beginPath();
+        o.arc(x + Math.cos((k / 6) * TAU) * s, y + Math.sin((k / 6) * TAU) * s, s * 0.78, 0, TAU);
+        inkPath(o, c1, c2, 2.5);
+      }
+      o.beginPath();
+      o.arc(x, y, s * 0.72, 0, TAU);
+      inkPath(o, '#f4c64f', '#a06b00', 2.5);
+    };
+    fl(62, 62, 10, '#ffffff', '#b58cc9');
+    fl(96, 38, 11, '#ff8fb8', '#9a2f62');
+    fl(128, 26, 12, '#ffffff', '#b58cc9');
+    fl(160, 38, 11, '#ff8fb8', '#9a2f62');
+    fl(194, 62, 10, '#ffffff', '#b58cc9');
+  } else if (d === 'medal') {
+    o.translate(58, -6); // pinned at the lower right, not over the face
+    o.beginPath();
+    o.moveTo(100, 160);
+    o.lineTo(128, 214);
+    o.lineTo(156, 160);
+    o.lineTo(144, 160);
+    o.lineTo(128, 190);
+    o.lineTo(112, 160);
+    o.closePath();
+    inkPath(o, '#d0213a', '#5a1020', 3);
+    const g = o.createRadialGradient(120, 200, 4, 128, 212, 30);
+    g.addColorStop(0, '#fff0a8');
+    g.addColorStop(0.7, '#f6cc63');
+    g.addColorStop(1, '#c98a12');
+    o.beginPath();
+    o.arc(128, 212, 26, 0, TAU);
+    inkPath(o, g, '#5a3a06', 4);
+    o.beginPath();
+    for (let k = 0; k < 10; k++) {
+      const a = -Math.PI / 2 + (k / 10) * TAU,
+        rr = k % 2 ? 6 : 14;
+      o.lineTo(128 + Math.cos(a) * rr, 212 + Math.sin(a) * rr);
+    }
+    o.closePath();
+    inkPath(o, '#c98a12', '#5a3a06', 2);
   }
   o.restore();
 }

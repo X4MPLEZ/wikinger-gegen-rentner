@@ -35,9 +35,19 @@ with sync_playwright() as p:
       const hpB = e2.hp; G.rolls = [{ id:2, x:e2.x - 3, z:e2.z, dx:1, dz:0, v:8, t:0, ang:0, team:0, hits:0 }]; let d2 = 0;
       for (let i = 0; i < 30; i++) { G.teams[1].posIn = { id:e2.id, x:e2.x, z:e2.z, y:0, a:0, s:0, pad:0, air:0 }; W.step(G); if (e2.down > 0) d2++; }
       out.boulder = { firstDown:d1, secondDown:d2, secondDmg:Math.round(hpB - e2.hp) };
+      // 4) the Viking throw: the hurled enemy bowls through his friends but never floors the thrower standing right behind him
+      let selfDown = 0, thrown = 0;
+      for (let trial = 0; trial < 30; trial++) { G.units.length = 0; G.teams[1].pos = null;
+        const yaw = trial * 0.7, v = mk(G, 0, 0, spot.x, spot.z); W.applyCmd(G, 0, { t:'poss', id:v.id }); W.step(G); v.yaw = yaw; v.down = 0;
+        for (let i = 0; i < 3; i++) { const d = 0.9 + i * 0.9; mk(G, 1, 2, spot.x + Math.sin(yaw) * d, spot.z + Math.cos(yaw) * d); }
+        v.spcd = 0; W.possSpecial(G, v, new Map(G.units.map(u => [u.id, u])));
+        if (G.units.some(u => u.team === 1 && u.air)) thrown++;
+        for (let t = 0; t < 60; t++) { W.step(G); if (v.down > 0 || v.air) { selfDown++; break; } } }
+      out.throw = { selfDown, thrown };
       return out; }""")
     print(json.dumps(r, indent=1)); print('ERRS', errs[:5]); b.close()
     ok = (r['possessed'] and r['ai'] is False and not r['aiDown'] and r['hz1'] is True and r['hz2'] is False and r['egoSrc'] is True and r['hz3'] is True
           and r['chargeEgo']['downTicks'] == 0 and r['chargeEgo']['hits'] > 0 and r['chargeAi']['downTicks'] > 0
-          and r['boulder']['firstDown'] > 0 and r['boulder']['secondDown'] == 0 and 0 < r['boulder']['secondDmg'] <= 30 and not errs)
+          and r['boulder']['firstDown'] > 0 and r['boulder']['secondDown'] == 0 and 0 < r['boulder']['secondDmg'] <= 30
+          and r['throw']['selfDown'] == 0 and r['throw']['thrown'] >= 25 and not errs)
     print('KNOCK', 'OK' if ok else 'FAIL')

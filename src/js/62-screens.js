@@ -246,9 +246,9 @@ $$('.sic').forEach(e => {
     can = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled),
     isFs = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
   const icoIn =
-      '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="#f3efe6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
+      '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
     icoOut =
-      '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="#f3efe6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+      '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
   const sync = () =>
     $$('.fsBtn').forEach(b => {
       b.hidden = !can || !!window.WVR_PORTAL; // portals bring their own fullscreen button (CrazyGames forbids a second one)
