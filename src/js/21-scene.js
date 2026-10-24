@@ -56,11 +56,26 @@ const SKY = (() => {
 })();
 scene.background = SKY;
 const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
+/* Every sprite is remembered: with the post effects of "Sehr hoch" (83-post.js) the sprites drawn without depth test (floating words,
+   speech bubbles, badges, bars) are drawn after the depth of field, sharp on top, instead of being blurred with the scene. */
+const SPRITES = new Set();
+THREE.Sprite = (S => {
+  const W = function (m) {
+    const sp = new S(m);
+    SPRITES.add(sp);
+    return sp;
+  };
+  W.prototype = S.prototype;
+  return W;
+})(THREE.Sprite);
 scene.fog = new THREE.Fog(lin(0xd7e8ef), 140, 340);
 const camera = new THREE.PerspectiveCamera(46, 1, 0.3, 600);
+camera.layers.enable(1); // layer 1: overlay sprites (see SPRITES)
 scene.add(new THREE.HemisphereLight(lin(0xbfd8ff), lin(0x6e7a62), 0.72));
+scene.children[scene.children.length - 1].layers.enable(1); // lights on both layers: the overlay pass keeps the same light setup
 const sun = new THREE.DirectionalLight(lin(0xffe2b8), 1.3);
 sun.castShadow = true;
+sun.layers.enable(1);
 sun.shadow.mapSize.set(COARSE ? 1024 : 2048, COARSE ? 1024 : 2048);
 Object.assign(sun.shadow.camera, { left: -38, right: 38, top: 38, bottom: -38, near: 1, far: 160 });
 sun.shadow.bias = -0.0003;
@@ -154,7 +169,7 @@ THREE.MeshLambertMaterial = (Lam =>
   })(THREE.MeshLambertMaterial); // every Lambert in the file becomes toon-lit (smooth ramp)
 /* Figure shading (units and their faces): a soft sheen where the sun hits (respects shadows: it is summed inside the light loop) and a
    cool rim light on the silhouette, brighter on top. Strength comes from uniforms, so the graphics tiers switch it without recompiling. */
-const FIG = { k: { value: 1 }, rim: { value: 0.55 }, shine: { value: 0.24 } };
+const FIG = { k: { value: 1 }, rim: { value: 0.55 }, shine: { value: 0.13 } };
 function figInject(sh) {
   sh.uniforms.figK = FIG.k;
   sh.uniforms.figRim = FIG.rim;
@@ -169,7 +184,7 @@ function figInject(sh) {
         )
         .replace(
           'reflectedLight.directDiffuse += irradiance',
-          'figSpec += directLight.color * pow( max( dot( geometry.normal, normalize( directLight.direction + geometry.viewDir ) ), 0.0 ), 22.0 );\n\treflectedLight.directDiffuse += irradiance'
+          'figSpec += directLight.color * pow( max( dot( geometry.normal, normalize( directLight.direction + geometry.viewDir ) ), 0.0 ), 9.0 );\n\treflectedLight.directDiffuse += irradiance'
         )
     )
     .replace(
@@ -283,7 +298,18 @@ INK.onBeforeCompile = sh => {
   sh.uniforms.inkW = INK_W;
   sh.vertexShader = sh.vertexShader
     .replace('#include <common>', '#include <common>\nvarying float vInkD;\nuniform float inkW;')
-    .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += normalize(normal) * inkW;')
+    .replace(
+      '#include <begin_vertex>',
+      // thinner up close: an outline of fixed world width gets fat and ragged right in front of the camera (the own warrior's head in
+      // the ego view: horns, rivets, cap edge); from ~9 m on it keeps its full width
+      `#include <begin_vertex>
+#ifdef USE_INSTANCING
+vec4 inkP = modelViewMatrix * instanceMatrix * vec4(transformed, 1.0);
+#else
+vec4 inkP = modelViewMatrix * vec4(transformed, 1.0);
+#endif
+transformed += normalize(normal) * inkW * clamp(-inkP.z / 9.0, 0.15, 1.0);`
+    )
     .replace('#include <project_vertex>', '#include <project_vertex>\nvInkD = -mvPosition.z;');
   sh.fragmentShader = sh.fragmentShader
     .replace('#include <common>', '#include <common>\nvarying float vInkD;')

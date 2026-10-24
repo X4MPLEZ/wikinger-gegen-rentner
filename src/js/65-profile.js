@@ -388,6 +388,8 @@ function profBlank() {
     days: [],
     daily: '',
     dq: null,
+    sL: 1, // the highest level whose reward the player has seen on the Ruhmespfad
+    sA: 0, // how many achievements he has seen
     st: profStatsBlank(),
   };
 }
@@ -426,6 +428,7 @@ function profClean(d) {
   P.gems = int(d.gems, 0, 1e6, 0);
   P.lvC = int(d.lvC, 1, LEVEL_MAX, 1);
   P.mC = int(d.mC, 0, 1e6, 0);
+  P.sL = int(d.sL, 1, LEVEL_MAX, P.lvC); // older saves: everything up to now counts as seen
   if (d.own && typeof d.own === 'object') for (const k in d.own) if (AV_BY[k] || SKINS[k]) P.own[k] = 1;
   if (d.ach && typeof d.ach === 'object') for (const k in d.ach) if (ACH_BY[k]) P.ach[k] = int(d.ach[k], 0, 1e13, 1);
   if (d.sk && typeof d.sk === 'object')
@@ -450,6 +453,7 @@ function profClean(d) {
       c: [0, 1, 2].map(i => ((q.c || [])[i] ? 1 : 0)),
       b: q.b ? 1 : 0,
     };
+  P.sA = int(d.sA, 0, 999, Object.keys(P.ach).length);
   const s = d.st && typeof d.st === 'object' ? d.st : {};
   for (const k in P.st) {
     if (typeof P.st[k] === 'number') P.st[k] = int(s[k], 0, 1e9, 0);
@@ -542,6 +546,20 @@ function profClaimLevels(out) {
     PLAYER.gems += 30 * (lv.master - PLAYER.mC);
     PLAYER.mC = lv.master;
   }
+}
+/* News: what the red number on the menu chip counts. Level rewards reached but not yet looked at on the Ruhmespfad, and new
+   achievements not yet looked at. Looking at the tab clears them (profSeen). */
+function profNews() {
+  let lv = 0;
+  for (let i = PLAYER.sL + 1; i <= Math.min(PLAYER.lvC, LEVEL_MAX); i++) if (LEVEL_REWARDS[i]) lv++;
+  const ach = Math.max(0, Object.keys(PLAYER.ach).length - PLAYER.sA);
+  return { lv, ach, n: lv + ach };
+}
+function profSeen(tab) {
+  const n0 = PLAYER.sL + ',' + PLAYER.sA;
+  if (tab === 'path') PLAYER.sL = Math.max(PLAYER.sL, Math.min(PLAYER.lvC, LEVEL_MAX));
+  if (tab === 'ach') PLAYER.sA = Object.keys(PLAYER.ach).length;
+  if (PLAYER.sL + ',' + PLAYER.sA !== n0) profSave();
 }
 // today's three quests (a new set every day, picked from the date)
 function dqToday() {
@@ -707,17 +725,33 @@ function setSkins(facs, ids) {
   });
 }
 /* Profile pictures: the unit head (rendered once per kind, headRaw in 26-icons-effects.js) on its background, with the decoration. */
-const AV_URL = {};
+const AV_URL = {},
+  AV_IMG = {};
 function avatarURL(id) {
+  if (!AV_BY[id]) id = AVATARS[0].id;
+  if (AV_PIC[id]) return AV_PIC[id]; // the hand-made picture (65a-avatar-pics.js)
   if (AV_URL[id]) return AV_URL[id];
   const [c, ok] = avatarCanvas(id),
     url = c.toDataURL();
   if (ok) AV_URL[id] = url;
   return url;
 }
-// [canvas 256 px, rendered completely]. A badge: ink ring, coloured rim with a highlight, halftone backdrop, the unit's head large,
-// its decoration drawn with gradients and ink outlines (the same comic-pop language as the buttons).
+// [canvas 256 px, ready]: the hand-made picture on a canvas (ready once the image has decoded; callers try again until then)
 function avatarCanvas(id) {
+  if (!AV_BY[id]) id = AVATARS[0].id;
+  if (!AV_PIC[id]) return avatarDrawn(id);
+  let im = AV_IMG[id];
+  if (!im) {
+    im = AV_IMG[id] = new Image();
+    im.src = AV_PIC[id];
+  }
+  const c = cnv(256, 256);
+  if (!im.complete || !im.naturalWidth) return [c, false];
+  c.getContext('2d').drawImage(im, 0, 0, 256, 256);
+  return [c, true];
+}
+// the drawn badge (fallback for a picture without artwork): ink ring, coloured rim, halftone backdrop, the unit's 3D head, decoration
+function avatarDrawn(id) {
   const A = AV_BY[id] || AVATARS[0],
     S = 256,
     C = S / 2,

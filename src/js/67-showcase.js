@@ -40,7 +40,7 @@ function showInit() {
     } catch (_) {}
   });
   cv.addEventListener('pointermove', e => {
-    if (SHOW.drag && SHOW.drag.id === e.pointerId) SHOW.yaw = SHOW.drag.yaw + (e.clientX - SHOW.drag.x) * 0.012;
+    if (SHOW.drag && SHOW.drag.id === e.pointerId && !SHOW.dragOff) SHOW.yaw = SHOW.drag.yaw + (e.clientX - SHOW.drag.x) * 0.012;
   });
   const up = () => (SHOW.drag = null);
   cv.addEventListener('pointerup', up);
@@ -128,7 +128,7 @@ function showTick(dt) {
   const w = h.clientWidth,
     hh = h.clientHeight;
   if (!w || !hh) return;
-  if (!SHOW.drag) SHOW.yaw += st * 0.45;
+  if (!SHOW.drag || SHOW.dragOff) SHOW.yaw += st * 0.45;
   SHOW.units.forEach((u, i) => {
     u.atkT = (clock * 0.7 + i * 0.9) % 3;
     animateRig(u, Math.min(st, 0.1), false, false);

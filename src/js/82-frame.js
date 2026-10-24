@@ -193,12 +193,13 @@ function frame() {
         }
       }
       projPut(p.m);
-      const c = p.kind === 'cake';
-      emitFX('explosion', p.to.x, p.to.y - 0.6, p.to.z, { col: c ? 0xf6b8d0 : 0xb9ad9a, n: 18, size: 1.3 });
-      emitFX('land', p.to.x, p.to.y - 0.8, p.to.z, { col: c ? 0xffffff : 0x8a7a66, n: 8, size: 1.4 });
-      word(c ? TR('SPLATSCH!') : TR('KRAWUMM!'), p.to.x, p.to.y + 2, p.to.z, { color: c ? '#ffd6e6' : '#ffb35c', scale: 1.3 });
+      const icy = MAP && MAP.ice && onIce(p.to.x, p.to.z),
+        c = p.kind === 'cake' && !icy; // on ice no cream: ice shards, and the hole tells the rest (70-world-view)
+      emitFX('explosion', p.to.x, p.to.y - 0.6, p.to.z, { col: icy ? 0xcff4ff : c ? 0xf6b8d0 : 0xb9ad9a, n: 18, size: 1.3 });
+      emitFX('land', p.to.x, p.to.y - 0.8, p.to.z, { col: icy ? 0xe8fbff : c ? 0xffffff : 0x8a7a66, n: 8, size: 1.4 });
+      if (!icy) word(c ? TR('SPLATSCH!') : TR('KRAWUMM!'), p.to.x, p.to.y + 2, p.to.z, { color: c ? '#ffd6e6' : '#ffb35c', scale: 1.3 });
       SFX.play(c ? 'splat' : 'crash', { x: p.to.x, z: p.to.z, vol: 1 });
-      aoeRing(p.to.x, p.to.z, 4.2 * (p.sal ? 0.8 : 1.1), c ? 0xff8fc0 : 0xffa040);
+      aoeRing(p.to.x, p.to.z, 4.2 * (p.sal ? 0.8 : 1.1), icy ? 0x9be7ff : c ? 0xff8fc0 : 0xffa040);
       fx.projs.splice(i, 1);
       continue;
     }

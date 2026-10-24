@@ -5386,3 +5386,107 @@ details.help ul {
 .gfx-lite .ppage {
   background: rgba(35, 28, 69, 0.92);
 }
+/* Ruhmespfad: arrows and a slide when swiping from one reward to the next; "NEU" marks and the dot on a tab with news */
+.bpshow {
+  touch-action: pan-y;
+}
+.bpnav {
+  position: absolute;
+  top: 50%;
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  margin-top: -20px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--paper-2);
+  border: 3px solid var(--ink2);
+  box-shadow: 3px 3px 0 var(--ink2);
+  color: var(--tink);
+}
+.bpnav svg {
+  width: 20px;
+  height: 20px;
+}
+.bpnav.prev {
+  left: 8px;
+}
+.bpnav.next {
+  right: 8px;
+}
+.bpnav:disabled {
+  opacity: 0.3;
+}
+.bpnav:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--ink2);
+}
+.bpshow .bpinfo {
+  padding-right: 54px;
+}
+@media (max-width: 460px) {
+  .bpshow .bpinfo {
+    padding: 0 54px 14px;
+  }
+  .bpnav {
+    top: 105px;
+  }
+}
+.bpshow.in-r .bpstage,
+.bpshow.in-r .bpinfo {
+  animation: bpInR 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+.bpshow.in-l .bpstage,
+.bpshow.in-l .bpinfo {
+  animation: bpInL 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes bpInR {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+@keyframes bpInL {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+}
+.bpnew {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-4deg);
+  z-index: 2;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--pink);
+  color: #fff;
+  border: 2px solid var(--ink2);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.ach {
+  position: relative;
+}
+.ach .bpnew {
+  left: auto;
+  right: 8px;
+  transform: rotate(3deg);
+}
+.ptabs button.nw::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 2px solid var(--ink2);
+}

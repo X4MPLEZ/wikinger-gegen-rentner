@@ -97,6 +97,18 @@ function setFaceMat(team, crop) {
     FACE.badge[team] = new THREE.SpriteMaterial({ map: ctex(c), depthTest: false, transparent: true });
   }
 }
+// online without a photo: the opponent's profile picture becomes the face on his big ego head (the inner disc of the badge, without
+// its rim), so you still see who you fight; null while the picture is not decoded yet
+function avatarFaceCrop(id) {
+  const [a, ok] = avatarCanvas(id);
+  if (!ok) return null;
+  const S = 256,
+    c = cnv(S, S),
+    x = c.getContext('2d'),
+    m = a.width * 0.12; // the rim of the badge stays outside
+  x.drawImage(a, m, m, a.width - 2 * m, a.height - 2 * m, 0, 0, S, S);
+  return c;
+}
 // online without a photo: the opponent's profile picture is the badge over his steered warrior (in the team colour ring)
 const AV_BADGE = { key: '', mat: null };
 function oppBadge(team) {

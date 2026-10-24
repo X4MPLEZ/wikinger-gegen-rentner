@@ -44,10 +44,25 @@ with sync_playwright() as p:
         if (G.units.some(u => u.team === 1 && u.air)) thrown++;
         for (let t = 0; t < 60; t++) { W.step(G); if (v.down > 0 || v.air) { selfDown++; break; } } }
       out.throw = { selfDown, thrown };
+      // 5) the rider's ram: he keeps galloping after his victims (the E-Mobil dash ends before they land); they must never floor him
+      out.ram = {};
+      for (const k of [4, 5]) { let down = 0, hitN = 0; const team = k === 4 ? 0 : 1, foe = 1 - team;
+        for (let trial = 0; trial < 16; trial++) { G.units.length = 0; G.teams[0].pos = G.teams[1].pos = null;
+          const yaw = trial * 0.9, v = mk(G, team, k, spot.x, spot.z); W.applyCmd(G, team, { t:'poss', id:v.id }); W.step(G); v.yaw = yaw; v.down = 0;
+          for (let i = 0; i < 4; i++) { const d = 2.5 + i * 1.3, s = i % 2 ? 0.6 : -0.6; mk(G, foe, foe === 0 ? 0 : 2, spot.x + Math.sin(yaw) * d + Math.cos(yaw) * s, spot.z + Math.cos(yaw) * d - Math.sin(yaw) * s); }
+          v.spcd = 0; W.possSpecial(G, v, new Map(G.units.map(u => [u.id, u])));
+          let x = v.x, z = v.z, n = 0;
+          for (let t = 0; t < 70; t++) { const sp = t < 10 ? 26 : 7, nx = x + Math.sin(yaw) * sp * 0.05, nz = z + Math.cos(yaw) * sp * 0.05;
+            if (W.walkable(nx, nz)) { x = nx; z = nz; }
+            G.teams[team].posIn = { id:v.id, n:++n, x, z, y:yaw, a:0, s:1, j:0, g:0, h:0, pad:0, air:0, flying:false };
+            W.step(G); if (t === 12 && G.units.some(u => u.team === foe && (u.down > 0 || u.air))) hitN++;
+            if (v.down > 0 || (v.air && v.air.kind === 'impact')) { down++; break; } } }
+        out.ram[k] = { down, hitN }; }
       return out; }""")
     print(json.dumps(r, indent=1)); print('ERRS', errs[:5]); b.close()
     ok = (r['possessed'] and r['ai'] is False and not r['aiDown'] and r['hz1'] is True and r['hz2'] is False and r['egoSrc'] is True and r['hz3'] is True
           and r['chargeEgo']['downTicks'] == 0 and r['chargeEgo']['hits'] > 0 and r['chargeAi']['downTicks'] > 0
           and r['boulder']['firstDown'] > 0 and r['boulder']['secondDown'] == 0 and 0 < r['boulder']['secondDmg'] <= 30
-          and r['throw']['selfDown'] == 0 and r['throw']['thrown'] >= 25 and not errs)
+          and r['throw']['selfDown'] == 0 and r['throw']['thrown'] >= 25
+          and all(r['ram'][k]['down'] == 0 for k in ('4', '5')) and r['ram']['5']['hitN'] >= 12 and not errs)
     print('KNOCK', 'OK' if ok else 'FAIL')

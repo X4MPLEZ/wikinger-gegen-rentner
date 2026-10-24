@@ -923,6 +923,7 @@ function step(G) {
       }
       const eb = BASES[1 - p.team];
       if (baseGap(eb, p.tx, p.tz) < p.aoe) hit(G, -2, p.dmg, p.team, byId, p.k);
+      const icyHit = sg && MAP.ice && onIce(p.tx, p.tz); // measured before the impact opens a hole there
       if (sg && MAP.ice) iceImpact(G, p.tx, p.tz, clamp(p.aoe * 0.48, 1.4, 2.4), p.team);
       if (sg) {
         const K = KINDS[p.k],
@@ -931,7 +932,7 @@ function step(G) {
           ddx = p.tx - sx,
           ddz = p.tz - sz,
           dl = Math.hypot(ddx, ddz) || 1; // the shot's direction decides where the rock rolls on
-        if (K.proj === 'boulder' && walkable(p.tx, p.tz) && !(MAP.ice && onIce(p.tx, p.tz)))
+        if (K.proj === 'boulder' && walkable(p.tx, p.tz) && !icyHit)
           G.rolls.push({
             id: (G.rollId = (G.rollId + 1) % 1000),
             x: p.tx,
@@ -944,7 +945,8 @@ function step(G) {
             team: p.team,
             hits: 0,
           });
-        else if (K.proj === 'cake')
+        else if (K.proj === 'cake' && !icyHit)
+          // on ice the cake leaves no cream: everyone shall see the ice break
           G.goo.push({ id: (G.gooId = (G.gooId + 1) % 1000), x: p.tx, z: p.tz, r: 3.6, t: 9, t0: 9, team: p.team });
       }
     } else hit(G, p.tgt, p.dmg, p.team, byId, p.k, p.bp);

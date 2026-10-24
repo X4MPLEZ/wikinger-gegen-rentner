@@ -1281,7 +1281,7 @@ function ramTick(G, u, byId) {
       continue;
     }
     hit(G, e.id, (KINDS[e.k].role === 'ranged' ? KINDS[e.k].hp * 0.6 : 45) * pk(G, u.team, 'ram', [1, 2]), u.team, byId, -1, true);
-    ramImpulse(e, L.fx, L.fz, lat, 9.5 * pk(G, u.team, 'ram', [1, 4]));
+    if (ramImpulse(e, L.fx, L.fz, lat, 9.5 * pk(G, u.team, 'ram', [1, 4])) && e.air) e.air.by = u.id; // the rider gallops after his victims: they never floor him
   }
   if (!Q.length) {
     if (G.st) G.st[u.team].rams += u.ramN;

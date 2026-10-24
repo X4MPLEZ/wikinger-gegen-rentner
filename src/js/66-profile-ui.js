@@ -9,12 +9,12 @@ function profChipUi() {
   $('#pcLv').textContent = TR('Lv {0}', lv.L);
   $('#pcBar').style.width = Math.round((lv.x / lv.need) * 100) + '%';
   $('#pcGems').textContent = GOD.on ? '∞' : PLAYER.gems;
-  const Q = dqToday(),
-    open = Q.c.filter(c => !c).length;
-  const qb = $('#pcQuest');
+  // the red number: only for things waiting to be looked at (new level rewards, new achievements), never for open quests
+  const nw = profNews().n,
+    qb = $('#pcQuest');
   if (qb) {
-    qb.textContent = open;
-    qb.hidden = !open;
+    qb.textContent = nw;
+    qb.hidden = !nw;
   }
 }
 const PUI = { tab: 'path', xfer: null, replace: false, sel: null, fac: null, sheet: null, taps: 0, tapT: 0 };
@@ -28,6 +28,7 @@ function profMsg(t) {
 function profOpen(tab) {
   PUI.tab = tab || PUI.tab;
   PUI.sel = null;
+  PUI.newFrom = PUI.newAch = undefined;
   profSheet(null);
   showScreen('profScr');
   profUi();
@@ -42,6 +43,15 @@ function profUi() {
   $('#pXp').textContent = TR('{0} / {1} EP', lv.x, lv.need);
   $('#pGems').textContent = GOD.on ? '∞' : PLAYER.gems;
   $$('.ptabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === PUI.tab)));
+  {
+    // what is new: a dot on the tab, "NEU" on the level nodes (kept for this visit, cleared from the count right away)
+    const nw = profNews();
+    if (PUI.tab === 'path' && PUI.newFrom === undefined) PUI.newFrom = PLAYER.sL;
+    $('.ptabs [data-tab="path"]').classList.toggle('nw', nw.lv > 0 && PUI.tab !== 'path');
+    $('.ptabs [data-tab="ach"]').classList.toggle('nw', nw.ach > 0 && PUI.tab !== 'ach');
+    if (PUI.tab === 'ach' && PUI.newAch === undefined) PUI.newAch = PLAYER.sA;
+    profSeen(PUI.tab);
+  }
   godBar();
   const box = $('#pBody'),
     keepScroll = box.dataset.tab === PUI.tab ? box.scrollTop : 0;
@@ -116,7 +126,11 @@ function bpNext(L) {
 function profTabPath(box) {
   const lv = lvOf(PLAYER.xp),
     L = lv.L;
-  if (!PUI.sel) PUI.sel = L >= LEVEL_MAX ? LEVEL_MAX : bpNext(L);
+  if (!PUI.sel) {
+    let first = 0; // a new reward waiting: show it first
+    for (let i = (PUI.newFrom || L) + 1; i <= L && !first; i++) if (LEVEL_REWARDS[i]) first = i;
+    PUI.sel = first || (L >= LEVEL_MAX ? LEVEL_MAX : bpNext(L));
+  }
   const sel = PUI.sel,
     r = LEVEL_REWARDS[sel];
   const bp = mkEl('div', 'bp');
@@ -168,6 +182,50 @@ function profTabPath(box) {
   } else {
     showMount(stage, { fac: myFacPref(), skin: PLAYER.sk[myFacPref()] });
   }
+  // swipe across the stage (or the arrows, or ← →) to go from one reward to the next: no need to tap each node
+  {
+    const steps = [];
+    for (let i = 1; i <= LEVEL_MAX; i++) if (LEVEL_REWARDS[i]) steps.push(i);
+    const go = d => {
+      let k = steps.indexOf(sel);
+      if (k < 0) k = d > 0 ? steps.findIndex(i => i > sel) - 1 : steps.findIndex(i => i >= sel);
+      const nx = steps[clamp(k + d, 0, steps.length - 1)];
+      if (nx === undefined || nx === sel) return;
+      SFX.play('click');
+      PUI.sel = nx;
+      PUI.slide = d;
+      profUi();
+    };
+    PUI.bpGo = go;
+    const prev = mkEl('button', 'bpnav prev'),
+      next = mkEl('button', 'bpnav next');
+    prev.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    next.innerHTML =
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    prev.setAttribute('aria-label', TR('Vorherige Belohnung'));
+    next.setAttribute('aria-label', TR('Nächste Belohnung'));
+    prev.disabled = sel <= steps[0];
+    next.disabled = sel >= steps[steps.length - 1];
+    prev.addEventListener('click', e => (e.stopPropagation(), go(-1)));
+    next.addEventListener('click', e => (e.stopPropagation(), go(1)));
+    show.append(prev, next);
+    let sw = null;
+    show.addEventListener('pointerdown', e => (sw = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId }));
+    show.addEventListener('pointerup', e => {
+      if (!sw || sw.id !== e.pointerId) return;
+      const dx = e.clientX - sw.x,
+        dy = e.clientY - sw.y;
+      sw = null;
+      if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.2) go(dx < 0 ? 1 : -1);
+    });
+    show.addEventListener('pointercancel', () => (sw = null));
+    if (PUI.slide) {
+      show.classList.add(PUI.slide > 0 ? 'in-r' : 'in-l');
+      PUI.slide = 0;
+    }
+    SHOW.dragOff = true; // here a drag swipes; the preview sheet turns the model instead
+  }
   bp.appendChild(show);
   // the track
   const track = mkEl('div', 'bptrack');
@@ -192,6 +250,7 @@ function profTabPath(box) {
     else ic.textContent = '★';
     n.appendChild(ic);
     if (i <= L) n.appendChild(mkEl('span', 'bpok', '✓'));
+    if (rw && PUI.newFrom !== undefined && i > PUI.newFrom && i <= L) n.appendChild(mkEl('span', 'bpnew', TR('NEU')));
     n.addEventListener('click', () => {
       SFX.play('click');
       PUI.sel = i;
@@ -252,15 +311,20 @@ function profTabAch(box) {
   bar.appendChild(f);
   head.append(mkEl('b', '', TR('{0} von {1} Erfolgen', got, ACH.length)), bar);
   box.appendChild(head);
-  const grid = mkEl('div', 'achs');
-  for (const a of [...ACH].sort((x, y) => !!PLAYER.ach[y.id] - !!PLAYER.ach[x.id])) {
+  const grid = mkEl('div', 'achs'),
+    gotT = id => PLAYER.ach[id] || 0,
+    // newest first among the unlocked ones; the ones unlocked since the last visit get "NEU"
+    order = [...ACH].sort((x, y) => !!gotT(y.id) - !!gotT(x.id) || gotT(y.id) - gotT(x.id)),
+    nNew = Math.max(0, got - (PUI.newAch ?? got));
+  order.forEach((a, i) => {
     const t = mkEl('div', 'ach' + (PLAYER.ach[a.id] ? ' got' : ''));
+    if (i < nNew) t.appendChild(mkEl('span', 'bpnew', TR('NEU')));
     const ic = mkEl('span', 'ai');
     ic.innerHTML = si(a.ic);
     t.append(ic, mkEl('b', '', a.n), mkEl('small', '', a.d));
     t.appendChild(gemEl('+' + a.g, 'ag'));
     grid.appendChild(t);
-  }
+  });
   box.appendChild(grid);
 }
 /* ---------- collection: profile pictures and skins; a tap opens the preview ---------- */
@@ -337,6 +401,7 @@ function profSheet(o) {
     im.alt = '';
     stage.appendChild(im);
   } else {
+    SHOW.dragOff = false; // the preview: drag turns the model
     showMount(stage, { fac: it.fac, skin: id });
     stage.appendChild(mkEl('span', 'pshint', TR('Zum Drehen ziehen')));
   }
@@ -597,3 +662,11 @@ function vsCard(oppPf) {
   V.vsN = (V.vsN || 0) + 1; // (read by the tests)
   setTimeout(() => d.remove(), 3600);
 }
+// ← → on the Ruhmespfad (PC)
+addEventListener('keydown', e => {
+  if ($('#profScr').hidden || PUI.tab !== 'path' || PUI.sheet || !PUI.bpGo) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    PUI.bpGo(e.key === 'ArrowRight' ? 1 : -1);
+  }
+});

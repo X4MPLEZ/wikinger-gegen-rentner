@@ -182,8 +182,8 @@ const GTIERS = [
 const ULTRA = Object.assign({}, GTIERS[0], {
   id: 'ultra',
   name: TR('Sehr hoch'),
-  pr: 2,
-  mp: 9,
+  pr: 1.75,
+  mp: 6,
   sh: 4096,
   shR: 2,
   unitSh: 0.1,

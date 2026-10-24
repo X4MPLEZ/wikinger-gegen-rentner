@@ -427,7 +427,7 @@ async function openRoom(code, role) {
   return r;
 }
 /* open every available transport at once (direct P2P + Claude room), so devices that ended up on different ones still meet */
-const NET_VER = 45; // bump when snapshots, commands or presence change shape: two different versions refuse to play together
+const NET_VER = 46; // bump when snapshots, commands or presence change shape: two different versions refuse to play together
 async function openClaude(code, role) {
   const vr = await viewerRoom();
   if (!vr) return null;
@@ -796,6 +796,8 @@ function leaveNet() {
   }
   NET.connectAttempt = (NET.connectAttempt || 0) + 1;
   NET.inlineLobby = false;
+  NET.quitAt = NET.goneAt = 0;
+  NET.hostGone = false;
   setHostMenu(false);
   lobbyHostStop();
   foundBan(false);
@@ -883,15 +885,49 @@ function faceChunkRecv(p) {
   }
   return null;
 }
-// The other player gave up (presence quit: 1, sent by quitMatch in 62-screens.js): you win, without a rematch (he has left the room).
+/* The other player has left. Gave up (presence quit: 1, sent by quitMatch in 62-screens.js): the field freezes and a short countdown
+   runs, then you win (without a rematch: he has left the room). Gone without a word (line dropped, tab closed): he has OPP_GONE_WAIT
+   seconds to come back, the warning counts them down; then you win as well. oppLeftTick runs twice a second. */
+const OPP_QUIT_DELAY = 3,
+  OPP_GONE_WAIT = 30;
 function oppQuit() {
   if (!V.playing || V.ending) return;
   NET.gone = true;
+  if (!NET.quitAt) NET.quitAt = now() + OPP_QUIT_DELAY * 1000;
+  oppLeftTick();
+}
+function oppWin(sub) {
+  NET.gone = true;
+  NET.quitAt = NET.goneAt = 0;
+  $('#netwarn').hidden = true;
   endGame(Object.assign({}, V.latest || {}, { o: V.myTeam }));
-  $('#endSub').textContent = TR('Dein Gegner hat aufgegeben. Der Sieg gehört dir!');
+  $('#endSub').textContent = sub;
   const a = NET.connectAttempt;
   setTimeout(() => a === NET.connectAttempt && leaveNet(), 1500);
 }
+function oppLeftTick() {
+  if (!V.playing || V.ending || (V.mode !== 'host' && V.mode !== 'guest')) {
+    NET.quitAt = NET.goneAt = 0;
+    return;
+  }
+  const t = now();
+  if (NET.quitAt) {
+    const s = Math.ceil((NET.quitAt - t) / 1000);
+    if (s <= 0) return oppWin(TR('Dein Gegner hat aufgegeben. Der Sieg gehört dir!'));
+    netWarn(TR('Dein Gegner hat das Spiel verlassen. Du gewinnst in {0} s …', s));
+    return;
+  }
+  const gone = V.mode === 'host' ? NET.gone : NET.hostGone;
+  if (!gone) {
+    NET.goneAt = 0;
+    return;
+  }
+  if (!NET.goneAt) NET.goneAt = t;
+  const s = Math.ceil(OPP_GONE_WAIT - (t - NET.goneAt) / 1000);
+  if (s <= 0) return oppWin(TR('Dein Gegner ist nicht zurückgekommen. Der Sieg gehört dir!'));
+  netWarn(TR('Dein Gegner ist weg. Kommt er nicht in {0} s zurück, gewinnst du.', s));
+}
+setInterval(oppLeftTick, 500);
 const CODE_LENGTH = 4;
 function genCode() {
   const digits = new Uint8Array(CODE_LENGTH);
@@ -991,6 +1027,10 @@ async function hostOnline(pub = false) {
   }, 150);
 }
 function hostReadGuest() {
+  if (NET.quitAt) {
+    NET.gone = true; // he gave up: the field stays frozen while the countdown runs (oppLeftTick)
+    return;
+  }
   const peers = NET.r ? NET.r.peers() || [] : [];
   let g = peers.find(p => p.peer === NET.guestPeer && p.presence && p.presence.role === 'guest');
   if (!g) {
@@ -1003,7 +1043,6 @@ function hostReadGuest() {
   }
   const wasGone = NET.gone;
   NET.gone = !g;
-  if (NET.gone && !wasGone) netWarn(TR('Dein Gegner ist weg. Warte auf seine Rückkehr …'));
   if (!NET.gone && wasGone) $('#netwarn').hidden = true;
   if (!g) return;
   if (g.presence.quit) {
@@ -1173,8 +1212,9 @@ async function joinOnline(code, opt = {}) {
       const me = peers.find(p => p.isMe && p.sameTab);
       if (me) NET.myPeer = me.peer;
     }
+    NET.hostGone = !host && V.mode === 'guest' && V.playing; // counted down by oppLeftTick
     if (!host) {
-      if (V.mode === 'guest' && V.playing) netWarn(TR('Verbindung zum Gegner verloren …'));
+      if (V.mode === 'guest' && V.playing) return;
       else if (now() - NET.joinT > 35000)
         setLobbyStatus(
           TR(
@@ -1223,7 +1263,7 @@ async function joinOnline(code, opt = {}) {
       if (fp !== undefined || got) r.presence(Object.assign({ fc: fp && fp.fc ? fp.fc : null }, got || {})).catch(() => {});
     } catch (_) {}
     if (V.mode === 'guest') {
-      $('#netwarn').hidden = true;
+      if (!NET.quitAt) $('#netwarn').hidden = true;
       if (P.pk && P.pk !== NET.lastPk) {
         NET.lastPk = P.pk;
         NET.rtt = Math.max(0, now() - P.pk);

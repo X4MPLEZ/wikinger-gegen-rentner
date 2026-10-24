@@ -526,6 +526,27 @@ function tryMap(seed, noForest, force, nf = 5, seed0 = seed) {
   m.blockers = blockers;
   const walk = buildWalk(blockers);
   m.walk = walk;
+  /* Fine collision at forests, rocks, cacti and igloos. The 1.5 m grid blocks a whole cell as soon as its centre lies in a blocker, so
+     its stair-step edge reached up to a metre past the visible trees and you got stuck there. Cells that only a blocker closes (free
+     in a blocker-free grid) keep the exact circles: walkable() lets you walk right up to the trunks. Paths still use the grid. */
+  {
+    const free = buildWalk([]);
+    m.obsL = new Map();
+    const exact = blockers.map(b => ({ x: b.x, z: b.z, rc: b.f ? b.r * 0.8 : b.rk ? b.rk + 0.1 : b.r }));
+    // the outer trees of a forest each get their own trunk circle (the core circle covers the inner ones)
+    for (const f of blockers)
+      if (f.f)
+        for (const t of m.trees)
+          if ((t.x - f.x) ** 2 + (t.z - f.z) ** 2 > (f.r * 0.8 - 0.4) ** 2 && (t.x - f.x) ** 2 + (t.z - f.z) ** 2 < f.r * f.r)
+            exact.push({ x: t.x, z: t.z, rc: 0.38 * t.s });
+    for (let c = 0; c < GW * GH; c++) {
+      if (walk[c] || !free[c]) continue;
+      const x = -HALF_W + ((c % GW) + 0.5) * CELL,
+        z = -HALF_H + (((c / GW) | 0) + 0.5) * CELL,
+        L = exact.filter(e => (x - e.x) ** 2 + (z - e.z) ** 2 < (e.rc + CELL) ** 2);
+      m.obsL.set(c, L);
+    }
+  }
   buildPadLinks(m);
   const wet = new Uint8Array(GW * GH);
   for (let j = 0; j < GH; j++)
@@ -935,7 +956,12 @@ function cellCenter(c) {
 }
 function walkableIn(m, x, z) {
   const c = cellOf(x, z);
-  return c >= 0 && (m.walk[c] === 1 || (m.wet && m.wet[c] === 1));
+  if (c < 0) return false;
+  if (m.walk[c] === 1 || (m.wet && m.wet[c] === 1)) return true;
+  const L = m.obsL && m.obsL.get(c); // a cell closed only by a forest or rock: test the exact circles
+  if (!L) return false;
+  for (const e of L) if ((x - e.x) ** 2 + (z - e.z) ** 2 < e.rc * e.rc) return false;
+  return true;
 }
 function landIn(m, x, z) {
   const c = cellOf(x, z);

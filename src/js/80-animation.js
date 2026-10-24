@@ -68,7 +68,7 @@ function lerpPose(out, a, b, t) {
 const STANCE = {
   0: pose({ aL: -0.18, eL: -0.95, zL: -0.16, aR: -0.22, eR: -0.7, zR: 0.16, ln: 0.05, kL: 0.14, kR: 0.14, nx: -0.04 }), // Berserker: shield across, axe ready
   1: pose({ aL: -0.22, eL: -0.32, zL: -0.08, aR: 0.04, eR: -0.22, zR: 0.08, ln: 0.02, kL: 0.1, kR: 0.1 }), // archer: bow low
-  2: pose({ aR: -0.42, eR: -0.12, zR: 0.12, aL: 0.42, eL: -1.1, zL: 0.14, ln: 0.27, kL: 0.24, kR: 0.24, nx: -0.26 }), // Opa: hunched, cane in front, other hand on the back
+  2: pose({ aR: -0.42, eR: -0.12, zR: 0.12, aL: 0.42, eL: -1.1, zL: 0.14, ln: 0.1, kL: 0.16, kR: 0.16, nx: -0.12 }), // Opa: a little bent, cane in front, other hand on the back
   3: pose({ aL: -0.08, eL: -1.35, zL: -0.18, aR: 0.06, eR: -0.32, zR: 0.12, ln: 0.12, kL: 0.16, kR: 0.16, nx: -0.1 }), // Oma: handbag on the forearm
   4: pose({ aL: -0.95, eL: -0.5, zL: 0.05, aR: -0.5, eR: -1.05, zR: 0.15, ln: 0.08 }), // goat rider: holds a horn, axe up
   5: pose({ aL: -1.2, eL: -0.25, zL: 0.1, aR: -1.2, eR: -0.25, zR: -0.1, ln: 0.16 }), // scooter: both hands on the tiller
@@ -591,6 +591,24 @@ function humanRig(u, dt, moving, attacking) {
     if (u.weapon && k === 0) u.weapon.rotation.z = 0;
   }
   if (u.fid) look = fidgetPose(u, P, dt, look);
+  // Stockwirbel (Opa's special): the cane arm straight out to the side, the cane in line with it, the other arm out for balance
+  let spinQ = 0;
+  if (k === 2) {
+    if ((u.spin || 0) > (u.spinPrev || 0) + 0.01) u.spinMax = u.spin;
+    u.spinPrev = u.spin || 0;
+    if (u.spin > 0) spinQ = clamp(u.spin / 0.08, 0, 1) * clamp(((u.spinMax || 0.6) - u.spin) / 0.06, 0, 1);
+    if (spinQ > 0) {
+      P[Z_R] = lerp(P[Z_R], 1.5, spinQ);
+      P[A_R] = lerp(P[A_R], 0, spinQ);
+      P[E_R] = lerp(P[E_R], 0, spinQ);
+      P[Y_R] = lerp(P[Y_R], 0, spinQ);
+      P[F_R] = lerp(P[F_R], 0, spinQ);
+      P[Z_L] = lerp(P[Z_L], -1.1, spinQ);
+      P[A_L] = lerp(P[A_L], 0, spinQ);
+      P[E_L] = lerp(P[E_L], -0.2, spinQ);
+      P[LN] = lerp(P[LN], 0, spinQ);
+    }
+  }
   // apply the pose
   u.armL.rotation.set(P[A_L], P[Y_L], P[Z_L]);
   u.armR.rotation.set(P[A_R], P[Y_R], P[Z_R]);
@@ -638,8 +656,8 @@ function humanRig(u, dt, moving, attacking) {
     const wk = (1 - u.cw) * (1 - 0.8 * run),
       beta = P[A_R] + Math.min(0, P[E_R]) + P[LN],
       delta = 0.3 + 0.22 * s * mb,
-      gam = (-Math.PI / 2 - beta - delta) * wk,
-      gz = 0.65 * wk; // rotate about the grip, not the cane's end
+      gam = lerp((-Math.PI / 2 - beta - delta) * wk, -Math.PI / 2, spinQ), // spinning: the cane continues the outstretched arm
+      gz = lerp(0.65 * wk, 0.65, spinQ); // rotate about the grip, not the cane's end
     u.weapon.rotation.x = gam;
     u.weapon.position.set(0, -0.245 + gz * Math.sin(gam), 0.05 - gz * Math.cos(gam));
   }

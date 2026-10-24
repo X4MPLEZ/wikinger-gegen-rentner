@@ -95,6 +95,7 @@ Every file starts with a short header comment saying what is in it.
 | 63-tutorial | tutorial and Profi tutorial | `tutSteps`, `startTutorial`, `tutBlock` |
 | 64-lobby | public games: list „Offene Spiele“, „Schnelles Spiel“, practising while waiting | `LOBBY`, `lobbyWatch`, `lobbyValid`, `lobbyHostStart`, `quickMatch` |
 | 65-profile | the player's profile: levels (Ruhmespfad), achievements, daily quests, Juwelen, pictures, skins, statistics, transfer code, god mode | `PLAYER`, `ACH`, `DQ_POOL`, `AVATARS`, `SKINS`, `LEVEL_REWARDS`, `profMatchEnd`, `profEvent`, `setSkins`, `avatarURL`, `godSet` |
+| 65a-avatar-pics | the hand-made profile pictures (data URLs by avatar id) | `AV_PIC` |
 | 66-profile-ui | profile page (home button, Ruhmespfad track, daily quests, collection with preview sheet), menu chip, end-screen rewards, VS card | `profOpen`, `profUi`, `profSheet`, `profEndUi`, `vsCard` |
 | 67-showcase | 3D showcase in the profile: a second small renderer drawing a squad in a skin, still pictures of skins | `showMount`, `showSet`, `showTick`, `skinThumb` |
 | 70-world-view | bears, holes, pads, pickups, fog of war (client) | `updateWorld`, `itemMesh`, `fogVis`, `fogSeen`, `fogWallTick` |
@@ -156,6 +157,10 @@ Every file starts with a short header comment saying what is in it.
   the layout box, `inset: 0 3px`, or fitText shrinks labels), halftone dots (`--dots`). Paper containers (`.card`, `.ppage`, `.pscard`,
   `.tut-card`) re-scope `--text/--dim/--panel/--line`, so anything inside turns dark on light without new rules; dark islands (`.bpshow`,
   `.psstage`, `.pcard`, `.mcard`) scope them back. HUD information stays dark glass, HUD controls are paper. Icons use `currentColor`.
+- **Overlay sprites:** every `THREE.Sprite` is registered in `SPRITES` (21-scene). With the post effects, sprites without depth test
+  (words, speech bubbles, badges) go to camera layer 1 and are drawn after the depth of field; lights are on both layers.
+- **Collision at forests/rocks:** the 1.5 m grid is for paths; `walkableIn` also tests exact circles (`m.obsL`) in cells closed only by a
+  blocker, so you can walk up to the trunks. Changing it changes the simulation: bump `NET_VER`.
 - **Skins** are colour swaps plus extra pieces applied while a unit model is built: `setSkins()` fills `UNIT_SKIN[k]`, `buildUnit` →
   `buildSkinned(k, id)` sets `LAM_MAP` (so `lam(color)` returns the swapped colour) and `SKIN_NOW` (so `skinExtras()` in 25-worm-model
   adds capes, crowns, glasses …); caches of built models key on the skin. Extras must not use randomness (the low-detail model is built

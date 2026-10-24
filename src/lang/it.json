@@ -487,7 +487,6 @@
   "Testmodus: Verbindung nur zwischen zwei Tabs in diesem Browser.": "Modalità test: connessione solo tra due schede di questo browser.",
   "Dein Gegner hat eine andere Spielversion. Bitte beide Geräte neu laden.": "Il tuo avversario ha un'altra versione del gioco. Ricaricate entrambi i dispositivi.",
   "Online-Partie in {0} …": "Partita online tra {0} …",
-  "Dein Gegner ist weg. Warte auf seine Rückkehr …": "Il tuo avversario è sparito. Aspetto che torni …",
   "Dein Gegner hat den Raum verlassen.": "Il tuo avversario ha lasciato la stanza.",
   "Warte auf Gegner …": "In attesa dell'avversario …",
   "Gegner will nochmal! Noch eine Runde!": "L'avversario vuole la rivincita! Un'altra partita!",
@@ -495,7 +494,6 @@
   "Bitte gib den vierstelligen Zahlencode ein.": "Inserisci il codice di quattro cifre.",
   "Suche Spiel": "Cerco una partita",
   "Spiel gefunden, verbinde": "Partita trovata, mi collego",
-  "Verbindung zum Gegner verloren …": "Connessione con l'avversario persa …",
   "Kein Spiel mit diesem Code gefunden. Stimmt der Code? Tipp: Beide Geräte neu laden (damit beide die neueste Version haben) und neu erstellen.": "Nessuna partita trovata con questo codice. Il codice è giusto? Consiglio: ricaricate entrambi i dispositivi (così avete tutti e due l'ultima versione) e create di nuovo la partita.",
   "Dein Gegner hat eine andere Spielversion. Bitte beide Geräte neu laden (dann habt ihr beide die neueste).": "Il tuo avversario ha un'altra versione del gioco. Ricaricate entrambi i dispositivi (così avrete tutti e due l'ultima).",
   "Dieses Spiel ist schon voll.": "Questa partita è già piena.",
@@ -1002,5 +1000,11 @@
   "Aufgaben": "Missioni",
   "Sehr hoch": "Ultra",
   "Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.": "Con ombreggiatura morbida, profondità di campo e bagliore – per dispositivi potenti.",
-  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "Gli effetti richiedono WebGL 2 – questo dispositivo mostra Ultra senza di essi."
+  "Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.": "Gli effetti richiedono WebGL 2 – questo dispositivo mostra Ultra senza di essi.",
+  "Dein Gegner hat das Spiel verlassen. Du gewinnst in {0} s …": "Il tuo avversario ha lasciato la partita. Vinci tra {0} s …",
+  "Dein Gegner ist weg. Kommt er nicht in {0} s zurück, gewinnst du.": "Il tuo avversario è sparito. Se non torna entro {0} s, vinci tu.",
+  "Dein Gegner ist nicht zurückgekommen. Der Sieg gehört dir!": "Il tuo avversario non è tornato. La vittoria è tua!",
+  "NEU": "NUOVO",
+  "Vorherige Belohnung": "Ricompensa precedente",
+  "Nächste Belohnung": "Ricompensa successiva"
 }

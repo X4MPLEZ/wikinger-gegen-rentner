@@ -41,6 +41,7 @@ function bowlStep(G) {
       );
       if (fl) {
         e.bowledBy = u.id;
+        if (e.air && a.by !== undefined) e.air.by = a.by; // a chain started by a throw or a ram never comes back to floor its author
         e.kbN = ((e.kbN || 0) + 1) % 100;
       }
       const king = G.chaos && u.kbTeam !== undefined && u.kbTeam !== e.team && pkL(G, u.kbTeam, 'kegel'); // Kegelkönig

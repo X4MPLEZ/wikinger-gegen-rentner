@@ -781,33 +781,37 @@ function buildUnitRaw0(k) {
     mesh(new THREE.BoxGeometry(0.36, 0.03, 0.26), lam(0xc9b98a), 0, 1.1, 0.56, rol); // basket and rim
     // the shopping: a loaf of bread with score cuts, a bunch of spring onions, a tomato with its stem
     {
-      const loaf = new THREE.Group();
-      loaf.position.set(-0.11, 1.22, 0.5);
-      loaf.rotation.set(-1.15, 0, 0.75); // a long loaf leaning out of the basket to the left
+      // basket inside: x -0.17..0.17, y 0.9..1.1 (rim), z 0.44..0.68. The loaf stands in it and leans out to the front left
+      const loaf = new THREE.Group(),
+        la = new THREE.Vector3(-0.15, 0.95, 0.22).normalize(),
+        lb = new THREE.Vector3(-0.05, 0.93, 0.52); // its lower end, inside the basket at the back: it leans forward, away from the hands
+      loaf.position.copy(lb).addScaledVector(la, 0.16);
+      loaf.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), la);
       rol.add(loaf);
-      mesh(new THREE.SphereGeometry(0.062, 12, 9).scale(1, 0.85, 3.2), lam(0xc98a4a), 0, 0, 0, loaf); // crust
-      mesh(new THREE.SphereGeometry(0.062, 12, 9).scale(0.85, 0.66, 3.0), lam(0xe3b878), 0, 0.028, 0, loaf); // lighter top
-      [-0.12, -0.04, 0.04, 0.12].forEach(
-        z => (mesh(new THREE.BoxGeometry(0.08, 0.012, 0.016), lam(0x8a5a2b), 0, 0.053, z, loaf).rotation.y = 0.5)
+      mesh(new THREE.SphereGeometry(0.056, 12, 9).scale(1, 0.9, 3), lam(0xc98a4a), 0, 0, 0, loaf); // crust
+      mesh(new THREE.SphereGeometry(0.056, 12, 9).scale(0.86, 0.7, 2.8), lam(0xe3b878), 0, 0.022, 0, loaf); // lighter top
+      [-0.1, -0.03, 0.04, 0.11].forEach(
+        z => (mesh(new THREE.BoxGeometry(0.07, 0.012, 0.016), lam(0x8a5a2b), 0, 0.048, z, loaf).rotation.y = 0.5)
       ); // score cuts
+      // spring onions: the white bulbs stay in the basket, only the greens look out
       const on = new THREE.Group();
-      on.position.set(0.09, 1.12, 0.62);
-      on.rotation.set(-0.45, 0, -0.35);
+      on.position.set(0.1, 0.98, 0.6);
+      on.rotation.set(-0.2, 0, -0.18);
       rol.add(on);
       [
-        [-0.03, 0, 0.1],
-        [0.03, 0.01, -0.05],
-        [0, -0.02, -0.15],
+        [-0.025, 0, 0.12],
+        [0.025, 0.01, -0.04],
+        [0, -0.02, -0.14],
       ].forEach(([x, z, tilt]) => {
-        mesh(new THREE.SphereGeometry(0.028, 8, 6).scale(1, 1.25, 1), lam(0xf6f1e4), x, 0, z, on); // bulb
-        mesh(new THREE.CylinderGeometry(0.014, 0.02, 0.1, 6).translate(0, 0.07, 0), lam(0xf6f1e4), x, 0, z, on).rotation.z = tilt;
-        const st = mesh(new THREE.CylinderGeometry(0.009, 0.014, 0.22, 6).translate(0, 0.22, 0), lam(0x5fae3e), x, 0, z, on);
-        st.rotation.z = tilt * 1.6;
-        mesh(new THREE.ConeGeometry(0.011, 0.07, 5).translate(0, 0.36, 0), lam(0x3f8f2e), x, 0, z, on).rotation.z = tilt * 2.2; // tips
+        mesh(new THREE.SphereGeometry(0.026, 8, 6).scale(1, 1.25, 1), lam(0xf6f1e4), x, 0, z, on); // bulb
+        mesh(new THREE.CylinderGeometry(0.013, 0.019, 0.09, 6).translate(0, 0.065, 0), lam(0xf6f1e4), x, 0, z, on).rotation.z = tilt;
+        const st = mesh(new THREE.CylinderGeometry(0.009, 0.013, 0.14, 6).translate(0, 0.17, 0), lam(0x5fae3e), x, 0, z, on);
+        st.rotation.z = tilt * 1.4;
+        mesh(new THREE.ConeGeometry(0.01, 0.05, 5).translate(0, 0.265, 0), lam(0x3f8f2e), x, 0, z, on).rotation.z = tilt * 1.4; // tips
       });
-      mesh(new THREE.TorusGeometry(0.045, 0.007, 5, 12), lam(0xc8302f), 0, 0.12, -0.02, on); // the band around the bunch
+      mesh(new THREE.TorusGeometry(0.042, 0.007, 5, 12), lam(0xc8302f), 0, 0.1, -0.01, on); // the band around the bunch
       const tom = new THREE.Group();
-      tom.position.set(0.04, 1.12, 0.46);
+      tom.position.set(0.05, 1.1, 0.48);
       rol.add(tom);
       mesh(new THREE.SphereGeometry(0.052, 12, 9).scale(1, 0.88, 1), lam(0xd9362c), 0, 0, 0, tom);
       mesh(new THREE.CylinderGeometry(0.006, 0.009, 0.03, 5), lam(0x3f8f2e), 0, 0.055, 0, tom); // stem
@@ -883,8 +887,8 @@ function buildUnitRaw0(k) {
     mesh(new THREE.CylinderGeometry(0.03, 0.033, 0.9, 7).rotateX(Math.PI / 2), wood, 0, 0, 0.3, axe);
     [-0.02, 0.1].forEach(z => mesh(new THREE.CylinderGeometry(0.037, 0.037, 0.07, 7).rotateX(Math.PI / 2), leather, 0, 0, z, axe));
     mesh(new THREE.SphereGeometry(0.042, 7, 5), steelD, 0, 0, -0.16, axe);
-    mesh(AXE_BLADE, steelL, 0, 0.03, 0.6, axe);
-    mesh(new THREE.BoxGeometry(0.07, 0.08, 0.16), steelD, 0, 0.01, 0.62, axe);
+    mesh(AXE_BLADE, steelL, 0, -0.03, 0.6, axe).rotation.z = Math.PI; // the cutting edge faces the enemy, not the warrior
+    mesh(new THREE.BoxGeometry(0.07, 0.08, 0.16), steelD, 0, -0.01, 0.62, axe);
     if (k === 0) {
       const sh = new THREE.Group();
       sh.position.set(-0.08, -0.035, 0.05);

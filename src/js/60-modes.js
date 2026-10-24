@@ -144,6 +144,8 @@ function beginMatch(mode, facs, myTeam, seed) {
   resetView();
   loadMap(seed);
   V.mode = mode;
+  NET.quitAt = NET.goneAt = 0; // a rematch in the same room starts with no "he has left" countdown
+  NET.hostGone = false;
   V.facs = facs;
   V.myTeam = myTeam;
   V.playing = true;
@@ -155,7 +157,7 @@ function beginMatch(mode, facs, myTeam, seed) {
     setSkins(facs, myTeam === 0 ? [mine, opp] : [opp, mine]);
   }
   setFaceMat(myTeam, FACE.mine ? FACE.mine.crop : null);
-  setFaceMat(1 - myTeam, FACE.other ? FACE.other.crop : null);
+  setFaceMat(1 - myTeam, FACE.other ? FACE.other.crop : V.oppPf ? avatarFaceCrop(V.oppPf.av) : null); // online without a photo: his profile picture
   if (!V.tut && MAP && MAP.type)
     setTimeout(() => {
       if (!V.playing || V.tut) return;
