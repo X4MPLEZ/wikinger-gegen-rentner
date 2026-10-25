@@ -118,7 +118,7 @@ const clampZ = z => clamp(z, -HALF_H + 0.5, HALF_H - 0.5);
 const sigeOf = (G, team) =>
   G.units.filter(u => u.team === team && KINDS[u.k].role === 'siege').length +
   G.teams[team].q.filter(q => KINDS[q].role === 'siege').length;
-const popOf = (G, team) => G.units.reduce((n, u) => n + (u.team === team), 0) + G.teams[team].q.length;
+const popOf = (G, team) => G.units.reduce((n, u) => n + (u.team === team && !u.hen), 0) + G.teams[team].q.length;
 const flagsOf = (G, team) => G.flags.reduce((n, f) => n + (f.owner === team), 0);
 function slotOffsets(n) {
   const out = [[0, 0]];
@@ -231,7 +231,7 @@ function applyCmd(G, team, c) {
   } else if (c.t === 'poss') {
     const u = G.units.find(v => v.id === c.id && v.team === team);
     // not a fallen warrior, not one that falls off the map, not a worm the enemy hero is riding
-    if (!u || u.hp <= 0 || u.fall > 0 || u.heroBy) return;
+    if (!u || u.hp <= 0 || u.fall > 0 || u.heroBy || u.hen) return;
     if (T.pos) {
       const o = G.units.find(v => v.id === T.pos);
       if (o && o !== u && (o.dance > 0 || o.hero)) return; // the dance and the hero lock hold for switching, too (like 'unposs')
@@ -300,8 +300,54 @@ function pickPerk(G, T, id) {
   T.lastPk = id;
   if (id === 'giant') {
     const ti = G.teams.indexOf(T);
-    for (const u of G.units) if (u.team === ti && !u.gs) makeGiant(u);
+    for (const u of G.units) if (u.team === ti && !u.gs && !u.hen) makeGiant(u);
   }
+  if (id === 'hens') spawnHens(G, G.teams.indexOf(T));
+}
+// Hühnerarmee (see HEN in 02-data.js): the chickens hatch in a fan in front of the own base and storm the enemy base at once; they can
+// be ordered like any other warrior
+function spawnHens(G, team) {
+  const T = G.teams[team],
+    B = BASES[team],
+    EB = BASES[1 - team],
+    k = FAC[T.fac].kinds[0],
+    dir = Math.atan2(EB.x - B.x, EB.z - B.z),
+    hens = [];
+  for (let i = 0; i < HEN.n; i++) {
+    const a = dir + ((i % 10) / 9 - 0.5) * 2.4,
+      r = 7.5 + Math.floor(i / 10) * 1.7 + Math.random() * 0.6,
+      p = nearestWalkable(MAP, clampX(B.x + Math.sin(a) * r), clampZ(B.z + Math.cos(a) * r));
+    const u = {
+      id: G.nextId++,
+      k,
+      team,
+      x: p.x,
+      z: p.z,
+      y: unitY(p.x, p.z),
+      hp: HEN.hp,
+      mhp: HEN.hp,
+      hen: 1,
+      cd: 0.4 + Math.random() * 0.5,
+      tgt: -1,
+      at: 0,
+      atk: 0,
+      sp: 0,
+      run: 0,
+      re: Math.random() * 0.3,
+      ord: { x: p.x, z: p.z, mv: false },
+      path: null,
+      losT: 0,
+      los: true,
+      repath: 0,
+      poss: false,
+      rage: 0,
+      spcd: 0,
+      yaw: dir,
+    };
+    G.units.push(u);
+    hens.push(u);
+  }
+  formation(hens, EB.x, EB.z, false, -2);
 }
 function makeGiant(u) {
   const K = KINDS[u.k];
@@ -444,7 +490,7 @@ function perkStep(G) {
       const T = G.teams[i];
       T.chT = (T.chT || 0) + DT;
       if (T.chT >= 12) {
-        const foes = G.units.filter(u => u.team !== i && KINDS[u.k].role !== 'siege' && !u.poss && !(u.chick > 0));
+        const foes = G.units.filter(u => u.team !== i && KINDS[u.k].role !== 'siege' && !u.poss && !(u.chick > 0) && !u.hen);
         if (foes.length) {
           T.chT = 0;
           for (let n = 0; n < 4 && foes.length; n++) foes.splice(Math.floor(Math.random() * foes.length), 1)[0].chick = 8;
@@ -468,7 +514,7 @@ function perkStep(G) {
   G.fb = G.fb.filter(b => b.t > 0);
 }
 function buildTime(G, team, k) {
-  return KINDS[k].build * pk(G, team, 'fast', [1, 0.5]);
+  return KINDS[k].build;
 }
 // Flags pay. No hidden gifts for the trailing side: comebacks come from home advantage, flag decay and bounties.
 function incomeOf(G, team) {
@@ -614,7 +660,7 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   }
   if (e.hp <= 0) {
     const T = G.teams[team];
-    T.gold += CFG.kill + (flagsOf(G, team) < flagsOf(G, e.team) ? CFG.underdogKill : 0);
+    if (!e.hen) T.gold += CFG.kill + (flagsOf(G, team) < flagsOf(G, e.team) ? CFG.underdogKill : 0);
     T.kills++;
     if (KINDS[e.k].role === 'siege' && !e.bounty) {
       e.bounty = 1;
@@ -935,10 +981,27 @@ function baseInReach(u, reach) {
 function possAttack(G, u, byId) {
   const K = KINDS[u.k];
   const EG = K.ego || NO_EGO; // per-kind ego tuning (the Berserker hits faster and harder and lives longer when you steer him)
-  u.cd = K.cd * CFG.possCd * EG.cd * (u.rage > 0 ? (pkL(G, u.team, 'walhalla') ? 0.5 : 0.75) : 1) * (u.frenzy > 0 ? 0.85 : 1);
+  // combo step (CMB in 02-data): the client sends it, accepted only as the next step within the window (with slack for lag)
+  let step = 0;
+  {
+    const In = G.teams[u.team].posIn;
+    if ((K.role === 'melee' || K.role === 'cav') && !K.bear && In && (In.cb === 1 || In.cb === 2 || In.cb === 3)) {
+      const inWin = G.t - (u.cmbT ?? -99) < K.cd * CFG.possCd * EG.cd * CMB.win + 0.5;
+      step = In.cb > 1 && inWin && In.cb === (u.cmb || 0) + 1 ? In.cb : 1;
+      u.cmb = step;
+      u.cmbT = G.t;
+    }
+  }
+  u.cd =
+    K.cd *
+    CFG.possCd *
+    EG.cd *
+    (u.rage > 0 ? (pkL(G, u.team, 'walhalla') ? 0.5 : 0.75) : 1) *
+    (u.frenzy > 0 ? 0.85 : 1) *
+    (step ? CMB.cd[step - 1] : 1);
   u.atk = (u.atk + 1) % 100;
   u.at = 0;
-  const dmg = K.dmg * CFG.possDmg[K.role] * EG.dmg * (u.rage > 0 ? 1.3 : 1) * homeMul(G, u);
+  const dmg = K.dmg * CFG.possDmg[K.role] * EG.dmg * (u.rage > 0 ? 1.3 : 1) * homeMul(G, u) * (step ? CMB.dmg[step - 1] : 1);
   if (K.role === 'siege') {
     const In = G.teams[u.team].posIn;
     let tx = u.x + Math.sin(u.yaw) * 12,
@@ -993,7 +1056,7 @@ function possAttack(G, u, byId) {
         knockFly(e, u.x, u.z, 2.6, undefined, undefined, 1.2, 'ego');
     }
     for (const b of G.bears.slice())
-      if (bearHere(b) && Math.hypot(b.x - cx, b.z - cz) < WORM.biteR + 1.3) hitBear(G, b, d0, u.team, u.k, true);
+      if (bearHere(b) && Math.hypot(b.x - cx, b.z - cz) < WORM.biteR + 1.3) hitBear(G, b, d0, u.team, u.k, true, false, u.id);
     if (baseInReach(u, K.range + 1.5)) hit(G, -2, dmg, u.team, byId, u.k);
     u.at = -6;
     u.run = 0;
@@ -1014,6 +1077,7 @@ function possAttack(G, u, byId) {
       team: u.team,
       k: u.k,
       dmg,
+      src: u.id,
     });
     u.at = -3;
   } else if (K.role === 'ranged') {
@@ -1026,9 +1090,10 @@ function possAttack(G, u, byId) {
       G.proj.push({ t: 0.5, dmg, tgt: -2, team: u.team, k: u.k });
     }
   } else {
-    let hits = enemiesInCone(G, u, K.range + K.r + 1.0, 1.15)
+    const fin = step === 3; // the finisher reaches a little wider and hits up to three
+    let hits = enemiesInCone(G, u, K.range + K.r + (fin ? 1.4 : 1.0), fin ? 1.4 : 1.15)
       .sort((a, b) => a.d - b.d)
-      .slice(0, 2);
+      .slice(0, fin ? 3 : 2);
     const charge = K.role === 'cav' && u.run > 1.2 ? (u.k === 5 ? 2.3 : 1.9) : 1;
     for (const b of G.bears.slice()) {
       if (!bearHere(b)) continue;
@@ -1036,7 +1101,7 @@ function possAttack(G, u, byId) {
         dz = b.z - u.z,
         d = Math.hypot(dx, dz);
       if (d < K.range + K.r + (b.worm ? 2.2 : 1.6) && Math.abs(angDiff(Math.atan2(dx, dz), u.yaw)) < 1.2) {
-        hitBear(G, b, dmg * charge, u.team, u.k, true);
+        hitBear(G, b, dmg * charge, u.team, u.k, true, false, u.id);
         u.at = -3;
       }
     }
@@ -1044,6 +1109,14 @@ function possAttack(G, u, byId) {
       hit(G, h.e.id, dmg * charge, u.team, byId, u.k, true);
       traitHit(G, u, h.e, charge > 1);
       if (u.k === 0 && u.rage > 0 && pkL(G, u.team, 'walhalla')) knockFly(h.e, u.x, u.z, 3.5);
+      else if (
+        fin &&
+        h.e.hp > 0 &&
+        KINDS[h.e.k].role !== 'siege' &&
+        knockFly(h.e, u.x, u.z, 2.6, undefined, undefined, 2.4, 'ego') &&
+        h.e.air
+      )
+        h.e.air.by = u.id; // the finisher sends them flying (never back into the striker)
     });
     if (hits.length) u.at = hits[0].e.id;
     else if (baseInReach(u, K.range + 1)) {
@@ -1082,7 +1155,7 @@ function possSpecial(G, u, byId) {
     u.wdN = ((u.wdN || 0) + 1) % 100;
     return;
   }
-  u.spcd = CFG.spCd * pk(G, u.team, 'charge', [1, 0.34]);
+  u.spcd = (SP_CD[u.k] ?? CFG.spCd) * pk(G, u.team, 'charge', [1, 0.34]);
   u.sp = (u.sp + 1) % 10;
   u.spm = 0;
   if (K.role === 'siege') {
@@ -1168,6 +1241,7 @@ function possSpecial(G, u, byId) {
         k: u.k,
         dmg: u.k === 1 ? 24 : 26,
         nb: vl ? 1 : 0,
+        src: u.id,
       });
     }
     u.spm = 1;
@@ -1182,7 +1256,7 @@ function possSpecial(G, u, byId) {
       knockFly(c.e, u.x, u.z, 3.2);
     });
     if (baseGap(BASES[1 - u.team], u.x, u.z) < 3.4) hit(G, -2, 60, u.team, byId, -1);
-    for (const b of G.bears.slice()) if (Math.hypot(b.x - u.x, b.z - u.z) < 3.6) hitBear(G, b, 60, u.team, -1, true);
+    for (const b of G.bears.slice()) if (Math.hypot(b.x - u.x, b.z - u.z) < 3.6) hitBear(G, b, 60, u.team, -1, true, false, u.id);
     u.spinT = pk(G, u.team, 'spin', [0, 2.4]);
     u.spinP = 0.4;
   } else if (u.k === 3) {
@@ -1265,7 +1339,7 @@ function ramTick(G, u, byId) {
     }
     if (h.bear !== undefined) {
       const b = G.bears.find(o => o.id === h.bear);
-      if (b) hitBear(G, b, 110, u.team, -1, true);
+      if (b) hitBear(G, b, 110, u.team, -1, true, false, u.id);
       continue;
     }
     const e = byId.get(h.id);
@@ -1312,7 +1386,7 @@ function possStep(G, u, byId) {
           hit(G, c.e.id, 46, u.team, byId, u.k, true);
           if ((u.clawP2 = !u.clawP2)) knockFly(c.e, u.x, u.z, 1.6);
         });
-      for (const b of G.bears.slice()) if (Math.hypot(b.x - u.x, b.z - u.z) < 4.2) hitBear(G, b, 46, u.team, u.k, true);
+      for (const b of G.bears.slice()) if (Math.hypot(b.x - u.x, b.z - u.z) < 4.2) hitBear(G, b, 46, u.team, u.k, true, false, u.id);
       if (baseInReach(u, 3)) hit(G, -2, 22, u.team, byId, -1);
     }
   }
@@ -1572,7 +1646,7 @@ function possStep(G, u, byId) {
   u.ord = { x: u.x, z: u.z, mv: false };
   u.tgt = -1;
 }
-function hitBear(G, b, dmg, team, attK, bp, head) {
+function hitBear(G, b, dmg, team, attK, bp, head, src) {
   if (!bearHere(b)) return;
   if (G.tut && b.tut && !bp) return;
   /* tutorial bear: only the player's own shots count */ let d = dmg;
@@ -1584,6 +1658,12 @@ function hitBear(G, b, dmg, team, attK, bp, head) {
   b.hp -= d;
   b.aggro = team;
   b.at = 3;
+  // a wild polar bear holds a grudge: whoever hurt it (even from far away) is charged down
+  if (src !== undefined && !b.worm && !b.tut && b.hp > 0) {
+    if (b.foe !== src || !(b.foeT > 0)) b.ang = ((b.ang || 0) % 100) + 1;
+    b.foe = src;
+    b.foeT = BEAR_GRUDGE;
+  }
   if (bp) {
     const T = G.teams[team],
       hy = b.worm ? (head && b.hdY !== undefined ? b.hdY : groundY(b.x, b.z) + 3) : groundY(b.x, b.z) + 1.4;
@@ -1609,4 +1689,6 @@ function hitBear(G, b, dmg, team, attK, bp, head) {
 const BEAR_COLLAPSE = 0.65,
   BEAR_GLOW = 1,
   BEAR_STAND = 0.6,
-  BEAR_TAME = BEAR_COLLAPSE + BEAR_GLOW + BEAR_STAND;
+  BEAR_TAME = BEAR_COLLAPSE + BEAR_GLOW + BEAR_STAND,
+  BEAR_GRUDGE = 10, // s a hurt polar bear keeps charging its attacker (renewed by every hit)
+  BEAR_GRUDGE_R = 45; // m beyond this it gives up

@@ -908,6 +908,7 @@ function updateWorld(dt) {
       v = WV.bearPool.pop() || bearMesh();
       v.id = b[6];
       v.atk = b[3];
+      v.ang = b[11] || 0;
       v.swipe = 0;
       v.walk = 0;
       v.tameFx = false;
@@ -966,6 +967,13 @@ function updateWorld(dt) {
       });
       v.body.rotation.z = Math.sin(w) * 0.03 * g2;
       v.body.position.y = Math.abs(Math.sin(w)) * 0.025 * g2 + Math.sin(clock * 1.8 + b[6]) * 0.006 * (1 - g2);
+    }
+    if ((b[11] || 0) !== (v.ang || 0)) {
+      // hurt from afar: it rears up, roars and comes for the shooter
+      v.ang = b[11] || 0;
+      v.rear = 0.4;
+      SFX.play('rumble', { x, z, vol: 1 });
+      word(TR('GRRR!'), x, y + 3.2, z, { color: '#ff5a3d', scale: 1.4 });
     }
     if ((b[9] || 0) !== (v.raise || 0)) {
       v.raise = b[9] || 0;

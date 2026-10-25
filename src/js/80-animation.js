@@ -257,16 +257,26 @@ function rangedPose(u, C, at, pre, cd) {
   }
   return false;
 }
-// one swing over time: -1 = full wind-up, 0 = ready, +1 = follow-through. The wind-up already held when the hit arrives is carried over.
-function swingSigma(t, pre, held) {
-  if (t < 0.08) return -lerp(held, 1, sstep(0, 0.08, t));
-  if (t < 0.16) {
-    const q = (t - 0.08) / 0.08;
-    return -1 + 2.15 * q * q;
-  }
-  if (t < 0.3) return 1.15 - 0.15 * sstep(0.16, 0.3, t);
-  if (t < 0.78) return 1 - sstep(0.3, 0.78, t);
-  return -pre;
+/* One melee blow over time: from where the body was into the wind-up, a fast accelerating strike that overshoots a little, a short
+   hold on the follow-through (that is where the blow "lands"), then back to the ready pose. The steered warrior winds up faster
+   (STRIKE_W in 51-ego.js: the strike frame matches the moment the slash and the hit appear); the combo finisher takes more time. */
+function meleeSwing(u, cp, C, at, pre) {
+  const v = cp.v[(u.av || 0) % cp.v.length],
+    fin = u.isPoss && u.cmbStep === 3 && now() - (u.ownStrike || 0) < 1500,
+    W = u.isPoss ? (fin ? 0.11 : 0.065) : 0.09,
+    S = u.isPoss ? 0.07 : 0.08,
+    H = fin ? 0.16 : 0.1,
+    R = fin ? 0.42 : 0.32;
+  if (at < W) {
+    const q = 1 - Math.pow(1 - at / W, 2); // ease out into the wind-up
+    if (u.cFromOn) lerpPose(C, u.cFrom, v[0], q);
+    else lerpPose(C, cp.ready, v[0], lerp(u.preHeld || 0, 1, q));
+  } else if (at < W + S) {
+    const q = (at - W) / S;
+    lerpPose(C, v[0], v[1], Math.min(1.12, q * q * 1.12)); // accelerating strike
+  } else if (at < W + S + H) lerpPose(C, cp.ready, v[1], 1.12 - 0.12 * sstep(W + S, W + S + H, at));
+  else if (at < W + S + H + R) lerpPose(C, cp.ready, v[1], 1 - sstep(W + S + H, W + S + H + R, at));
+  else lerpPose(C, cp.ready, v[0], pre);
 }
 function pickAv(u) {
   const K = KINDS[u.k];
@@ -508,9 +518,15 @@ function humanRig(u, dt, moving, attacking) {
   // combat: wind-up (anticipated from the attack rhythm), strike, follow-through, recovery
   const cd = u.cdA || K.cd,
     at = u.atkT;
-  if (at < (u.atPrev ?? 99)) u.preHeld = u.preCur || 0;
+  if (at < (u.atPrev ?? 99)) {
+    u.preHeld = u.preCur || 0;
+    // a new blow starts from the pose the body is really in (mid follow-through in a combo), not from the ready pose: no pop
+    u.cFromOn = !!(u.cLast && u.cw > 0.4);
+    if (u.cFromOn) (u.cFrom || (u.cFrom = new Float32Array(NP))).set(u.cLast);
+  }
   u.atPrev = at;
-  const pre = attacking ? sstep(cd * 0.55, cd * 0.95, at) * (at < cd * 1.8 ? 1 : Math.max(0, 1 - (at - cd * 1.8) / 0.4)) : 0;
+  // the steered warrior never winds up on his own: the player decides when the next blow comes
+  const pre = attacking && !u.isPoss ? sstep(cd * 0.55, cd * 0.95, at) * (at < cd * 1.8 ? 1 : Math.max(0, 1 - (at - cd * 1.8) / 0.4)) : 0;
   u.preCur = pre;
   const fighting = attacking || at < cd * 1.6;
   u.cw = lerp(u.cw, fighting ? 1 : 0, 1 - Math.exp(-dt * (fighting ? 10 : 3)));
@@ -520,14 +536,11 @@ function humanRig(u, dt, moving, attacking) {
     if (K.role === 'ranged') ok = rangedPose(u, C, at, pre, cd);
     else {
       const cp = CPOSE[k];
-      if (cp) {
-        const v = cp.v[(u.av || 0) % cp.v.length],
-          sg = swingSigma(at, pre, u.preHeld || 0);
-        if (sg < 0) lerpPose(C, cp.ready, v[0], Math.min(1, -sg));
-        else lerpPose(C, cp.ready, v[1], sg);
-      } else ok = false;
+      if (cp) meleeSwing(u, cp, C, at, pre);
+      else ok = false;
     }
     if (ok) {
+      (u.cLast || (u.cLast = new Float32Array(NP))).set(C);
       const wA = u.cw,
         wL = u.cw * (1 - mb * 0.85);
       for (let i = 0; i < NP; i++) {
@@ -791,7 +804,9 @@ function animateRig(u, dt, moving, attacking) {
     catapultRig(u, dt, moving);
     return;
   }
-  u.atkT += dt;
+  if (u.hitStop > 0)
+    u.hitStop -= dt; // hit-stop: the blow freezes for a heartbeat on contact
+  else u.atkT += dt;
   humanRig(u, dt, moving, attacking);
 }
 /* Hidden performance overlay: add ?perf=1 to the URL. Measures CPU time per frame section, draw calls, triangles, shadows. */

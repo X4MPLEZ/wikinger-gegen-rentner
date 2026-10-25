@@ -94,7 +94,8 @@ const heroCanStart = u =>
   !(u.dance > 0) &&
   !u.bur &&
   !(u.dashS > 0) &&
-  !(u.chick > 0);
+  !(u.chick > 0) &&
+  !u.hen;
 // a sandworm the hero can climb right now: a wild one out of the sand (ploughing with its head up, or reared up and not about to dive),
 // or an enemy worm unit on the surface / reared up
 const heroWildOk = b => b.worm && b.hp > 0 && b.tameTeam === undefined && !b.heroBy && (b.ws === 6 || (b.ws === 4 && b.st < WORM.up - 0.2));
@@ -191,7 +192,7 @@ function heroStep(G, u, byId) {
     H.dmg += dmg;
     if (H.unit)
       hit(G, w.id, dmg / (w.poss ? CFG.possArmor * WORM.egoArmor : 1), u.team, byId, u.k, true); // the ego worm's armour does not soften a hero's stabs
-    else hitBear(G, w, dmg, u.team, u.k, true);
+    else hitBear(G, w, dmg, u.team, u.k, true, false, u.id);
     return w.hp <= 0 || (!H.unit && w.tameTeam !== undefined);
   };
   while (H.n < HERO.stabs.length && H.t >= HERO.stabs[H.n]) {

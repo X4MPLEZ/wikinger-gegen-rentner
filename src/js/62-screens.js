@@ -26,7 +26,9 @@ function gfxUi() {
       : TR('Feste Stufe: {0}.', T.name),
     QS.ultra
       ? POST.on
-        ? TR('Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.')
+        ? SET.gfxDof === 'off'
+          ? TR('Mit weicher Verschattung und Leuchten – für starke Geräte.')
+          : TR('Mit weicher Verschattung, Tiefenschärfe und Leuchten – für starke Geräte.')
         : TR('Die Effekte brauchen WebGL 2 – dieses Gerät zeigt Sehr hoch ohne sie.')
       : '',
     TR('Bild: {0} × {1} Pixel', px.x, px.y),
@@ -39,6 +41,8 @@ function gfxUi() {
   $('#gfxFx').value = SET.gfxFx || 'auto';
   $('#gfxRes').value = SET.gfxRes || 'auto';
   $('#gfxFps').value = SET.gfxFps || 'auto';
+  $('#gfxDof').value = SET.gfxDof || 'auto';
+  $('#gfxDof').disabled = !(QS.ultra && POST.on);
 }
 ['#btnGfx', '#btnGfx2'].forEach((id, i) =>
   $(id).addEventListener('click', () => {
@@ -126,6 +130,7 @@ $$('#gfxQ button').forEach(b => b.addEventListener('click', () => setGfx(b.datas
   ['#gfxFx', 'gfxFx'],
   ['#gfxRes', 'gfxRes'],
   ['#gfxFps', 'gfxFps'],
+  ['#gfxDof', 'gfxDof'],
 ].forEach(([id, key]) =>
   $(id).addEventListener('change', e => {
     SET[key] = e.target.value;
@@ -276,14 +281,15 @@ $$('.sic').forEach(e => {
   );
   sync();
 }
-$$('[data-face]').forEach(img => {
-  const k = +img.dataset.face;
-  try {
-    img.src = unitHead(k) || PORTRAIT[k];
-  } catch (_) {
-    img.src = PORTRAIT[k];
-  }
-});
+// the faces on the faction buttons: the hand-made badges of the profile pictures (65a-avatar-pics.js, a later file: so this runs from
+// 99-boot.js), the drawn portrait as a fallback
+const FAC_FACE = { 0: 'berserker', 1: 'archer', 2: 'opa', 3: 'oma', 4: 'goat', 5: 'racer' };
+function facFaces() {
+  $$('[data-face]').forEach(img => {
+    const k = +img.dataset.face;
+    img.src = AV_PIC[FAC_FACE[k]] || PORTRAIT[k];
+  });
+}
 $$('.fac').forEach(o => o.setAttribute('aria-pressed', String(o.dataset.fac === myFac)));
 $$('.fac').forEach(b =>
   b.addEventListener('click', () => {

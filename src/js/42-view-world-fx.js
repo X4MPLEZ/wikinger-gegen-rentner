@@ -851,36 +851,82 @@ function baseAlarm() {
   SFX.play('alarm');
 }
 /* ---------- chicken, dance, bite, jump, disco grenade ---------- */
-function chickenMesh() {
-  const g = new THREE.Group(),
-    white = lam(0xfafafa);
-  mesh(new THREE.SphereGeometry(0.42, 14, 10), white, 0, 0.62, 0, g).scale.set(1, 0.95, 1.25);
-  mesh(new THREE.SphereGeometry(0.24, 12, 9), white, 0, 1.08, 0.3, g);
-  mesh(new THREE.ConeGeometry(0.07, 0.2, 8).rotateX(Math.PI / 2), lam(0xf5b62a), 0, 1.05, 0.58, g);
-  [-0.05, 0.05].forEach(o => mesh(new THREE.SphereGeometry(0.06, 8, 6), lam(0xd0213a), o, 1.32, 0.3 + o, g));
-  mesh(new THREE.SphereGeometry(0.05, 8, 6), lam(0xd0213a), 0, 0.92, 0.5, g);
+// the chicken in ONE mesh (all parts merged, vertex colours): thirty chickens of the Hühnerarmee are thirty draw calls, not 450.
+// scarf: the team colour for the Hühnerarmee, none for the cursed (Hühnerfluch) warriors
+const CHICK_GEO = new Map();
+let CHICK_MAT = null;
+function chickenGeo(scarf) {
+  if (CHICK_GEO.has(scarf)) return CHICK_GEO.get(scarf);
+  const parts = [],
+    M = new THREE.Matrix4(),
+    Q = new THREE.Quaternion(),
+    E = new THREE.Euler();
+  const add = (geo, c, x, y, z, s = [1, 1, 1], rx = 0) => {
+    M.compose(new THREE.Vector3(x, y, z), Q.setFromEuler(E.set(rx, 0, 0)), new THREE.Vector3(...s));
+    parts.push([(geo.index ? geo.toNonIndexed() : geo).applyMatrix4(M), lin(c)]);
+  };
+  const W = 0xfafafa,
+    Y = 0xf5b62a,
+    R = 0xd0213a;
+  add(new THREE.SphereGeometry(0.42, 14, 10), W, 0, 0.62, 0, [1, 0.95, 1.25]);
+  add(new THREE.SphereGeometry(0.24, 12, 9), W, 0, 1.08, 0.3);
+  add(new THREE.ConeGeometry(0.07, 0.2, 8).rotateX(Math.PI / 2), Y, 0, 1.05, 0.58);
+  [-0.05, 0.05].forEach(o => add(new THREE.SphereGeometry(0.06, 8, 6), R, o, 1.32, 0.3 + o));
+  add(new THREE.SphereGeometry(0.05, 8, 6), R, 0, 0.92, 0.5);
   [-1, 1].forEach(sx => {
-    mesh(new THREE.SphereGeometry(0.035, 6, 5), lam(0x111111), sx * 0.12, 1.13, 0.48, g);
-    const w = mesh(new THREE.SphereGeometry(0.22, 10, 8), white, sx * 0.38, 0.66, -0.02, g);
-    w.scale.set(0.35, 0.8, 1.1);
+    add(new THREE.SphereGeometry(0.035, 6, 5), 0x111111, sx * 0.12, 1.13, 0.48);
+    add(new THREE.SphereGeometry(0.22, 10, 8), W, sx * 0.38, 0.66, -0.02, [0.35, 0.8, 1.1]);
+    add(new THREE.CylinderGeometry(0.025, 0.025, 0.3, 5), Y, sx * 0.13, 0.17, 0);
+    add(new THREE.BoxGeometry(0.14, 0.03, 0.16), Y, sx * 0.13, 0.03, 0.05);
   });
-  mesh(new THREE.ConeGeometry(0.2, 0.35, 8), white, 0, 0.82, -0.52, g).rotation.x = -1.0;
-  [-1, 1].forEach(sx => {
-    mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.3, 5), lam(0xf5b62a), sx * 0.13, 0.17, 0, g);
-    mesh(new THREE.BoxGeometry(0.14, 0.03, 0.16), lam(0xf5b62a), sx * 0.13, 0.03, 0.05, g);
-  });
-  g.scale.setScalar(1.25);
-  return g;
+  add(new THREE.ConeGeometry(0.2, 0.35, 8), W, 0, 0.82, -0.52, [1, 1, 1], -1.0);
+  if (scarf !== undefined) {
+    // a thick neckerchief and a tail tip in the team colour: own and enemy chickens apart at a glance
+    add(new THREE.TorusGeometry(0.25, 0.085, 6, 16), scarf, 0, 0.9, 0.22, [1, 1, 1], Math.PI / 2 - 0.3);
+    add(new THREE.ConeGeometry(0.13, 0.26, 4), scarf, 0, 1.0, 0.04, [1, 1, 0.5], 2.3);
+    add(new THREE.SphereGeometry(0.12, 8, 6), scarf, 0, 0.98, -0.72);
+  }
+  let n = 0;
+  for (const [g] of parts) n += g.attributes.position.count;
+  const pos = new Float32Array(n * 3),
+    nor = new Float32Array(n * 3),
+    col = new Float32Array(n * 3);
+  let o = 0;
+  for (const [g, c] of parts) {
+    const k = g.attributes.position.count;
+    pos.set(g.attributes.position.array, o * 3);
+    nor.set(g.attributes.normal.array, o * 3);
+    for (let i = 0; i < k; i++) col.set([c.r, c.g, c.b], (o + i) * 3);
+    o += k;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.userData.shared = true;
+  CHICK_GEO.set(scarf, geo);
+  return geo;
 }
-function setChicken(u, on) {
+function chickenMesh(scarf) {
+  if (!CHICK_MAT) {
+    CHICK_MAT = new THREE.MeshLambertMaterial({ vertexColors: true });
+    CHICK_MAT.userData.shared = true;
+  }
+  const m = new THREE.Mesh(chickenGeo(scarf), CHICK_MAT);
+  m.scale.setScalar(scarf !== undefined ? 1.05 : 1.25);
+  m.castShadow = true;
+  return m;
+}
+function setChicken(u, on, hen) {
   u.chick = on;
   if (on) {
     if (!u.chickM) {
-      u.chickM = chickenMesh();
+      u.chickM = chickenMesh(hen ? ((V.facs[u.team] || KINDS[u.k].fac) === 'viking' ? 0x3f8fe0 : 0xff5fa0) : undefined);
       u.g.add(u.chickM);
     }
     u.chickM.visible = true;
     u.rig.visible = false;
+    if (hen) return; // the Hühnerarmee hatches with its own little burst (processSnap)
     puff(u.g.position.x, u.g.position.y + 1, u.g.position.z, 0xffffff, 10, 0.7);
     word(TR('GACK!'), u.g.position.x, u.g.position.y + 2.6, u.g.position.z, { color: '#ffffff' });
     SFX.play('chicken', { x: u.g.position.x, z: u.g.position.z });
@@ -895,11 +941,12 @@ function updateStatusFx(u, dt, x, y, z) {
     u.chickM.position.y = Math.abs(Math.sin(clock * 14)) * 0.15;
     u.chickM.rotation.z = Math.sin(clock * 20) * 0.08;
     u.chickM.rotation.x = u.atkT < 0.35 ? Math.sin((u.atkT / 0.35) * Math.PI) * 0.7 : 0;
-    if (Math.random() < dt * 0.7) {
+    // thirty chickens of the Hühnerarmee cackle much less each than a single cursed warrior
+    if (Math.random() < dt * (u.hen ? 0.05 : 0.7)) {
       word(Math.random() < 0.5 ? TR('GACK!') : TR('BOCK!'), x, y + 2.6, z, { color: '#ffffff', scale: 0.8 });
       SFX.play('chicken', { x, z, vol: 0.6 });
     }
-    if (Math.random() < dt * 3) puff(x, y + 0.8, z, 0xffffff, 1, 0.3);
+    if (!u.hen && Math.random() < dt * 3) puff(x, y + 0.8, z, 0xffffff, 1, 0.3);
   }
   if (u.bitten) {
     if (!u.biteM) {

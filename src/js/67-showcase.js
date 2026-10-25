@@ -29,6 +29,7 @@ function showInit() {
   );
   disc.position.y = 0.01;
   sc.add(disc);
+  SHOW.disc = disc;
   SHOW.grp = new THREE.Group();
   sc.add(SHOW.grp);
   SHOW.cam = new THREE.PerspectiveCamera(28, 1.5, 0.1, 80);
@@ -149,7 +150,9 @@ function skinThumb(id) {
   SHOW.key = '';
   showSet({ k: FAC[S.fac].kinds[0], skin: id });
   SHOW.yaw = 0.35;
+  SHOW.disc.visible = false; // a still picture is cut out of its tile: no shadow disc with hard edges
   showFrame(160, 180);
+  SHOW.disc.visible = true;
   const url = SHOW.r.domElement.toDataURL('image/png');
   // back to what was on show
   SHOW.units.forEach(u => SHOW.grp.remove(u.g));

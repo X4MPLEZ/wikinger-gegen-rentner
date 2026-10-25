@@ -214,9 +214,11 @@ function processSnap(s) {
       const x = e[2] / 10,
         z = e[3] / 10,
         team = teamOfKind(e[1], s.fa);
+      const hen = (e[7] & 32768) === 32768;
       u = Object.assign(buildUnit(e[1]), {
         id,
         team,
+        hen,
         hpPct: e[4],
         wob: 0,
         wobV: 0,
@@ -232,7 +234,13 @@ function processSnap(s) {
       u.g.position.set(x, air ? air[2] / 10 : unitY(x, z), z);
       u.g.rotation.y = team ? 0 : Math.PI;
       V.units.set(id, u);
-      if (prev) {
+      if (prev && hen) {
+        // Hühnerarmee: thirty at once – a feather burst each, only a few cackles
+        puff(x, u.g.position.y + 0.6, z, 0xffffff, 5, 0.7);
+        u.g.scale.setScalar(0.01);
+        u.pop = 0;
+        if (id % 6 === 0) SFX.play('chicken', { x, z, vol: 0.7 });
+      } else if (prev) {
         puff(x, u.g.position.y + 0.6, z, 0xf6f1e7, 4);
         if (Math.random() < 0.35) say(u, QUOTES[u.k].spawn);
         if (!KINDS[u.k].bear && !KINDS[u.k].worm && !air) {
@@ -253,7 +261,7 @@ function processSnap(s) {
     u.spm = poss && e[12] === 1;
     u.dancing = (e[7] & 8) === 8;
     const ch = (e[7] & 16) === 16;
-    if (ch !== !!u.chick) setChicken(u, ch);
+    if (ch !== !!u.chick) setChicken(u, ch, u.hen);
     u.bitten = (e[7] & 4) === 4;
     if (e[7] & 32 && !(pe && pe[7] & 32)) {
       const nearPad = (MAP.pads || []).some(pd => Math.hypot(pd.x - e[2] / 10, pd.z - e[3] / 10) < 3.5);
@@ -562,9 +570,21 @@ function killFeed(e, s) {
   );
 }
 function onAttack(u, at, cur, poss) {
+  const K = KINDS[u.k],
+    own = V.poss && V.poss.id === u.id,
+    melee = (K.role === 'melee' || K.role === 'cav') && !K.bear && !K.worm;
+  if (own && melee) return; // the own blow already started on this screen (egoStrike in 51-ego.js), with its slash, hit and sound
   u.atkT = 0;
-  const K = KINDS[u.k];
   u.av = pickAv(u);
+  if (poss && melee) {
+    // a steered enemy: his combo is read from his rhythm (the same window as the host's), so the moves and the slash match
+    const base = K.cd * CFG.possCd * (K.ego || NO_EGO).cd,
+      tn = now();
+    u.cmbStep = (u.cmbStep || 0) < 3 && tn - (u.cmbT || -1e9) < base * CMB.win * 1000 + 150 ? (u.cmbStep || 0) + 1 : 1;
+    u.cmbT = tn;
+    u.ownStrike = tn;
+    u.av = (COMBO_AV[u.k] || [0, 1, 2])[u.cmbStep - 1];
+  }
   if (K.worm) {
     if (at === -5) {
       u.atkT = 9;
@@ -642,7 +662,27 @@ function onAttack(u, at, cur, poss) {
     SFX.play(K.role === 'siege' ? 'catapult' : u.k === 1 ? 'bow' : 'teeth', { x: from.x, z: from.z });
     return;
   }
-  if (!K.proj && poss && !(V.poss && V.poss.id === u.id) && !K.bear) {
+  if (!K.proj && poss && !own && melee) {
+    const g = u.g.position,
+      yaw = u.yawNet ?? u.g.rotation.y + Math.PI,
+      fol = {
+        get x() {
+          return u.g.position.x;
+        },
+        get z() {
+          return u.g.position.z;
+        },
+      };
+    slashFx(
+      { x: g.x, z: g.z, fy: g.y, yaw, k: u.k },
+      K,
+      u.av,
+      u.cmbStep,
+      u.team === V.myTeam ? 0xffd34d : 0xff4a3d,
+      STRIKE_W[u.cmbStep - 1],
+      fol
+    );
+  } else if (!K.proj && poss && !own && !K.bear) {
     const g = u.g.position,
       yaw = u.yawNet ?? u.g.rotation.y + Math.PI;
     swingFx(

@@ -510,7 +510,7 @@ function wormUnitStep(G, u, byId) {
           )
             hit(G, e.id, 240, u.team, byId, u.k, true); // too big to swallow: crushed
         for (const b of G.bears.slice())
-          if (bearHere(b) && Math.hypot(b.x - u.ex, b.z - u.ez) < WORM.grabRE + 1) hitBear(G, b, 160, u.team, u.k, true);
+          if (bearHere(b) && Math.hypot(b.x - u.ex, b.z - u.ez) < WORM.grabRE + 1) hitBear(G, b, 160, u.team, u.k, true, false, u.id);
       }
     }
     if (u.gn >= 0 && u.wst >= WORM.gulpAt && !u.gulped) {

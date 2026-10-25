@@ -25,6 +25,10 @@ function enterEgo() {
   const id = [...V.selected][0],
     u = V.units.get(id);
   if (!u || u.team !== V.myTeam) return;
+  if (u.hen) {
+    toast(TR('Ein Huhn lässt sich nicht steuern – es pickt lieber.'), 1800);
+    return;
+  }
   sendCmd({ t: 'poss', id });
   const K = KINDS[u.k];
   V.poss = {
@@ -617,10 +621,27 @@ function egoAttack() {
   }
   const P = V.poss;
   if (!P || P.down || P.dance || P.heroOn || (V.latest && V.latest.pz > 0)) return;
-  const K = KINDS[P.k];
-  if (P.cdT > 0) return;
+  const K = KINDS[P.k],
+    melee = (K.role === 'melee' || K.role === 'cav') && !K.bear && !K.worm;
+  if (P.cdT > 0) {
+    if (melee && P.cdT < 0.28) P.bufA = now(); // pressed a little early: the blow comes the moment it can (combo timing feels fair)
+    return;
+  }
+  P.bufA = 0;
   P.a = (P.a + 1) % 1000;
-  P.cdT = K.cd * CFG.possCd * (K.ego || NO_EGO).cd * (P.rageT > 0 ? 0.75 : 1);
+  const base = K.cd * CFG.possCd * (K.ego || NO_EGO).cd * (P.rageT > 0 ? 0.75 : 1);
+  P.cdT = base;
+  if (melee) {
+    const tn = now(),
+      step = (P.cmb || 0) < 3 && tn - (P.cmbT || -1e9) < base * CMB.win * 1000 ? (P.cmb || 0) + 1 : 1;
+    P.cmb = step;
+    P.cmbT = tn;
+    P.cb = step; // sent with every input packet, checked by the host
+    P.cdT = base * CMB.cd[step - 1];
+    P.ad = null;
+    egoStrike(P, K, step);
+    return;
+  }
   if (K.role === 'siege') {
     const { pt } = egoAim(P);
     P.gp = [+pt.x.toFixed(1), +pt.z.toFixed(1)];
@@ -647,6 +668,207 @@ function egoAttack() {
     swingFx(P, K);
     EG.kick = Math.max(EG.kick, 0.18);
   }
+}
+/* ---------- the blow of a steered melee warrior: it starts at once on the own screen (no waiting for the host), the combo step picks the
+   move (COMBO_AV), a cartoon slash cuts through the air, and the targets in reach are hit right at the strike frame: hit-stop, sparks,
+   shake and sound. The damage itself stays with the host (possAttack); this is only what the hand feels. ---------- */
+const COMBO_AV = { 0: [1, 2, 3], 2: [0, 1, 2], 4: [1, 0, 2], 5: [0, 1, 2] };
+// the shape of the slash per kind and move: h = sideways sweep (dir: +1 left to right), v = overhead, t = thrust
+const SLASH = {
+  0: [{ m: 'v' }, { m: 'h', d: -1 }, { m: 'h', d: 1, s: 0.75 }, { m: 'v', s: 1.3 }],
+  2: [{ m: 'h', d: -1 }, { m: 't' }, { m: 'v' }, { m: 'h', d: 1 }],
+  4: [{ m: 'v' }, { m: 'h', d: -1 }, { m: 't', s: 1.2 }],
+  5: [{ m: 't' }, { m: 'h', d: 1 }, { m: 't', s: 1.3 }],
+};
+const STRIKE_W = [0.065, 0.065, 0.11]; // wind-up before the strike frame, per combo step (80-animation uses the same)
+function egoStrike(P, K, step) {
+  const mu = V.units.get(P.id),
+    av = (COMBO_AV[P.k] || [0, 1, 2])[step - 1],
+    fin = step === 3;
+  if (mu) {
+    mu.atkT = 0;
+    mu.av = av;
+    mu.cmbStep = step;
+    mu.ownStrike = now();
+  }
+  const W = STRIKE_W[step - 1];
+  slashFx(P, K, av, step, P.rageT > 0 ? 0xff6a3d : fin ? 0xffa62b : 0xffd34d, W);
+  SFX.play(fin ? 'whoosh' : u2swing(P.k), { vol: fin ? 1.2 : 1.05 });
+  EG.kick = Math.max(EG.kick, fin ? 0.26 : 0.14);
+  setTimeout(() => egoStrikeHit(P, K, step), (W + 0.035) * 1000);
+}
+const u2swing = k => (k === 2 ? 'swingR' : 'swing');
+function egoStrikeHit(P, K, step) {
+  if (V.poss !== P) return;
+  const fin = step === 3,
+    reach = K.range + K.r + (fin ? 1.4 : 1.0),
+    cone = fin ? 1.4 : 1.15,
+    hits = [];
+  for (const u of V.units.values()) {
+    if (u.team === V.myTeam || u.dead || !u.g.visible || u.fogHid) continue;
+    const dx = u.g.position.x - P.x,
+      dz = u.g.position.z - P.z,
+      d = Math.hypot(dx, dz);
+    if (d > reach + KINDS[u.k].r || Math.abs(angDiff(Math.atan2(dx, dz), P.yaw)) > cone) continue;
+    hits.push({ u, d });
+  }
+  hits.sort((a, b) => a.d - b.d);
+  hits.length = Math.min(hits.length, fin ? 3 : 2);
+  if (!hits.length) return;
+  const mu = V.units.get(P.id);
+  if (mu) mu.hitStop = fin ? 0.11 : 0.055; // the swing freezes for a heartbeat on contact
+  shake(fin ? 0.55 : 0.2);
+  EG.kick = Math.max(EG.kick, fin ? 0.4 : 0.22);
+  if (fin) EG.punch = 1;
+  for (const h of hits) {
+    const p = h.u.g.position;
+    h.u.flash = 0.18;
+    h.u.hitV = (h.u.hitV || 0) + (fin ? 5 : 3);
+    h.u.hitStop = fin ? 0.11 : 0.055;
+    emitFX('hit', p.x, p.y + 1.2, p.z, { dx: p.x - P.x, dz: p.z - P.z, n: fin ? 12 : 7, size: fin ? 0.95 : 0.65 });
+    impactStar(p.x, p.y + 1.3, p.z, fin);
+  }
+  const p0 = hits[0].u.g.position;
+  SFX.play(HIT_SFX[P.k] || 'axe', { vol: 1.15 });
+  if (fin) SFX.play('crash', { vol: 0.7 });
+  if (step > 1) word(fin ? TR('KOMBO!') : '×' + step, p0.x, p0.y + 3, p0.z, { color: fin ? '#ffcf3d' : '#ffffff', scale: fin ? 1.7 : 1.3 });
+  else if (Math.random() < 0.25 && QUOTES[P.k].hit.length) word(pick(QUOTES[P.k].hit), p0.x, p0.y + 3, p0.z);
+}
+/* a comic impact star where a blow lands: a spiky white-yellow burst with an ink edge, pops up and fades in a quarter second */
+const STAR_GEO = (() => {
+  const sh = new THREE.Shape(),
+    n = 9;
+  for (let i = 0; i <= n * 2; i++) {
+    const a = (i / (n * 2)) * TAU,
+      r = i % 2 ? 0.42 : 1;
+    if (i) sh.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    else sh.moveTo(r, 0);
+  }
+  const g = new THREE.ShapeGeometry(sh);
+  g.userData.shared = true;
+  return g;
+})();
+function impactStar(x, y, z, big) {
+  const g = new THREE.Group(),
+    ink = new THREE.MeshBasicMaterial({ color: 0x1b1430, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
+    fill = new THREE.MeshBasicMaterial({
+      color: big ? 0xffa62b : 0xffe14d,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+    core = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
+  const a = new THREE.Mesh(STAR_GEO, ink),
+    b = new THREE.Mesh(STAR_GEO, fill),
+    c = new THREE.Mesh(STAR_GEO, core);
+  a.scale.setScalar(1.18);
+  c.scale.setScalar(0.5);
+  b.position.z = 0.01;
+  c.position.z = 0.02;
+  g.add(a, b, c);
+  g.position.set(x, y, z);
+  g.renderOrder = 12;
+  [a, b, c].forEach(m => (m.renderOrder = 12));
+  g.rotation.z = Math.random() * TAU;
+  scene.add(g);
+  fx.swings.push({ star: true, m: g, mats: [ink, fill, core], t: 0, big });
+}
+/* the cartoon slash: a fat crescent (or a streak for a thrust) with a white core, a coloured body and an ink edge. Its head races
+   along the arc in a few frames, the tail follows and thins out, an echo crescent trails a little behind. */
+const SLASH_VS = `varying vec2 vUv;
+uniform float uSpan; uniform float uR0; uniform float uR1; uniform float uMode; uniform float uLen;
+void main() {
+  vUv = uv;
+  vec3 p;
+  if (uMode < 0.5) {
+    float a = (uv.x - 0.5) * uSpan, r = mix(uR0, uR1, uv.y);
+    p = vec3(sin(a) * r, 0.0, cos(a) * r);
+  } else p = vec3((uv.y - 0.5) * 1.5, 0.0, mix(0.3, uLen, uv.x));
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+}`;
+const SLASH_FS = `varying vec2 vUv;
+uniform float uHead; uniform float uTail; uniform float uFade; uniform float uMode; uniform vec3 uCol; uniform float uFlip;
+void main() {
+  float x = uFlip > 0.5 ? 1.0 - vUv.x : vUv.x;
+  if (x > uHead || x < uTail) discard;
+  float s = (x - uTail) / max(0.001, uHead - uTail);
+  float th = pow(sin(3.14159 * pow(s, 0.65)), 0.75); // fat just behind the head, a thin tail
+  float v = uMode < 0.5 ? vUv.y : 1.0 - abs(vUv.y - 0.5) * 2.0;
+  float edge = 1.0 - th;                                // the band grows from the outer edge inwards
+  if (v < edge) discard;
+  float k = (v - edge) / max(0.001, th);                // 0 at the inner border .. 1 at the outer edge
+  vec3 ink = vec3(0.106, 0.078, 0.188);
+  // ink outline on both borders, a white hot edge outside, the colour inside
+  vec3 c = k < 0.14 || k > 0.93 ? ink : k > 0.58 ? vec3(1.0) : mix(uCol * 0.85, uCol, (k - 0.14) / 0.44);
+  if (s > 0.96) c = ink;                                // a dark lip on the leading edge
+  gl_FragColor = vec4(c, uFade);
+}`;
+const SLASH_GEO = (() => {
+  const g = new THREE.PlaneGeometry(1, 1, 40, 1);
+  g.userData.shared = true;
+  return g; // only its uv matter: the vertex shader bends it into the arc or the streak
+})();
+const SLASH_BASE = new THREE.ShaderMaterial({
+  vertexShader: SLASH_VS,
+  fragmentShader: SLASH_FS,
+  uniforms: {
+    uSpan: { value: 2.6 },
+    uR0: { value: 0.5 },
+    uR1: { value: 2 },
+    uMode: { value: 0 },
+    uLen: { value: 2.5 },
+    uHead: { value: 0 },
+    uTail: { value: 0 },
+    uFade: { value: 1 },
+    uCol: { value: new THREE.Color() },
+    uFlip: { value: 0 },
+  },
+  transparent: true,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+});
+SLASH_BASE.userData.shared = true;
+function slashFx(P, K, av, step, col, delay = 0, follow = null) {
+  if (fx.swings.length > 40) return;
+  const sh = (SLASH[P.k] || SLASH[0])[av % (SLASH[P.k] || SLASH[0]).length],
+    fin = step === 3,
+    cav = K.role === 'cav',
+    reach = (K.range + 1.1) * (sh.s || 1) * (fin ? 1.18 : 1),
+    g = new THREE.Group(),
+    mk = (lag, scale, colr) => {
+      const m = SLASH_BASE.clone();
+      m.uniforms.uMode.value = sh.m === 't' ? 1 : 0;
+      m.uniforms.uSpan.value = sh.m === 'v' ? 2.2 : 2.7;
+      m.uniforms.uR0.value = 0.45;
+      m.uniforms.uR1.value = reach * scale * (sh.m === 'v' ? 0.85 : 1);
+      m.uniforms.uLen.value = reach * 1.15 * scale;
+      m.uniforms.uCol.value.set(colr);
+      m.uniforms.uFlip.value = sh.d === 1 ? 1 : 0;
+      const me = new THREE.Mesh(SLASH_GEO, m);
+      me.renderOrder = 9;
+      me.frustumCulled = false;
+      g.add(me);
+      return { m, lag };
+    };
+  const layers = [mk(0, 1, col), mk(0.07, 0.86, col)]; // the slash and its echo
+  layers[1].m.uniforms.uFade.value = 0.6;
+  const y = (P.fy ?? groundY(P.x, P.z)) + (cav ? 1.85 : 1.35);
+  g.position.set(P.x, y, P.z);
+  g.rotation.order = 'YXZ';
+  g.rotation.y = P.yaw;
+  g.rotation.x = -0.42; // tipped towards the camera behind: a slash seen edge-on would be invisible
+  if (sh.m === 'h')
+    g.rotation.z = (sh.d === 1 ? 1 : -1) * (fin ? 0.3 : 0.18); // tilted like the blow
+  else if (sh.m === 'v') {
+    g.rotation.z = -0.95; // a diagonal chop from high right down to low left in front
+    g.position.y += 0.45;
+  } else {
+    g.rotation.x = -0.75; // a thrust points away from the camera: stand it up more so its streak is seen
+    g.position.y += 0.1;
+  }
+  scene.add(g);
+  fx.swings.push({ slash: true, m: g, layers, t: -delay, dur: fin ? 0.16 : 0.12, follow: follow || P, yaw: P.yaw });
 }
 const swingGeo = new THREE.RingGeometry(0.7, 2.3, 28, 1, -1.25, 2.5).rotateX(-Math.PI / 2);
 function swingFx(P, K, col, quiet) {
@@ -675,6 +897,41 @@ function swingTick(dt) {
   for (let i = fx.swings.length - 1; i >= 0; i--) {
     const w = fx.swings[i];
     w.t += dt;
+    if (w.star) {
+      const q = w.t / (w.big ? 0.32 : 0.24),
+        sc = (w.big ? 0.75 : 0.45) * (q < 0.25 ? sstep(0, 0.25, q) * 1.15 : 1.15 - 0.15 * q);
+      w.m.scale.setScalar(Math.max(0.01, sc));
+      w.m.quaternion.copy(camera.quaternion); // faces the camera
+      w.mats.forEach(m => (m.opacity = q < 0.6 ? 1 : 1 - (q - 0.6) / 0.4));
+      if (q >= 1) {
+        scene.remove(w.m);
+        w.mats.forEach(m => m.dispose());
+        fx.swings.splice(i, 1);
+      }
+      continue;
+    }
+    if (w.slash) {
+      const f = w.follow;
+      w.m.position.x = f.x;
+      w.m.position.z = f.z;
+      let alive = false;
+      for (const L of w.layers) {
+        const t = w.t - L.lag,
+          head = t < 0 ? 0 : Math.min(1.08, Math.pow(t / w.dur, 0.7)), // races ahead, then holds just past the end
+          tail = t < w.dur * 0.35 ? 0 : Math.min(1.1, ((t - w.dur * 0.35) / (w.dur * 1.4)) * 1.1);
+        L.m.uniforms.uHead.value = head;
+        L.m.uniforms.uTail.value = tail;
+        if (t >= 0) L.m.uniforms.uFade.value = (L.lag ? 0.6 : 1) * (1 - sstep(w.dur * 1.2, w.dur * 2.2, t));
+        if (t < w.dur * 2.2 && tail < 1.05) alive = true;
+      }
+      w.m.visible = w.t >= 0;
+      if (!alive) {
+        scene.remove(w.m);
+        w.layers.forEach(L => L.m.dispose());
+        fx.swings.splice(i, 1);
+      }
+      continue;
+    }
     const p = w.t / 0.24;
     w.m.position.set(w.follow.x, w.m.position.y, w.follow.z);
     w.m.rotation.y = w.yaw - Math.PI / 2 + lerp(0.9, -0.9, Math.min(1, p));
@@ -896,7 +1153,7 @@ function egoSpecial() {
   }
   P.spSent = now();
   P.s = (P.s + 1) % 1000;
-  P.spT = (KINDS[P.k].role === 'siege' ? 14 : KINDS[P.k].bear ? 6 : KINDS[P.k].worm ? 9 : CFG.spCd) * [1, 0.34][tpk(V.myTeam, 'charge')];
+  P.spT = spCdOf(P.k) * [1, 0.34][tpk(V.myTeam, 'charge')];
   if (P.k === 0) P.rageT = 4;
   if (P.k === 4 || P.k === 5) {
     // riders dash at once (the host starts the ram from the same spot, P.dp)
@@ -1129,6 +1386,11 @@ function egoUpdate(dt) {
     rdt = Math.min(0.5, (tn - (P.lastT || tn)) / 1000);
   P.lastT = tn;
   P.cdT = Math.max(0, P.cdT - rdt);
+  if (P.bufA && P.cdT <= 0) {
+    const ok = tn - P.bufA < 380;
+    P.bufA = 0;
+    if (ok) egoAttack();
+  }
   P.spT = Math.max(0, P.spT - rdt);
   {
     const mu = V.units.get(P.id);
@@ -1350,6 +1612,7 @@ function egoUpdate(dt) {
     air: P.airAck || 0,
     flying: !!P.air,
   };
+  if (P.cb) input.cb = P.cb; // the combo step of the last blow (CMB)
   if (P.air) input.av = [P.air.vx, P.air.vz, P.air.vy, P.air.kind === 'dash' ? 1 : 0, +P.fy.toFixed(3), +P.air.sy.toFixed(3)];
   if (P.ad) input.ad = P.ad;
   if (P.at) input.at = P.at;
@@ -1388,19 +1651,7 @@ function egoUpdate(dt) {
     NET.r.presence({ in: input }).catch(() => {});
   }
   const sp = $('#egoSp');
-  cssVar(
-    sp,
-    '--p',
-    Math.round(
-      Math.min(
-        100,
-        (P.spT /
-          ((KINDS[P.k].role === 'siege' ? 14 : KINDS[P.k].bear ? 6 : KINDS[P.k].worm ? 9 : CFG.spCd) *
-            [1, 0.34][tpk(V.myTeam, 'charge')])) *
-          100
-      )
-    ) + '%'
-  );
+  cssVar(sp, '--p', Math.round(Math.min(100, (P.spT / (spCdOf(P.k) * [1, 0.34][tpk(V.myTeam, 'charge')])) * 100)) + '%');
   cssSet(sp, 'opacity', P.spT > 0 ? '0.75' : '1');
   {
     const sf = $('#speedFx'),
@@ -1579,9 +1830,10 @@ function egoUpdate(dt) {
   camera.lookAt(EG.lk);
   {
     const f0 = camera.aspect < 1 ? 78 : 62,
-      want = f0 + (P.dashT > 0 ? 9 : 0);
+      want = f0 + (P.dashT > 0 ? 9 : 0) - (EG.punch || 0) * 4; // a combo finisher punches in for a moment
+    EG.punch = Math.max(0, (EG.punch || 0) - dt * 5);
     if (Math.abs(camera.fov - want) > 0.05) {
-      camera.fov = lerp(camera.fov, want, Math.min(1, dt * (P.dashT > 0 ? 14 : 5)));
+      camera.fov = lerp(camera.fov, want, Math.min(1, dt * (P.dashT > 0 || EG.punch > 0 ? 14 : 5)));
       camera.updateProjectionMatrix();
     }
   } // dash: speed kick

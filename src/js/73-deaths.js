@@ -94,6 +94,14 @@ function startDeath(u, cause) {
     u.g.visible = false;
     return;
   } // swallowed
+  if (u.hen) {
+    // a chicken of the Hühnerarmee: gone in a cloud of feathers
+    u.dv = 'gone';
+    u.g.visible = false;
+    puff(x, y + 0.7, z, 0xffffff, 9, 0.9);
+    if (Math.random() < 0.4) SFX.play('chicken', { x, z, vol: 0.5 });
+    return;
+  }
   if (cause === 3) u.dv = 'fall';
   else if (cause === 1) u.dv = 'squash';
   else {

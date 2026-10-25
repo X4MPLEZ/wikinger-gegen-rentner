@@ -69,8 +69,7 @@ function roleGlyph(o, role, cx, cy) {
   }
   o.restore();
 }
-const UNIT_HEAD = [],
-  HEAD_RAW = [];
+const HEAD_RAW = [];
 // the head of unit kind k, rendered once in 3D (transparent 192 px canvas; always the classic colours, no skin)
 function headRaw(k) {
   if (HEAD_RAW[k]) return HEAD_RAW[k];
@@ -120,32 +119,6 @@ function headRaw(k) {
   rx.putImageData(id, 0, 0);
   sc.remove(u.g);
   return (HEAD_RAW[k] = raw);
-}
-function unitHead(k) {
-  if (UNIT_HEAD[k]) return UNIT_HEAD[k];
-  const raw = headRaw(k),
-    out = cnv(128, 128),
-    o = out.getContext('2d'),
-    col = new THREE.Color(FAC[KINDS[k].fac].css),
-    light = '#' + col.clone().lerp(new THREE.Color(0xffffff), 0.5).getHexString(),
-    dark = '#' + col.clone().lerp(new THREE.Color(0x0d1526), 0.45).getHexString();
-  const gr = o.createRadialGradient(56, 40, 6, 64, 64, 64);
-  gr.addColorStop(0, light);
-  gr.addColorStop(1, dark);
-  o.save();
-  o.beginPath();
-  o.arc(64, 64, 62, 0, TAU);
-  o.clip();
-  o.fillStyle = gr;
-  o.fillRect(0, 0, 128, 128);
-  o.drawImage(raw, -4, -2, 136, 136);
-  o.restore();
-  o.strokeStyle = 'rgba(255,255,255,.55)';
-  o.lineWidth = 3;
-  o.beginPath();
-  o.arc(64, 64, 61, 0, TAU);
-  o.stroke();
-  return (UNIT_HEAD[k] = out.toDataURL());
 }
 function unitIcon(k) {
   const ik = k + '|' + (UNIT_SKIN[k] ? UNIT_SKIN[k].id : '');

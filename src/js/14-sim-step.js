@@ -240,6 +240,7 @@ function worldStep(G, byId) {
     b.cd -= DT;
     b.mv = 0;
     b.at = (b.at || 0) - DT;
+    b.foeT = (b.foeT || 0) - DT;
     let tg = null,
       bd = 64;
     for (const u of G.units) {
@@ -248,6 +249,18 @@ function worldStep(G, byId) {
       if (d2 < bd) {
         bd = d2;
         tg = u;
+      }
+    }
+    let mad = false;
+    if (b.foeT > 0) {
+      // grudge: charge whoever shot it, unless someone else is already right under its paws
+      const f = byId.get(b.foe);
+      const fd2 = f && f.hp > 0 && !f.pj && !f.grab && !f.bur ? (f.x - b.x) ** 2 + (f.z - b.z) ** 2 : 1e9;
+      if (fd2 > BEAR_GRUDGE_R * BEAR_GRUDGE_R) b.foeT = 0;
+      else if (!(f.fall > 0) && !(tg && tg !== f && bd < 2.0 * 2.0 && fd2 > 4 * 4)) {
+        tg = f;
+        bd = fd2;
+        mad = true;
       }
     }
     let tx = b.x,
@@ -273,7 +286,7 @@ function worldStep(G, byId) {
     } else if (tg) {
       tx = tg.x;
       tz = tg.z;
-      sp = 4.7;
+      sp = mad ? 5.3 : 4.7;
       const d = Math.sqrt(bd);
       if (d < 2.0) {
         tx = b.x;
@@ -637,7 +650,7 @@ function step(G) {
       if (d <= range) {
         u.eng = 0.5;
         if (u.cd <= 0) {
-          const rage = u.k === 0 && G.chaos && u.hp < maxHp(u) * 0.6 && pkL(G, u.team, 'walhalla'); // Walhalla-Raserei: battered Berserkers rage
+          const rage = u.k === 0 && !u.hen && G.chaos && u.hp < maxHp(u) * 0.6 && pkL(G, u.team, 'walhalla'); // Walhalla-Raserei: battered Berserkers rage
           u.cd = K.cd * (u.frenzy > 0 ? 0.85 : 1) * (rage ? 0.6 : 1);
           u.atk = (u.atk + 1) % 100;
           if (rage && !u.rageV) {
@@ -650,8 +663,9 @@ function step(G) {
           if (u.tgt === -3) {
             const b = G.bears.find(o => o.id === u.btg);
             u.at = -3;
-            if (K.proj) G.proj.push({ t: dist / K.pspeed, dmg: K.dmg, tgt: -3, bear: u.btg, team: u.team, k: u.k, aoe: K.aoe, tx, tz });
-            else hitBear(G, b, K.dmg * charge, u.team, u.k);
+            if (K.proj)
+              G.proj.push({ t: dist / K.pspeed, dmg: K.dmg, tgt: -3, bear: u.btg, team: u.team, k: u.k, aoe: K.aoe, tx, tz, src: u.id });
+            else hitBear(G, b, K.dmg * charge, u.team, u.k, false, false, u.id);
           } else if (K.proj && K.role === 'siege')
             u.wind = { t: SIEGE_WIND, tx, tz, tgt: u.at }; // the arm winds up first: everyone can see it coming
           else if (K.proj) {
@@ -689,8 +703,15 @@ function step(G) {
               });
             }
           } else {
-            hit(G, u.at, K.dmg * hm * charge * (u.chick > 0 ? 0.3 : 1) * (rage ? 1.5 : 1), u.team, byId, u.k);
-            traitHit(G, u, tgt, charge > 1);
+            hit(
+              G,
+              u.at,
+              K.dmg * hm * charge * (u.hen ? (u.at === -2 ? HEN.base : HEN.dmg) : u.chick > 0 ? 0.3 : 1) * (rage ? 1.5 : 1),
+              u.team,
+              byId,
+              u.k
+            );
+            if (!u.hen) traitHit(G, u, tgt, charge > 1);
             if (tgt && rage) {
               const t3 = byId.get(u.at);
               if (
@@ -702,7 +723,7 @@ function step(G) {
               )
                 t3.kbTeam = u.team;
             }
-            if (u.k === 2 && G.chaos && pkL(G, u.team, 'spin') && G.t >= (u.spinA || 0)) {
+            if (u.k === 2 && !u.hen && G.chaos && pkL(G, u.team, 'spin') && G.t >= (u.spinA || 0)) {
               // Tornado-Opa: in a fight the Opa whirls his stick every 6 s and knocks everyone around him back
               u.spinA = G.t + 6;
               u.sp = (u.sp + 1) % 100;
@@ -722,11 +743,11 @@ function step(G) {
           u,
           approach ? approach.x : tx,
           approach ? approach.z : tz,
-          K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1)
+          K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1) * (u.hen ? HEN.speed : 1)
         );
       }
     } else if (u.navPad !== undefined || Math.hypot(o.x - u.x, o.z - u.z) > 0.3)
-      steer(G, u, o.x, o.z, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1));
+      steer(G, u, o.x, o.z, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1) * (u.hen ? HEN.speed : 1));
     const ox = u.x,
       oz = u.z;
     {
@@ -879,7 +900,10 @@ function step(G) {
         G.bears.find(o => o.id === p.bear),
         p.dmg,
         p.team,
-        p.k
+        p.k,
+        false,
+        false,
+        p.src
       );
       continue;
     }
@@ -1001,7 +1025,7 @@ function step(G) {
           }
         }
         if (hb2) {
-          hitBear(G, hb2, p.dmg, p.team, p.k, true, hd);
+          hitBear(G, hb2, p.dmg, p.team, p.k, true, hd, p.src);
           p.t = 0;
           break;
         }
@@ -1138,7 +1162,7 @@ function step(G) {
   for (const u of us)
     if (u.hp <= 0 && !u.kfd) {
       u.kfd = 1;
-      if (G.chaos && pkL(G, u.team, 'revive') && KINDS[u.k].role !== 'siege' && !KINDS[u.k].bear && !KINDS[u.k].worm) {
+      if (G.chaos && pkL(G, u.team, 'revive') && KINDS[u.k].role !== 'siege' && !KINDS[u.k].bear && !KINDS[u.k].worm && !u.hen) {
         // Unkraut vergeht nicht: every third fallen warrior comes back at the base after 4 s
         const T = G.teams[u.team];
         T.revN = (T.revN || 0) + 1;
@@ -1173,13 +1197,14 @@ function step(G) {
                                 ? 4
                                 : 0;
       const kt = cause === 3 ? (u.kbTeam ?? lh[1]) : lh[1];
+      if (u.hen) continue; // a chicken of the Hühnerarmee is not news
       G.kfS = ((G.kfS || 0) + 1) % 10000;
       (G.kf || (G.kf = [])).push([G.kfS, u.k, kt ?? -1, lh[0] >= 0 ? lh[0] : -1, cause, u.poss ? 1 : 0]);
       if (G.kf.length > 6) G.kf.shift();
     }
   if (G.st)
     for (const u of us)
-      if (u.hp <= 0 && !u.counted) {
+      if (u.hp <= 0 && !u.counted && !u.hen) {
         u.counted = 1;
         G.st[u.team].lost++;
         if ((u.fallen || u.air) && u.kbTeam !== undefined && G.t - (u.kbT || -9) < 6) {
@@ -1375,6 +1400,7 @@ function snapOf(G) {
         b.tameTeam === undefined ? 0 : b.tameTeam + 1,
         b.raise || 0,
       ];
+      if (!b.worm && b.ang) e.push(0, b.ang); // [10] 0 = not a worm, [11] grudge counter (roars once per new grudge)
       if (b.worm) e.push(1, b.ws, Math.round(b.st * 100), Math.round((b.ex ?? b.x) * 10), Math.round((b.ez ?? b.z) * 10), b.bite, b.warnN);
       return e;
     }),
@@ -1455,11 +1481,12 @@ function snapOf(G) {
           (u.down > 0 ? 2 : 0) |
           (u.bite > 0 ? 4 : 0) |
           (u.dance > 0 ? 8 : 0) |
-          (u.chick > 0 ? 16 : 0) |
+          (u.chick > 0 || u.hen ? 16 : 0) |
           (u.jumpT > 0 ? 32 : 0) |
           (u.frenzy > 0 ? 64 : 0) |
           (u.slowT > 0 ? 128 : 0) |
-          ((u.kbN || 0) << 8),
+          ((u.kbN || 0) << 8) |
+          (u.hen ? 32768 : 0),
       ];
       if (u.poss)
         e.push(

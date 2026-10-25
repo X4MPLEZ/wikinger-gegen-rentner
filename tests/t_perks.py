@@ -20,8 +20,14 @@ with sync_playwright() as p:
         G.flags[0].owner = 1; out.behindHi = +share().toFixed(2); out.behindUp = T.offerUp;
         out.factionOk = [...Array(200)].every(() => { W.makeOffer(G, T); return T.offer.every(id => !W.PERKS[id].f || W.PERKS[id].f === T.fac); }); }
       const c = W.nw(0, 0);
-      // Fließband
-      { const G = fresh(); const t0 = W.buildTime(G, 0, 0); G.teams[0].pk.fast = 1; out.fast = +(W.buildTime(G, 0, 0) / t0).toFixed(2); }
+      // Hühnerarmee: 30 chickens hatch once at the own base, storm off, do not count for the army, cannot be steered, give no kill gold
+      { const G = fresh(); const T = G.teams[0]; mk(G, 1, 2, c.x + 40, c.z).tutStill = true; T.offer = ['hens', 'gold']; W.applyCmd(G, 0, { t: 'perk', id: 'hens' });
+        const hens = G.units.filter(u => u.team === 0 && u.hen), EB = W.BASES[1], d0 = hens.reduce((a, u) => a + Math.hypot(u.x - EB.x, u.z - EB.z), 0) / hens.length;
+        for (let i = 0; i < 20 * 6; i++) W.step(G);
+        const d1 = hens.filter(u => u.hp > 0).reduce((a, u) => a + Math.hypot(u.x - EB.x, u.z - EB.z), 0) / Math.max(1, hens.filter(u => u.hp > 0).length);
+        W.applyCmd(G, 0, { t: 'poss', id: hens[0].id }); const steer = !!hens[0].poss;
+        const g0 = G.teams[1].gold, byId = new Map(G.units.map(u => [u.id, u])); W.hit(G, hens[1].id, 999, 1, byId, 0);
+        out.hens = { n: hens.length, pop: W.popOf(G, 0), closer: d0 - d1 > 15, steer, gold: G.teams[1].gold - g0, snapBit: W.snapOf(G).u.filter(e => e[7] & 32768).length >= 29 }; }
       // Schildwall: an archer's arrow on a Berserker does half
       { const G = fresh(); const v = mk(G, 0, 0, c.x, c.z); const byId = new Map(G.units.map(u => [u.id, u]));
         const dmg = () => { const h0 = v.hp; W.hit(G, v.id, 20, 1, byId, 3); const d = h0 - v.hp; v.hp = 999; return d; }; v.hp = 999;
@@ -56,7 +62,7 @@ with sync_playwright() as p:
       return out; }""")
     print(json.dumps(r)); print('ERRS', errs[:3]); b.close()
 ok = (not r['bad'] and r['maxTier'] == [1, 2, 2, 3] and r['behindHi'] > r['evenHi'] * 1.4 and r['behindUp'] == 1 and r['evenUp'] == 0 and r['factionOk']
-      and r['fast'] == 0.5 and r['wall'] == 0.5 and r['volley'][1] >= r['volley'][0] * 1.25 and r['spin'] >= 2
+      and r['hens']['n'] == 30 and r['hens']['pop'] <= 1 and r['hens']['closer'] and not r['hens']['steer'] and r['hens']['gold'] == 0 and r['hens']['snapBit'] and r['wall'] == 0.5 and r['volley'][1] >= r['volley'][0] * 1.25 and r['spin'] >= 2
       and r['walhalla'][1][1] >= 3 and r['walhalla'][0][1] == 0 and r['ram'] >= 1
       and r['quake'][0] >= 3 and r['quake'][1] == 1 and r['revive'][1] == r['revive'][0] + 1 and r['twins'] == 10 and r['chicken'] == 4 and not errs)
 print('PERKS', 'OK' if ok else 'FAIL')

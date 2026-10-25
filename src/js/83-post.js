@@ -1,9 +1,12 @@
 /* 83-post.js - POST EFFECTS for the graphics tier "Sehr hoch" (WebGL2 only): the scene is drawn into a multisampled render target with a
    depth texture, then one full-screen pass adds soft ambient occlusion (darker creases and contact areas, from the depth buffer), a gentle
-   depth of field (sharp where the camera looks – in the ego view always the own warrior –, the far background softly blurred), a glow on
-   bright parts, colour grading and a vignette. Sprites without depth test (floating words, speech bubbles, badges) are drawn afterwards on
-   top, sharp. The render target follows the frame time: below ~60 fps it shrinks (down to 55 %), with headroom it grows back, so the
-   tier holds 60 fps and more. postRender() replaces renderer.render() in frame() while POST.on. Nothing here touches the game state. */
+   depth of field (sharp where the camera looks – in the ego view always the own warrior –, the far background slightly soft), a glow on
+   bright parts, colour grading and a vignette. The depth of field is cheap and steady: one quarter-resolution copy of the picture, box
+   filtered (each pixel the mean of a 4x4 block, sharp foreground weighted out), is blended in by distance. No per-pixel sample pattern,
+   so grass and leaves in the distance do not shimmer while the camera moves; it can be switched off (SET.gfxDof = 'off').
+   Sprites without depth test (floating words, speech bubbles, badges) are drawn afterwards on top, sharp. The render target follows
+   the frame time: below ~60 fps it shrinks (down to 55 %), with headroom it grows back, so the tier holds 60 fps and more.
+   postRender() replaces renderer.render() in frame() while POST.on. Nothing here touches the game state. */
 const POST = {
   on: false,
   ok: null,
@@ -18,6 +21,7 @@ const POST = {
   ft: 8,
   slowT: 0,
   fastT: 0,
+  holdT: 0,
   last: 0,
 };
 const POST_VS = `varying vec2 vUv;
@@ -48,20 +52,39 @@ void main() {
     float l = length(S);
     occ += max(0.0, dot(N, S / max(l, 1e-4)) - 0.18) * smoothstep(aoR * 2.0, aoR * 0.3, l);
   }
+  occ *= smoothstep(75.0, 35.0, -P.z); // far away the samples land on single blades and leaves: no occlusion there, no shimmer
   gl_FragColor = vec4(vec3(clamp(1.0 - occ / 8.0 * 1.6, 0.0, 1.0)), 1.0);
 }`;
-// pass 2 (full resolution): blurred occlusion, depth of field, glow, grading, vignette
+// quarter-resolution copy for the depth of field: 4 bilinear taps = the mean of the 4x4 block under the pixel; sharp (near) pixels
+// count less, so a warrior in front does not bleed into the soft background
+const POST_DOWN = `precision highp float;
+varying vec2 vUv;
+uniform sampler2D tColor; uniform sampler2D tDepth; uniform vec2 src; uniform float cNear; uniform float cFar; uniform vec3 dof;
+float linZ(float d) { float z = d * 2.0 - 1.0; return 2.0 * cNear * cFar / (cFar + cNear - z * (cFar - cNear)); }
+vec4 tap(vec2 o) {
+  vec2 uv = vUv + o / src;
+  float d = texture2D(tDepth, uv).r;
+  float c = d > 0.99999 ? 1.0 : smoothstep(dof.x, dof.y, linZ(d));
+  float w = 0.04 + c;
+  return vec4(texture2D(tColor, uv).rgb * w, w);
+}
+void main() {
+  vec4 a = tap(vec2(-1.0, -1.0)) + tap(vec2(1.0, -1.0)) + tap(vec2(-1.0, 1.0)) + tap(vec2(1.0, 1.0));
+  gl_FragColor = vec4(a.rgb / a.a, 1.0);
+}`;
+// pass 3 (full resolution): blurred occlusion, depth of field, glow, grading, vignette
 const POST_FS = `precision highp float;
 varying vec2 vUv;
-uniform sampler2D tColor; uniform sampler2D tDepth; uniform sampler2D tAO;
-uniform vec2 res; uniform float cNear; uniform float cFar;
-uniform float focus; uniform float aperture; uniform float fgK; uniform float aoK; uniform float time;
+uniform sampler2D tColor; uniform sampler2D tDepth; uniform sampler2D tAO; uniform sampler2D tBlur;
+uniform vec2 res; uniform vec2 bres; uniform float cNear; uniform float cFar;
+uniform vec3 dof; uniform vec2 fg; uniform float aoK; uniform float time;
 float linZ(float d) { float z = d * 2.0 - 1.0; return 2.0 * cNear * cFar / (cFar + cNear - z * (cFar - cNear)); }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+// how soft a pixel gets: from dof.x to dof.y metres behind the camera it fades in up to dof.z (the sky too); in the commander view
+// a little in front of the focus as well (fg: distance where it is full, strength)
 float cocOf(float d, float z) {
-  if (d > 0.99999) return 1.0;
-  float c = (1.0 / focus - 1.0 / z) * focus * aperture; // > 0 behind the focus plane, < 0 in front
-  return smoothstep(0.15, 1.0, c > 0.0 ? c : -c * fgK); // in front of the focus hardly any blur: that is usually a warrior
+  if (d > 0.99999) return dof.z;
+  return dof.z * smoothstep(dof.x, dof.y, z) + fg.y * (1.0 - smoothstep(fg.x * 0.5, fg.x, z));
 }
 void main() {
   float d = texture2D(tDepth, vUv).r;
@@ -75,26 +98,18 @@ void main() {
     ao += texture2D(tAO, vUv + o).r * w; aw += w;
   }
   ao = mix(1.0, ao / aw, aoK);
-  float coc = cocOf(d, z);
-  float rPx = coc * 4.0 * (res.y / 900.0);
-  vec3 glow = vec3(0.0);
-  if (rPx > 0.5) {
-    vec3 acc = col; float wsum = 1.0;
-    for (int i = 0; i < 12; i++) {
-      float fi = float(i) + 0.5;
-      float a = fi * 2.39996, r = sqrt(fi / 12.0) * rPx;
-      vec2 o = vec2(cos(a), sin(a)) * r / res;
-      float sd = texture2D(tDepth, vUv + o).r, sz = linZ(sd);
-      // a sharp thing in front must not smear over the blurred background
-      float w = (sz < z - 0.5 && cocOf(sd, sz) < coc * 0.5) ? 0.1 : 1.0;
-      vec3 c = texture2D(tColor, vUv + o).rgb;
-      acc += c * w; wsum += w;
-      glow += max(c - 0.8, 0.0);
+  if (dof.z > 0.0) {
+    float coc = cocOf(d, z);
+    if (coc > 0.004) {
+      // a tent over the quarter-resolution copy: smooth, and the same from frame to frame
+      vec2 bp = 0.5 / bres;
+      vec3 b = (texture2D(tBlur, vUv + vec2(-bp.x, -bp.y)).rgb + texture2D(tBlur, vUv + vec2(bp.x, -bp.y)).rgb +
+                texture2D(tBlur, vUv + vec2(-bp.x, bp.y)).rgb + texture2D(tBlur, vUv + vec2(bp.x, bp.y)).rgb) * 0.25;
+      col = mix(col, b, coc);
+      col += max(b - 0.8, 0.0) * 0.4 * coc;
     }
-    col = acc / wsum;
   }
   col *= ao;
-  col += glow / 12.0 * 0.4;
   // grading: a little more colour and contrast, warm highlights, cool shadows, then a soft vignette
   float l = dot(col, vec3(0.299, 0.587, 0.114));
   col = mix(vec3(l), col, 1.12);
@@ -121,6 +136,8 @@ function postInit() {
     POST.rt = rt;
     POST.ao = new THREE.WebGLRenderTarget(4, 4, { depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
     POST.ao.texture.generateMipmaps = false;
+    POST.bl = new THREE.WebGLRenderTarget(4, 4, { depthBuffer: false, minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+    POST.bl.texture.generateMipmaps = false;
     const shader = (fs, uniforms) =>
       new THREE.ShaderMaterial({
         vertexShader: POST_VS,
@@ -137,16 +154,26 @@ function postInit() {
       projInv: { value: new THREE.Matrix4() },
       aoR: { value: 0.5 },
     });
+    POST.dof = new THREE.Vector3(30, 120, 0.5);
+    POST.blMat = shader(POST_DOWN, {
+      tColor: { value: rt.texture },
+      tDepth: { value: dt },
+      src: { value: new THREE.Vector2(1, 1) },
+      cNear: { value: camera.near },
+      cFar: { value: camera.far },
+      dof: { value: POST.dof },
+    });
     POST.mat = shader(POST_FS, {
       tColor: { value: rt.texture },
       tDepth: { value: dt },
       tAO: { value: POST.ao.texture },
+      tBlur: { value: POST.bl.texture },
       res: { value: new THREE.Vector2(1, 1) },
+      bres: { value: new THREE.Vector2(1, 1) },
       cNear: { value: camera.near },
       cFar: { value: camera.far },
-      focus: { value: 20 },
-      aperture: { value: 0.32 },
-      fgK: { value: 0.3 },
+      dof: { value: POST.dof },
+      fg: { value: new THREE.Vector2(10, 0) },
       aoK: { value: 1 },
       time: { value: 0 },
     });
@@ -168,6 +195,7 @@ function postSet(on) {
   if (!POST.on && POST.rt) {
     POST.rt.setSize(4, 4); // free the big buffers while the effects are off
     POST.ao.setSize(4, 4);
+    POST.bl.setSize(4, 4);
     POST.w = POST.h = 0;
   }
   return POST.on;
@@ -207,10 +235,12 @@ function postScale() {
   else POST.slowT = Math.max(0, POST.slowT - sec);
   if (POST.ft < 10.5) POST.fastT += sec;
   else POST.fastT = 0;
+  POST.holdT = Math.max(0, POST.holdT - sec);
   if (POST.slowT > 0.8 && POST.scale > 0.55) {
     POST.scale = Math.max(0.55, POST.scale - 0.1);
     POST.slowT = 0;
-  } else if (POST.fastT > 4 && POST.scale < 1) {
+    POST.holdT = 12; // no see-saw between two sizes: after shrinking it waits a while before trying again
+  } else if (POST.fastT > 4 && POST.holdT <= 0 && POST.scale < 1) {
     POST.scale = Math.min(1, POST.scale + 0.05);
     POST.fastT = 0;
   }
@@ -227,6 +257,7 @@ function postRender(dt) {
     POST.h = sh;
     rt.setSize(sw, sh);
     POST.ao.setSize(Math.ceil(sw / 2), Math.ceil(sh / 2));
+    POST.bl.setSize(Math.ceil(sw / 4), Math.ceil(sh / 4));
   }
   const ua = POST.aoMat.uniforms;
   ua.res.value.set(Math.ceil(sw / 2), Math.ceil(sh / 2));
@@ -235,9 +266,18 @@ function postRender(dt) {
   u.res.value.set(sw, sh);
   u.cNear.value = camera.near;
   u.cFar.value = camera.far;
-  u.focus.value = postFocus(dt);
-  u.aperture.value = V.poss ? 0.22 : 0.32;
-  u.fgK.value = V.poss ? 0 : 0.3;
+  // depth of field: in the ego view the own warrior and everything up to ~25 m stay sharp, beyond that it softens gently; in the
+  // commander view the band around the looked-at point stays sharp
+  const f = postFocus(dt),
+    off = SET.gfxDof === 'off';
+  if (V.poss) POST.dof.set(26, 130, off ? 0 : 0.5);
+  else POST.dof.set(f * 1.6, f * 4.5, off ? 0 : 0.55);
+  u.fg.value.set(f * 0.45, V.poss || off ? 0 : 0.3);
+  u.bres.value.set(Math.ceil(sw / 4), Math.ceil(sh / 4));
+  const ub = POST.blMat.uniforms;
+  ub.src.value.set(sw, sh);
+  ub.cNear.value = camera.near;
+  ub.cFar.value = camera.far;
   u.time.value = (u.time.value + 1) % 256;
   // overlay sprites go to layer 1 (drawn last, sharp); the rest of the scene stays on layer 0
   for (const sp of SPRITES) {
@@ -257,6 +297,11 @@ function postRender(dt) {
   POST.quad.material = POST.aoMat;
   renderer.setRenderTarget(POST.ao);
   renderer.render(POST.sc, POST.cam);
+  if (POST.dof.z > 0) {
+    POST.quad.material = POST.blMat;
+    renderer.setRenderTarget(POST.bl);
+    renderer.render(POST.sc, POST.cam);
+  }
   POST.quad.material = POST.mat;
   renderer.setRenderTarget(null);
   renderer.render(POST.sc, POST.cam);

@@ -72,7 +72,7 @@ Every file starts with a short header comment saying what is in it.
 | 12-sim-worms | sandworms, bears, jump pads, ice | `wildWormStep`, `wormUnitStep`, `tameBearStep`, `padStep`, `iceStep` |
 | 13-sim-hazards | bowling bodies, rolling boulders, cream puddles | `bowlStep`, `rollStep`, `gooStep` |
 | 14-sim-step | **the tick** and the snapshot; map events | `step(G)`, `snapOf(G)`, `worldStep`, `startEvent` |
-| 15-ai | computer opponent | `aiThink`, `aiRecruit`, `aiPossess`, `AI_LVL` |
+| 15-ai | computer opponent (levels: Einfach, Mittel, Schwer, Extrem, Killer) | `aiThink`, `aiRecruit`, `aiPossess`, `AI_LVL` |
 | 20-textures | canvas textures | `cnv`, `portrait`, `flagCanvas` |
 | 21-scene | renderer, camera, lights, materials, fog shader, outlines | `lam(color)` (cached!), `fogInject`, `inkify`, `mesh` |
 | 22-map-view | terrain, water, trees, flags | `buildMapView` |
@@ -106,7 +106,7 @@ Every file starts with a short header comment saying what is in it.
 | 80-animation | procedural poses | `humanRig`, `animateRig` |
 | 81-quality | graphics quality levels, auto-quality, profiler | `QS`, `perfTick`, `applyQuality` |
 | 82-frame | **the frame loop** | `frame`, `renderUnits` |
-| 83-post | post effects of the tier „Sehr hoch“ (WebGL2): ambient occlusion, depth of field, glow, grading | `postSet`, `postRender`, `POST` |
+| 83-post | post effects of the tier „Sehr hoch“ (WebGL2): ambient occlusion, a cheap steady depth of field (quarter-resolution box-filtered copy, off with `SET.gfxDof`), glow, grading | `postSet`, `postRender`, `POST` |
 | 99-boot | start; `window.__wvr` (internals for tests) | – |
 
 ## How it runs
@@ -155,8 +155,8 @@ Every file starts with a short header comment saying what is in it.
 - **UI design ("Comic Pop"):** the last section of src/style.css is a design layer that restyles every control: paper surfaces
   (`--paper`), ink outlines and hard offset shadows (`--ink2`), skewed boxes on `::before` (text stays upright – keep the pseudo inside
   the layout box, `inset: 0 3px`, or fitText shrinks labels), halftone dots (`--dots`). Paper containers (`.card`, `.ppage`, `.pscard`,
-  `.tut-card`) re-scope `--text/--dim/--panel/--line`, so anything inside turns dark on light without new rules; dark islands (`.bpshow`,
-  `.psstage`, `.pcard`, `.mcard`) scope them back. HUD information stays dark glass, HUD controls are paper. Icons use `currentColor`.
+  `.tut-card`) re-scope `--text/--dim/--panel/--line`, so anything inside turns dark on light without new rules; dark islands (`.psstage`,
+  `.pcard`, `.mcard`) scope them back. HUD information stays dark glass, HUD controls are paper. Icons use `currentColor`.
 - **Overlay sprites:** every `THREE.Sprite` is registered in `SPRITES` (21-scene). With the post effects, sprites without depth test
   (words, speech bubbles, badges) go to camera layer 1 and are drawn after the depth of field; lights are on both layers.
 - **Collision at forests/rocks:** the 1.5 m grid is for paths; `walkableIn` also tests exact circles (`m.obsL`) in cells closed only by a
@@ -165,6 +165,13 @@ Every file starts with a short header comment saying what is in it.
   `buildSkinned(k, id)` sets `LAM_MAP` (so `lam(color)` returns the swapped colour) and `SKIN_NOW` (so `skinExtras()` in 25-worm-model
   adds capes, crowns, glasses …); caches of built models key on the skin. Extras must not use randomness (the low-detail model is built
   the same way and its parts are paired by order). Both players see each other's skins.
+- **Melee combos** (ego, melee and riders): the client counts the step and sends it as `cb` in the input packet; the host accepts it
+  only within the combo window (`CMB` in 02-data, `possAttack` in 10-sim). The own blow is drawn locally at once (`egoStrike` in 51-ego:
+  pose, cartoon slash `slashFx`, hit stop, impact star); `meleeSwing` (80-animation) blends from the previous pose into the next blow.
+- **Hühnerarmee** (perk `hens`): the chickens are units of the faction's melee kind with `u.hen` (see `HEN` in 02-data): not counted in
+  `popOf`, no kill gold, no kill feed, cannot be taken over; snapshot flag bit 32768 (drawn as a chicken with a team scarf, one merged mesh).
+- **Ruhmespfad** (66-profile-ui): every reward is a card on one horizontal road over a progress bar; touch scrolls natively, the mouse
+  drags (with momentum) or uses the wheel, ← → scroll; a tap opens the preview sheet (`profSheet`).
 - **God mode** (`GOD.on`, 65-profile): everything owned, `profSave()` does nothing; for trying out skins, not for players.
 - **Strangers:** nothing typed by a player and no photos ever reach another player in a public match; everything received from the
   lobby or a peer is validated (`lobbyValid`, `profPeer`).
@@ -174,7 +181,7 @@ Every file starts with a short header comment saying what is in it.
 
 ## Recipes
 
-- **Balance** (hp, damage, speed, cost, ranges, timings): `KINDS` / `CFG` in 02-data.js. Perk numbers: where `pk(G, team, 'id', [a, b])` is used.
+- **Balance** (hp, damage, speed, cost, ranges, timings): `KINDS` / `CFG` in 02-data.js (special recharge per kind: `SP_CD` / `spCdOf`). Perk numbers: where `pk(G, team, 'id', [a, b])` is used.
 - **New unit special:** sim effect in `possSpecial` (10-sim); client prediction/effects in `egoSpecial` (51-ego); AI use in 15-ai; label
   `KINDS[k].sp`.
 - **New perk:** entry in `PERKS` (02-data: `t` tier 0-3, `f` faction-only, `ic` icon, `n`/`d` German name/description) + the effect where it
@@ -201,6 +208,7 @@ Every file starts with a short header comment saying what is in it.
 - `tests/t_i18n.py` checks the languages (complete files with intact placeholders, no German left in English/Russian/Japanese, long
   labels fit); `tests/t_profile.py` the profile (levels, achievements, shop, skins, broken saves); `tests/mp/mp_lobby.py` the lobby list,
   quick match, practising while waiting, skins/VS card online and the transfer code.
+- `tests/t_bear.py`: a polar bear shot from afar charges the shooter (`b.foe`, `BEAR_GRUDGE` in 10-sim).
 - `tests/mp/mp_net.py` plays two pages against each other over local PeerJS/MQTT servers (quit, line drop, rejoin);
   `tests/mp/mp_recon.py` checks the ego movement online (no pull-backs on a clear walk or after a lag burst, knock-downs, a speed cheat).
 

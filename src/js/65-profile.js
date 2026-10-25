@@ -259,7 +259,7 @@ const ACH = [
     ic: 'fire',
     g: 60,
     n: TR('Unaufhaltsam'),
-    d: TR('Besiege den Computer auf „Sehr schwer“'),
+    d: TR('Besiege den Computer auf „Extrem“'),
     t: (P, M) => M.won && M.ai && ['insane', 'extreme'].includes(M.lvl),
   },
   {
@@ -267,7 +267,7 @@ const ACH = [
     ic: 'crown',
     g: 100,
     n: TR('Legende'),
-    d: TR('Besiege den Computer auf „Extrem“'),
+    d: TR('Besiege den Computer auf „Killer“'),
     t: (P, M) => M.won && M.ai && M.lvl === 'extreme',
   },
   { id: 'onlineWin', ic: 'army', g: 40, n: TR('Online-Held'), d: TR('Gewinne eine Online-Partie'), t: (P, M) => M.won && M.online },

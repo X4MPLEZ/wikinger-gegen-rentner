@@ -252,7 +252,7 @@ function updateHud() {
     if (ec.className !== 'panel ' + ecl) ec.className = 'panel ' + ecl;
     killFeedTop();
   }
-  const pop = s.u.filter(e => teamOfKind(e[1], s.fa) === me).length + s.q[me].length;
+  const pop = s.u.filter(e => teamOfKind(e[1], s.fa) === me && !(e[7] & 32768)).length + s.q[me].length;
   txt($('#pop'), pop + '/' + CFG.pop);
   $$('#flagdots i').forEach((d, i) => {
     const o = s.f[i] ? s.f[i][0] : -1;
@@ -348,7 +348,7 @@ function spawnSlot(i) {
     s = V.latest,
     me = V.myTeam;
   if (s) {
-    const pop = s.u.filter(e => teamOfKind(e[1], s.fa) === me).length + s.q[me].length;
+    const pop = s.u.filter(e => teamOfKind(e[1], s.fa) === me && !(e[7] & 32768)).length + s.q[me].length;
     if (s.g[me] < KINDS[k].cost) {
       SFX.play('error');
       toast(TR('Zu wenig {0}. Fahnen bringen mehr!', FAC[V.facs[me]].res), 1600);

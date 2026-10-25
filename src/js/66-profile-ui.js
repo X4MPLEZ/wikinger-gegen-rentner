@@ -28,6 +28,7 @@ function profMsg(t) {
 function profOpen(tab) {
   PUI.tab = tab || PUI.tab;
   PUI.sel = null;
+  PUI.trackX = undefined;
   PUI.newFrom = PUI.newAch = undefined;
   profSheet(null);
   showScreen('profScr');
@@ -118,158 +119,226 @@ function godBar() {
     })
   );
 }
-/* ---------- Ruhmespfad: a track of levels; the selected level's reward on a 3D stage ---------- */
+/* ---------- Ruhmespfad: every reward side by side over one progress bar, like a trophy road. Swipe (touch), drag (mouse), the
+   wheel or ← → move along it; a tap on a reward opens its preview. ---------- */
 function bpNext(L) {
   for (let i = L + 1; i <= LEVEL_MAX; i++) if (LEVEL_REWARDS[i]) return i;
   return LEVEL_MAX;
 }
+// the picture on a reward card
+function bpArt(rw, fac) {
+  const art = mkEl('span', 'bpart');
+  if (rw.sk) {
+    const id = rw.sk.find(x => SKINS[x].fac === fac),
+      other = rw.sk.find(x => x !== id),
+      im = mkEl('img', 'bpsk');
+    im.src = skinThumb(id);
+    im.alt = '';
+    art.appendChild(im);
+    const o = mkEl('img', 'bpsk2');
+    o.src = skinThumb(other);
+    o.alt = '';
+    o.dataset.sk = other;
+    art.appendChild(o);
+  } else if (rw.av) {
+    const im = mkEl('img', 'bpavs');
+    im.src = avatarURL(rw.av);
+    im.alt = '';
+    art.appendChild(im);
+  } else if (rw.gems) {
+    art.innerHTML = si('gem');
+    art.classList.add('gemart');
+  }
+  return art;
+}
 function profTabPath(box) {
   const lv = lvOf(PLAYER.xp),
-    L = lv.L;
-  if (!PUI.sel) {
-    let first = 0; // a new reward waiting: show it first
-    for (let i = (PUI.newFrom || L) + 1; i <= L && !first; i++) if (LEVEL_REWARDS[i]) first = i;
-    PUI.sel = first || (L >= LEVEL_MAX ? LEVEL_MAX : bpNext(L));
-  }
-  const sel = PUI.sel,
-    r = LEVEL_REWARDS[sel];
+    L = lv.L,
+    fac = myFacPref(),
+    goal = L >= LEVEL_MAX ? LEVEL_MAX : L + 1;
   const bp = mkEl('div', 'bp');
-  // the stage
-  const show = mkEl('div', 'bpshow'),
-    stage = mkEl('div', 'bpstage'),
-    info = mkEl('div', 'bpinfo');
-  show.append(stage, info);
-  info.appendChild(mkEl('small', 'bplv', TR('Level {0}', sel)));
-  info.appendChild(mkEl('b', 'bpname', rewardText(r)));
-  const state = mkEl('span', 'bpstate');
-  if (sel <= L) {
-    state.textContent = '✓ ' + TR('Freigeschaltet');
-    state.classList.add('ok');
-  } else {
-    let need = lv.need - lv.x;
-    for (let i = L + 1; i < sel; i++) need += lvNeed(i);
-    state.textContent = TR('Noch {0} EP', need);
-  }
-  info.appendChild(state);
-  if (r && r.sk) {
-    // which faction's skin is on the stage
-    const seg = mkEl('div', 'bpfac');
-    for (const f of ['viking', 'rentner']) {
-      const b = mkEl('button', myFacPref() === f ? 'on' : '', FAC[f].name);
-      b.addEventListener('click', () => {
-        SFX.play('click');
-        PUI.fac = f;
-        profUi();
-      });
-      seg.appendChild(b);
-    }
-    info.appendChild(seg);
-    const id = r.sk.find(x => SKINS[x].fac === myFacPref());
-    showMount(stage, { fac: myFacPref(), skin: id });
-    stage.appendChild(mkEl('span', 'bptag', SKINS[id].n));
-  } else if (r && r.av) {
-    const im = mkEl('img', 'bpav');
-    im.src = avatarURL(r.av);
-    im.alt = '';
-    stage.appendChild(im);
-    stage.classList.add('flat');
-  } else if (r && r.gems) {
-    const g = mkEl('div', 'bpgem');
-    g.innerHTML = si('gem');
-    g.appendChild(mkEl('b', '', '+' + r.gems));
-    stage.appendChild(g);
-    stage.classList.add('flat');
-  } else {
-    showMount(stage, { fac: myFacPref(), skin: PLAYER.sk[myFacPref()] });
-  }
-  // swipe across the stage (or the arrows, or ← →) to go from one reward to the next: no need to tap each node
-  {
-    const steps = [];
-    for (let i = 1; i <= LEVEL_MAX; i++) if (LEVEL_REWARDS[i]) steps.push(i);
-    const go = d => {
-      let k = steps.indexOf(sel);
-      if (k < 0) k = d > 0 ? steps.findIndex(i => i > sel) - 1 : steps.findIndex(i => i >= sel);
-      const nx = steps[clamp(k + d, 0, steps.length - 1)];
-      if (nx === undefined || nx === sel) return;
-      SFX.play('click');
-      PUI.sel = nx;
-      PUI.slide = d;
-      profUi();
-    };
-    PUI.bpGo = go;
-    const prev = mkEl('button', 'bpnav prev'),
-      next = mkEl('button', 'bpnav next');
-    prev.innerHTML =
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    next.innerHTML =
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    prev.setAttribute('aria-label', TR('Vorherige Belohnung'));
-    next.setAttribute('aria-label', TR('Nächste Belohnung'));
-    prev.disabled = sel <= steps[0];
-    next.disabled = sel >= steps[steps.length - 1];
-    prev.addEventListener('click', e => (e.stopPropagation(), go(-1)));
-    next.addEventListener('click', e => (e.stopPropagation(), go(1)));
-    show.append(prev, next);
-    let sw = null;
-    show.addEventListener('pointerdown', e => (sw = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId }));
-    show.addEventListener('pointerup', e => {
-      if (!sw || sw.id !== e.pointerId) return;
-      const dx = e.clientX - sw.x,
-        dy = e.clientY - sw.y;
-      sw = null;
-      if (Math.abs(dx) > 36 && Math.abs(dx) > Math.abs(dy) * 1.2) go(dx < 0 ? 1 : -1);
-    });
-    show.addEventListener('pointercancel', () => (sw = null));
-    if (PUI.slide) {
-      show.classList.add(PUI.slide > 0 ? 'in-r' : 'in-l');
-      PUI.slide = 0;
-    }
-    SHOW.dragOff = true; // here a drag swipes; the preview sheet turns the model instead
-  }
-  bp.appendChild(show);
-  // the track
-  const track = mkEl('div', 'bptrack');
-  let selNode = null;
+  // headline: what comes next, and a button back to it
+  const head = mkEl('div', 'bphead'),
+    ht = mkEl('div', 'bpht');
+  ht.appendChild(mkEl('b', '', L >= LEVEL_MAX ? TR('Ruhmespfad geschafft!') : TR('Nächste Belohnung: Level {0}', goal)));
+  ht.appendChild(
+    mkEl('small', '', L >= LEVEL_MAX ? TR('Ab Level {0}: alle 500 EP gibt es 30 Juwelen.', LEVEL_MAX) : TR('Noch {0} EP', lv.need - lv.x))
+  );
+  const me = mkEl('button', 'bpme', TR('Zu mir'));
+  head.append(ht, me);
+  bp.appendChild(head);
+  // the road
+  const road = mkEl('div', 'bproad'),
+    row = mkEl('div', 'bprow'),
+    bar = mkEl('div', 'bpbar'),
+    fill = mkEl('i');
+  bar.appendChild(fill);
+  row.appendChild(bar);
+  road.appendChild(row);
+  const cols = [];
+  let firstNew = 0;
   for (let i = 1; i <= LEVEL_MAX; i++) {
     const rw = LEVEL_REWARDS[i],
-      n = mkEl('button', 'bpnode' + (i <= L ? ' done' : '') + (i === L ? ' cur' : '') + (i === sel ? ' sel' : ''));
-    n.appendChild(mkEl('span', 'bpn', String(i)));
-    const ic = mkEl('span', 'bpic');
-    if (rw && rw.sk) {
-      const im = mkEl('img');
-      im.src = skinThumb(rw.sk.find(x => SKINS[x].fac === myFacPref()));
-      im.alt = '';
-      ic.appendChild(im);
-      n.classList.add('big');
-    } else if (rw && rw.av) {
-      const im = mkEl('img', 'round');
-      im.src = avatarURL(rw.av);
-      im.alt = '';
-      ic.appendChild(im);
-    } else if (rw && rw.gems) ic.appendChild(gemEl(rw.gems));
-    else ic.textContent = '★';
-    n.appendChild(ic);
-    if (i <= L) n.appendChild(mkEl('span', 'bpok', '✓'));
-    if (rw && PUI.newFrom !== undefined && i > PUI.newFrom && i <= L) n.appendChild(mkEl('span', 'bpnew', TR('NEU')));
-    n.addEventListener('click', () => {
-      SFX.play('click');
-      PUI.sel = i;
-      profUi();
-    });
-    track.appendChild(n);
-    if (i === sel) selNode = n;
+      col = mkEl('div', 'bpcol' + (i <= L ? ' done' : '') + (i === L ? ' cur' : '') + (i === goal && L < LEVEL_MAX ? ' next' : ''));
+    if (rw) {
+      const card = mkEl('button', 'bpcard' + (rw.sk ? ' skin' : rw.av ? ' av' : ' gem') + (i === LEVEL_MAX ? ' final' : ''));
+      card.appendChild(bpArt(rw, fac));
+      if (i === LEVEL_MAX) {
+        // the last level gives everything at once: the extras as small chips
+        const ex = mkEl('span', 'bpextra');
+        const im = mkEl('img');
+        im.src = avatarURL(rw.av);
+        im.alt = '';
+        ex.append(im, gemEl('+' + rw.gems));
+        card.appendChild(ex);
+      }
+      card.appendChild(
+        mkEl('span', 'bpname', rw.sk ? SKINS[rw.sk.find(x => SKINS[x].fac === fac)].n : rw.av ? TR('Profilbild') : '+' + rw.gems)
+      );
+      const st = mkEl('span', 'bpst');
+      if (i <= L) st.textContent = '✓';
+      else st.innerHTML = si('lock');
+      card.appendChild(st);
+      if (PUI.newFrom !== undefined && i > PUI.newFrom && i <= L) {
+        card.appendChild(mkEl('span', 'bpnew', TR('NEU')));
+        firstNew ||= i;
+      }
+      card.setAttribute('aria-label', TR('Level {0}', i) + ': ' + rewardText(rw) + (i <= L ? ' ✓' : ''));
+      card.addEventListener('click', e => {
+        SFX.play('click');
+        const o = e.target.closest('[data-sk]');
+        if (o) profSheet({ id: o.dataset.sk, isAv: false });
+        else if (rw.sk) profSheet({ id: rw.sk.find(x => SKINS[x].fac === fac), isAv: false });
+        else if (rw.av) profSheet({ id: rw.av, isAv: true });
+        else {
+          card.classList.remove('pop');
+          void card.offsetWidth;
+          card.classList.add('pop');
+          profMsg(i <= L ? TR('{0} Juwelen', rw.gems) + ' ✓' : TR('Noch {0} EP', bpNeed(lv, i)));
+        }
+      });
+      col.appendChild(card);
+    } else {
+      col.classList.add('start');
+      col.appendChild(mkEl('span', 'bpstart', TR('Start')));
+    }
+    col.appendChild(mkEl('span', 'bpdot', String(i)));
+    row.appendChild(col);
+    cols[i] = col;
   }
-  bp.appendChild(track);
-  bp.appendChild(mkEl('p', 'note', TR('Ab Level {0}: alle 500 EP gibt es 30 Juwelen.', LEVEL_MAX)));
   box.appendChild(bp);
-  if (selNode)
-    requestAnimationFrame(() => {
-      const tl = selNode.offsetLeft - track.clientWidth / 2 + selNode.clientWidth / 2;
-      track.scrollLeft = PUI.trackX !== undefined && PUI.keepTrack ? PUI.trackX : tl;
-      PUI.keepTrack = false;
-    });
-  track.addEventListener('scroll', () => (PUI.trackX = track.scrollLeft));
-  track.addEventListener('click', () => (PUI.keepTrack = true), true);
+  bp.appendChild(road);
+  bp.appendChild(mkEl('p', 'note', TR('Wische durch den Pfad – tippe auf eine Belohnung für die Vorschau.')));
+  // bar and fill follow the real column positions
+  const cx = i => cols[i].offsetLeft + cols[i].offsetWidth / 2;
+  const layout = () => {
+    const a = cx(1),
+      z = cx(LEVEL_MAX),
+      at = L >= LEVEL_MAX ? z : cx(L) + (cx(L + 1) - cx(L)) * (lv.x / lv.need);
+    bar.style.left = a + 'px';
+    bar.style.width = z - a + 'px';
+    fill.style.width = Math.max(0, at - a) + 'px';
+  };
+  const center = (i, smooth) => {
+    const left = cx(i) - road.clientWidth / 2;
+    if (smooth) road.scrollTo({ left, behavior: 'smooth' });
+    else road.scrollLeft = left;
+  };
+  const meVis = () => {
+    const x = cx(goal) - road.scrollLeft;
+    me.classList.toggle('show', x < 0 || x > road.clientWidth);
+    me.classList.toggle('right', x > road.clientWidth);
+  };
+  requestAnimationFrame(() => {
+    if (!road.isConnected) return; // drawn again in the meantime
+    layout();
+    if (PUI.trackX !== undefined) road.scrollLeft = PUI.trackX;
+    else center(firstNew || goal, false);
+    PUI.trackX = road.scrollLeft;
+    meVis();
+  });
+  road.addEventListener(
+    'scroll',
+    () => {
+      if (!road.isConnected) return;
+      PUI.trackX = road.scrollLeft;
+      meVis();
+    },
+    { passive: true }
+  );
+  me.addEventListener('click', () => {
+    SFX.play('click');
+    center(goal, true);
+  });
+  // mouse: drag with a little momentum, the wheel scrolls sideways; touch scrolls natively
+  let drag = null,
+    moved = false,
+    raf = 0;
+  road.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button) return;
+    cancelAnimationFrame(raf);
+    drag = { x: e.clientX, s: road.scrollLeft, lx: e.clientX, t: performance.now(), v: 0, id: e.pointerId };
+    moved = false;
+  });
+  road.addEventListener('pointermove', e => {
+    if (!drag || drag.id !== e.pointerId) return;
+    const dx = e.clientX - drag.x;
+    if (!moved && Math.abs(dx) > 6) {
+      moved = true;
+      road.classList.add('drag');
+      try {
+        road.setPointerCapture(e.pointerId);
+      } catch (_) {}
+    }
+    if (!moved) return;
+    road.scrollLeft = drag.s - dx;
+    const t = performance.now();
+    drag.v = drag.v * 0.4 + ((e.clientX - drag.lx) / Math.max(1, t - drag.t)) * 16 * 0.6;
+    drag.lx = e.clientX;
+    drag.t = t;
+  });
+  const end = () => {
+    if (!drag) return;
+    let v = -drag.v;
+    drag = null;
+    road.classList.remove('drag');
+    const glide = () => {
+      if (Math.abs(v) < 0.4) return;
+      road.scrollLeft += v;
+      v *= 0.92;
+      raf = requestAnimationFrame(glide);
+    };
+    if (moved) glide();
+  };
+  road.addEventListener('pointerup', end);
+  road.addEventListener('pointercancel', end);
+  road.addEventListener(
+    'click',
+    e => {
+      if (moved) {
+        e.stopPropagation();
+        e.preventDefault();
+        moved = false;
+      }
+    },
+    true
+  );
+  road.addEventListener(
+    'wheel',
+    e => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      road.scrollLeft += e.deltaY;
+      e.preventDefault();
+    },
+    { passive: false }
+  );
+  PUI.bpGo = d => road.scrollBy({ left: d * Math.round(road.clientWidth * 0.6), behavior: 'smooth' });
+}
+// XP still missing to reach level i
+function bpNeed(lv, i) {
+  let need = lv.need - lv.x;
+  for (let k = lv.L + 1; k < i; k++) need += lvNeed(k);
+  return need;
 }
 /* ---------- daily quests ---------- */
 function profTabQuests(box) {

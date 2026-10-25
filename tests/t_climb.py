@@ -27,8 +27,8 @@ with sync_playwright() as p:
       return out; }""")
     print(json.dumps(r))
     # 4) client side: normal walking is never pulled back; a host that refuses to follow pulls the ego back to where it has it
-    pg.evaluate('__wvr.startSim(false)'); pg.wait_for_timeout(300)
-    pg.evaluate("(()=>{const W=__wvr,P=W.V.poss,u=W.G.units.find(o=>o.id===P.id); const q=W.nw(W.BASES[0].x*0.5, W.BASES[0].z*0.5); u.x=P.x=q.x; u.z=P.z=q.z; u.y=u.fy=P.fy=W.unitY(q.x,q.z); P.camYaw=Math.atan2(-q.x,-q.z);})()")
+    pg.evaluate("(()=>{const W=__wvr,P=W.V.poss,u=W.G.units.find(o=>o.id===P.id); const q=W.nw(W.BASES[0].x*0.5, W.BASES[0].z*0.5); u.air=null; u.fall=0; u.falling=false; u.down=0; P.air=null; P.vy=0; u.x=P.x=q.x; u.z=P.z=q.z; u.y=u.fy=P.fy=W.unitY(q.x,q.z); P.camYaw=Math.atan2(-q.x,-q.z);})()")  # (it may have just stepped off the ramp top: start from the ground)
+    pg.evaluate('__wvr.startSim(false)'); pg.wait_for_timeout(300)  # only now: snapshots and inputs still in flight would carry the old spot
     pg.wait_for_timeout(500); s0 = pg.evaluate("(()=>{const P=__wvr.V.poss; return [P.x,P.z];})()")
     pg.keyboard.down('w'); pg.wait_for_timeout(1800); pg.keyboard.up('w'); pg.wait_for_timeout(600)
     s1 = pg.evaluate("(()=>{const W=__wvr,P=W.V.poss,u=W.G.units.find(o=>o.id===P.id); return [P.x,P.z,u.x,u.z];})()")

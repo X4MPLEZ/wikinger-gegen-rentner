@@ -247,10 +247,10 @@ const FAC = {
 };
 const CFG = {
   startGold: 160,
-  baseInc: 4.5,
-  flagInc: 1.2,
-  incGrow: 0.12,
-  incGrowMax: 2,
+  baseInc: 5.6, // gold per second (v55: +25 %, more warriors on the field)
+  flagInc: 1.5,
+  incGrow: 0.15,
+  incGrowMax: 2.5,
   kill: 4,
   underdogKill: 3,
   siegeBounty: 50,
@@ -276,13 +276,13 @@ const CFG = {
   towerCd: 0.8,
   towerPoss: 4,
   baseArmor: 0.45,
-  flagIncDeep: 0.8,
+  flagIncDeep: 1,
   towerSpeed: 24,
   flagR: 6,
   capTime: 5,
   leash: 11,
   hillBonus: 3,
-  spCd: 8,
+  spCd: 8, // special recharge in s (see SP_CD for the faster ones)
   possDmg: { melee: 1.5, cav: 1.4, ranged: 1.25 },
   possArmor: 0.8,
   possHp: 1.6,
@@ -296,6 +296,17 @@ const CFG = {
   healR: 16,
   heal: 6,
 };
+/* Melee combos of a steered warrior (melee and riders): three blows in a row, each within `win` × the attack time of the last one.
+   The 3rd is the finisher: much more damage, it knocks the enemies back. Blows 1 and 2 come faster, the finisher has a longer recovery.
+   The client counts the combo and sends its step (input packet cb); the host checks it (possAttack). */
+// specials that recharge faster than CFG.spCd: the Krückstock-Opa's Stockwirbel a little faster than the Berserker's rage
+const SP_CD = { 0: 6.5, 2: 5.5 };
+// the recharge time of kind k's special (siege, bears and sandworms have their own)
+function spCdOf(k) {
+  const K = KINDS[k];
+  return K.role === 'siege' ? 14 : K.bear ? 6 : K.worm ? 9 : (SP_CD[k] ?? CFG.spCd);
+}
+const CMB = { win: 1.9, dmg: [1, 1.12, 1.75], cd: [0.8, 0.8, 1.3] };
 const maxHp = u => u.mhp || KINDS[u.k].hp;
 const SIEGE_EGO_REACH = 6; // the aiming ring and the simulation clamp an ego catapult shot to the same distance
 /* Chaos-mode perks. Rules of thumb (checked with tools/balance.py, computer vs computer):
@@ -308,7 +319,7 @@ const PERKS = {
   flagger: { t: 0, ic: si('flag'), n: TR('Fahnenträger'), d: TR('Fahnen 2,5× schneller erobern') },
   heal: { t: 0, ic: si('heal'), n: TR('Heilquelle'), d: TR('Deine Krieger heilen sich überall') },
   cavspd: { t: 0, ic: si('horseshoe'), n: TR('Galopp'), d: TR('Reiter +50 % Tempo und +25 % Schaden') },
-  fast: { t: 0, ic: si('gear'), n: TR('Fließband'), d: TR('Ausbildung doppelt so schnell') },
+  hens: { t: 0, ic: si('chicken'), n: TR('Hühnerarmee'), d: TR('Einmalig: 30 Hühner schlüpfen an deiner Basis und stürmen los') },
   moon: { t: 0, ic: si('moon'), n: TR('Mondschwerkraft'), d: TR('Umgestoßene Gegner fliegen sehr hoch und lange') },
   charge: { t: 0, ic: si('battery'), n: TR('Spezial-Akku'), d: TR('Spezialfähigkeiten laden 3× schneller') },
   arrows: { t: 1, ic: si('arrow'), n: TR('Scharfe Pfeile'), d: TR('Fernkämpfer machen 60 % mehr Schaden') },
@@ -404,6 +415,9 @@ const FOG_SIGHT = {
   memory: 6, // seconds the computer remembers where it last saw someone (the player gets tracks for as long, 74-fog-guides.js)
 };
 const fogSightOf = (role, poss) => (poss ? FOG_SIGHT.torch : role === 'cav' ? FOG_SIGHT.scout : FOG_SIGHT.unit);
+// Hühnerarmee: the chickens are warriors of the faction's melee kind with u.hen set: few hit points, weak pecks (hardly any against the
+// base), fast feet; they do not count for the army size, give no kill gold and cannot be taken over
+const HEN = { n: 30, hp: 28, dmg: 0.4, base: 0.12, speed: 1.3 };
 const PERK_IDS = Object.keys(PERKS),
   PERK_EVERY = 30,
   PERK_MAX = 7,

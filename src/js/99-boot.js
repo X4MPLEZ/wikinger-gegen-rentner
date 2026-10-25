@@ -8,6 +8,7 @@ document.fonts &&
       fitText(); // (the display font changes the widths)
     })
     .catch(() => {});
+facFaces();
 menuScene();
 applyCam();
 initQuality();
@@ -96,6 +97,9 @@ window.__wvr = {
   iceVelocity,
   iceStep,
   hitBear,
+  POST,
+  popOf,
+  BASES,
   tameBearStep,
   baseGap,
   baseApproach,

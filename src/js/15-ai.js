@@ -42,7 +42,7 @@ const AI_LVL = {
     bonus: 0,
   },
   insane: {
-    name: TR('Sehr schwer'),
+    name: TR('Extrem'),
     think: 0.25,
     inc: 1.35,
     counter: 1,
@@ -57,7 +57,7 @@ const AI_LVL = {
     rangedEgo: 0.3,
   },
   extreme: {
-    name: TR('Extrem'),
+    name: TR('Killer'),
     think: 0.15,
     inc: 1.8,
     counter: 1,
@@ -452,6 +452,7 @@ function aiPossess(G, team, A, L, mine, foes) {
           !KINDS[u.k].worm &&
           !u.grab &&
           !(u.down > 0) &&
+          !u.hen &&
           u.hp >= KINDS[u.k].hp * 0.8
       ),
       ep = foes.find(e => e.poss),
@@ -855,7 +856,7 @@ function aiThink(G, team) {
         'tower',
         'bounty',
         'gold',
-        'fast',
+        'hens',
         'heal',
         'flagger',
         'cavspd',
