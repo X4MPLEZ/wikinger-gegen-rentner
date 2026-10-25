@@ -215,7 +215,11 @@ function feetInit() {
 const feetKind = k => (k === 5 ? 'tyre' : k === 4 ? 'hoof' : 'foot');
 function fogFeetTick() {
   const on = FOG.on && FOG.k > 0.05 && V.playing && !V.tut;
-  if (!on && !FEET.list.length) return;
+  if (!on && !FEET.list.length) {
+    // nothing to show: the instanced prints must go too (they kept their last count after the fog ended or a new match began)
+    if (FEET.kinds) for (const kind in FEET.kinds) FEET.kinds[kind].im.count = 0;
+    return;
+  }
   if (!FEET.kinds) feetInit();
   const tn = now();
   if (on)

@@ -758,9 +758,9 @@ function aiPossess(G, team, A, L, mine, foes) {
   };
 }
 function aiHeroWorm(G, A, L, u, foes) {
-  // now and then the AI's own Berserker / Opa goes to play the hero on a sandworm nearby:
+  // now and then the AI's own steered warrior goes to play the hero on a sandworm nearby:
   // a wild one (more likely when it is weakened) or an enemy worm unit
-  if ((u.k !== 0 && u.k !== 2) || L.micro < 2 || u.hero) return null;
+  if (!HERO.kinds.includes(u.k) || L.micro < 2 || u.hero) return null;
   const ok = w => (heroIsUnit(w) ? heroUnitOk(w, u.team) : heroWildOk(w) && !(w.ws === 4 && w.st >= WORM.up - 1.2));
   if (G.t >= (A.heroT || 0)) {
     A.heroT = G.t + 1.5;

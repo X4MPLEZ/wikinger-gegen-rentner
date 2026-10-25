@@ -203,7 +203,7 @@ function unitIcon(k) {
 }
 
 /* ---------- effects ---------- */
-const fx = { puffs: [], projs: [], words: [], coins: [], shots: [], swings: [], debris: [], claws: [] };
+const fx = { puffs: [], projs: [], words: [], coins: [], shots: [], stuck: [], swings: [], debris: [], claws: [] };
 const fxPrev = new THREE.Vector3(),
   fxAim = new THREE.Vector3();
 const PUFF_CAP = 192,

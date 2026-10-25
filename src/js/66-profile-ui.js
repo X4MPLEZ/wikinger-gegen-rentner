@@ -78,7 +78,7 @@ function rewardText(r) {
   const out = [];
   if (!r) return TR('Start');
   if (r.av) out.push(TR('Profilbild'));
-  if (r.sk) out.push(TR('Skins: {0} und {1}', SKINS[r.sk[0]].n, SKINS[r.sk[1]].n));
+  if (r.sk) out.push(r.sk.length > 1 ? TR('Skins: {0} und {1}', SKINS[r.sk[0]].n, SKINS[r.sk[1]].n) : TR('Skin: {0}', SKINS[r.sk[0]].n));
   if (r.gems) out.push(TR('{0} Juwelen', r.gems));
   return out.join(' · ');
 }
@@ -125,28 +125,36 @@ function bpNext(L) {
   for (let i = L + 1; i <= LEVEL_MAX; i++) if (LEVEL_REWARDS[i]) return i;
   return LEVEL_MAX;
 }
+// the skin a reward card shows: the one of the faction played, else the level's only one
+const bpSkin = (rw, fac) => rw.sk.find(x => SKINS[x].fac === fac) || rw.sk[0];
 // the picture on a reward card
 function bpArt(rw, fac) {
   const art = mkEl('span', 'bpart');
   if (rw.sk) {
-    const id = rw.sk.find(x => SKINS[x].fac === fac),
+    const id = bpSkin(rw, fac),
       other = rw.sk.find(x => x !== id),
       im = mkEl('img', 'bpsk');
     im.src = skinThumb(id);
     im.alt = '';
     art.appendChild(im);
-    const o = mkEl('img', 'bpsk2');
-    o.src = skinThumb(other);
-    o.alt = '';
-    o.dataset.sk = other;
-    art.appendChild(o);
+    if (other) {
+      const o = mkEl('img', 'bpsk2');
+      o.src = skinThumb(other);
+      o.alt = '';
+      o.dataset.sk = other;
+      art.appendChild(o);
+    }
   } else if (rw.av) {
     const im = mkEl('img', 'bpavs');
     im.src = avatarURL(rw.av);
     im.alt = '';
     art.appendChild(im);
   } else if (rw.gems) {
-    art.innerHTML = si('gem');
+    const im = mkEl('img', 'bpgem3');
+    im.src = gemThumb(rw.gems >= 150 ? 3 : rw.gems >= 70 ? 2 : 1); // 3D crystals: more of them for bigger rewards
+    im.alt = '';
+    if (im.src) art.appendChild(im);
+    else art.innerHTML = si('gem');
     art.classList.add('gemart');
   }
   return art;
@@ -192,9 +200,7 @@ function profTabPath(box) {
         ex.append(im, gemEl('+' + rw.gems));
         card.appendChild(ex);
       }
-      card.appendChild(
-        mkEl('span', 'bpname', rw.sk ? SKINS[rw.sk.find(x => SKINS[x].fac === fac)].n : rw.av ? TR('Profilbild') : '+' + rw.gems)
-      );
+      card.appendChild(mkEl('span', 'bpname', rw.sk ? SKINS[bpSkin(rw, fac)].n : rw.av ? TR('Profilbild') : '+' + rw.gems));
       const st = mkEl('span', 'bpst');
       if (i <= L) st.textContent = '✓';
       else st.innerHTML = si('lock');
@@ -208,7 +214,7 @@ function profTabPath(box) {
         SFX.play('click');
         const o = e.target.closest('[data-sk]');
         if (o) profSheet({ id: o.dataset.sk, isAv: false });
-        else if (rw.sk) profSheet({ id: rw.sk.find(x => SKINS[x].fac === fac), isAv: false });
+        else if (rw.sk) profSheet({ id: bpSkin(rw, fac), isAv: false });
         else if (rw.av) profSheet({ id: rw.av, isAv: true });
         else {
           card.classList.remove('pop');

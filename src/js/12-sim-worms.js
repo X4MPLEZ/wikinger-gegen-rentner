@@ -101,7 +101,7 @@ function wormHead(w, unit, yaw) {
     h = 1.85;
     f = 1;
   } else if (s === 7) {
-    const o = heroWormPose(st, st, {});
+    const o = heroWormPose(st, st, {}, HERO_S[w.heroS || 0]);
     h = o.h;
     f = o.f;
   }

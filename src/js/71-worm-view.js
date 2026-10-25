@@ -199,11 +199,12 @@ function wormFrameFx(v, dt) {
     }
     if (W.st >= 1.4 && !W.gulped) {
       W.gulped = 1;
-      W.gulp = 0;
-      if (near) {
-        SFX.play('gulp', { x, z, vol: 1.1 });
-        if (v.held && v.held.some(Boolean))
+      if (W.hadPrey) {
+        W.gulp = 0; // only something caught goes down its throat
+        if (near) {
+          SFX.play('gulp', { x, z, vol: 1.1 });
           word(pick([TR('HAPP!'), TR('SCHLUCK!'), TR('MAHLZEIT!')]), x, groundY(x, z) + 8, z, { color: '#ffd38a', scale: 1.3 });
+        }
       }
     }
   }

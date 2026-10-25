@@ -306,7 +306,8 @@ function spCdOf(k) {
   const K = KINDS[k];
   return K.role === 'siege' ? 14 : K.bear ? 6 : K.worm ? 9 : (SP_CD[k] ?? CFG.spCd);
 }
-const CMB = { win: 1.9, dmg: [1, 1.12, 1.75], cd: [0.8, 0.8, 1.3] };
+// (v56: an ego melee warrior strikes a little faster and a little softer)
+const CMB = { win: 1.9, dmg: [0.86, 0.96, 1.5], cd: [0.7, 0.7, 1.15] };
 const maxHp = u => u.mhp || KINDS[u.k].hp;
 const SIEGE_EGO_REACH = 6; // the aiming ring and the simulation clamp an ego catapult shot to the same distance
 /* Chaos-mode perks. Rules of thumb (checked with tools/balance.py, computer vs computer):
@@ -319,7 +320,7 @@ const PERKS = {
   flagger: { t: 0, ic: si('flag'), n: TR('Fahnenträger'), d: TR('Fahnen 2,5× schneller erobern') },
   heal: { t: 0, ic: si('heal'), n: TR('Heilquelle'), d: TR('Deine Krieger heilen sich überall') },
   cavspd: { t: 0, ic: si('horseshoe'), n: TR('Galopp'), d: TR('Reiter +50 % Tempo und +25 % Schaden') },
-  hens: { t: 0, ic: si('chicken'), n: TR('Hühnerarmee'), d: TR('Einmalig: 30 Hühner schlüpfen an deiner Basis und stürmen los') },
+  hens: { t: 0, ic: si('chicken'), n: TR('Hühnerarmee'), d: TR('Einmalig: 40 Hühner schlüpfen an deiner Basis und stürmen los') },
   moon: { t: 0, ic: si('moon'), n: TR('Mondschwerkraft'), d: TR('Umgestoßene Gegner fliegen sehr hoch und lange') },
   charge: { t: 0, ic: si('battery'), n: TR('Spezial-Akku'), d: TR('Spezialfähigkeiten laden 3× schneller') },
   arrows: { t: 1, ic: si('arrow'), n: TR('Scharfe Pfeile'), d: TR('Fernkämpfer machen 60 % mehr Schaden') },
@@ -416,8 +417,8 @@ const FOG_SIGHT = {
 };
 const fogSightOf = (role, poss) => (poss ? FOG_SIGHT.torch : role === 'cav' ? FOG_SIGHT.scout : FOG_SIGHT.unit);
 // Hühnerarmee: the chickens are warriors of the faction's melee kind with u.hen set: few hit points, weak pecks (hardly any against the
-// base), fast feet; they do not count for the army size, give no kill gold and cannot be taken over
-const HEN = { n: 30, hp: 28, dmg: 0.4, base: 0.12, speed: 1.3 };
+// base), fast feet; they do not count for the army size and give no kill gold. Taken over, a chicken pecks (no special, no counters)
+const HEN = { n: 40, hp: 28, dmg: 0.4, base: 0.12, speed: 1.3 };
 const PERK_IDS = Object.keys(PERKS),
   PERK_EVERY = 30,
   PERK_MAX = 7,
@@ -433,7 +434,7 @@ function headBox(e) {
 function setPoss(u, on) {
   if (!!u.poss === on) return;
   const K = KINDS[u.k],
-    base = (u.gs ? 1.6 : 1) * K.hp,
+    base = u.hen ? HEN.hp : (u.gs ? 1.6 : 1) * K.hp,
     sg = K.role === 'siege',
     ph = sg ? 0.8 : CFG.possHp * (K.ego ? K.ego.hp : 1);
   if (on) {
@@ -443,7 +444,7 @@ function setPoss(u, on) {
   } else {
     u.poss = false;
     u.hp = Math.max(1, Math.min(base, u.hp / ph));
-    u.mhp = u.gs ? base : undefined;
+    u.mhp = u.gs || u.hen ? base : undefined;
     u.aim = null;
   }
 }

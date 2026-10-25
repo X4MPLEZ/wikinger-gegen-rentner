@@ -68,7 +68,7 @@ Every file starts with a short header comment saying what is in it.
 | 02-data | **all game data and balance** | `KINDS`, `FAC`, `CFG`, `PERKS`, `TIERS` |
 | 03-map | map generation, terrain, pathfinding, body physics | `genMap`, `setMap`, `groundY`, `walkable`, `findPath`, `startAir`, `advanceGround` |
 | 10-sim | simulation core | `newGame`, `applyCmd` (every command), `hit`, `knockFly`, `possStep` (ego input), `possAttack`, `possSpecial` |
-| 11-sim-hero | "Den Helden spielen" (jump onto a sandworm) | `heroWorm`, `heroStart`, `heroStep` |
+| 11-sim-hero | "Den Helden spielen" (any warrior sacrifices himself on a sandworm; two scripts per kind in `HERO_S`/`HERO_SET`) | `heroWorm`, `heroStart`, `heroStep`, `HERO_S` |
 | 12-sim-worms | sandworms, bears, jump pads, ice | `wildWormStep`, `wormUnitStep`, `tameBearStep`, `padStep`, `iceStep` |
 | 13-sim-hazards | bowling bodies, rolling boulders, cream puddles | `bowlStep`, `rollStep`, `gooStep` |
 | 14-sim-step | **the tick** and the snapshot; map events | `step(G)`, `snapOf(G)`, `worldStep`, `startEvent` |
@@ -91,7 +91,7 @@ Every file starts with a short header comment saying what is in it.
 | 52-hud | HUD numbers, spawn buttons, chips, kill feed position, tips | `updateHud`, `toast`, `HINTS`, `killFeedTop` |
 | 60-modes | match setup, sim loop, commands, end screen | `playAi`, `beginMatch`, `startSim`, `sendCmd`, `endGame`, `G`, `NET` |
 | 61-net | online: transports, lobby, host/guest sync, rematch | `openMulti`, `hostOnline`, `joinOnline`, `hostReadGuest`, `hostBroadcast`, `NET_VER` |
-| 62-screens | menus, pause, settings, quit | `showScreen`, `toMenu`, `quitMatch`, `menuScene` |
+| 62-screens | menus, pause, settings, quit, bug report (FormSubmit) | `showScreen`, `toMenu`, `quitMatch`, `menuScene`, `bugOpen` |
 | 63-tutorial | tutorial and Profi tutorial | `tutSteps`, `startTutorial`, `tutBlock` |
 | 64-lobby | public games: list „Offene Spiele“, „Schnelles Spiel“, practising while waiting | `LOBBY`, `lobbyWatch`, `lobbyValid`, `lobbyHostStart`, `quickMatch` |
 | 65-profile | the player's profile: levels (Ruhmespfad), achievements, daily quests, Juwelen, pictures, skins, statistics, transfer code, god mode | `PLAYER`, `ACH`, `DQ_POOL`, `AVATARS`, `SKINS`, `LEVEL_REWARDS`, `profMatchEnd`, `profEvent`, `setSkins`, `avatarURL`, `godSet` |
@@ -168,8 +168,13 @@ Every file starts with a short header comment saying what is in it.
 - **Melee combos** (ego, melee and riders): the client counts the step and sends it as `cb` in the input packet; the host accepts it
   only within the combo window (`CMB` in 02-data, `possAttack` in 10-sim). The own blow is drawn locally at once (`egoStrike` in 51-ego:
   pose, cartoon slash `slashFx`, hit stop, impact star); `meleeSwing` (80-animation) blends from the previous pose into the next blow.
+- **Den Helden spielen:** a script (`HERO_S`: hits, gulp, inner hits, end; per kind two in `HERO_SET`) drives the host's damage, the
+  worm's pose (`heroWormPose(st, t, o, S)`) and the view (72-hero-view: climb, rodeo, pogo, fling in slow motion, ramp with the mount
+  eaten first, riders' mount split off with `heroSplit`). The hero always dies; a worm he beats holds out at 1 hp (`heroBeat`) until then.
+- **Melee moves** (80-animation `CPOSE`): per kind a list of moves (`n` ordinary, `a` computer only, `f` finisher with `spin`/`jump`, `W`
+  wind-up, `sl` slash shape); `comboSeq` picks a steered warrior's three, `pickAv` a computer warrior's; the arm waits raised (`avN`).
 - **Hühnerarmee** (perk `hens`): the chickens are units of the faction's melee kind with `u.hen` (see `HEN` in 02-data): not counted in
-  `popOf`, no kill gold, no kill feed, cannot be taken over; snapshot flag bit 32768 (drawn as a chicken with a team scarf, one merged mesh).
+  `popOf`, no kill gold, no kill feed; taken over it only pecks; snapshot flag bit 32768 (drawn as a chicken with a team scarf, one merged mesh).
 - **Ruhmespfad** (66-profile-ui): every reward is a card on one horizontal road over a progress bar; touch scrolls natively, the mouse
   drags (with momentum) or uses the wheel, ← → scroll; a tap opens the preview sheet (`profSheet`).
 - **God mode** (`GOD.on`, 65-profile): everything owned, `profSave()` does nothing; for trying out skins, not for players.
@@ -209,6 +214,7 @@ Every file starts with a short header comment saying what is in it.
   labels fit); `tests/t_profile.py` the profile (levels, achievements, shop, skins, broken saves); `tests/mp/mp_lobby.py` the lobby list,
   quick match, practising while waiting, skins/VS card online and the transfer code.
 - `tests/t_bear.py`: a polar bear shot from afar charges the shooter (`b.foe`, `BEAR_GRUDGE` in 10-sim).
+- `tests/t_bug.py`: the bug report form posts text, device info and the screenshot to FormSubmit (the request is caught in the test).
 - `tests/mp/mp_net.py` plays two pages against each other over local PeerJS/MQTT servers (quit, line drop, rejoin);
   `tests/mp/mp_recon.py` checks the ego movement online (no pull-backs on a clear walk or after a lag burst, knock-downs, a speed cheat).
 

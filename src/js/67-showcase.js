@@ -164,3 +164,70 @@ function skinThumb(id) {
   SK_THUMB[id] = url;
   return url;
 }
+
+// a still picture of 3D gems (the Juwelen cards on the Ruhmespfad): one, two or three cut crystals, lit like the showcase
+const GEM_THUMB = {};
+function gemThumb(n = 1) {
+  if (GEM_THUMB[n]) return GEM_THUMB[n];
+  if (!showInit()) return '';
+  const pts = [
+      new THREE.Vector2(0, -0.95),
+      new THREE.Vector2(1.0, 0.08),
+      new THREE.Vector2(0.98, 0.18),
+      new THREE.Vector2(0.62, 0.55),
+      new THREE.Vector2(0, 0.55),
+    ],
+    geo = new THREE.LatheGeometry(pts, 8),
+    mat = new THREE.MeshPhongMaterial({
+      color: lin(0x1fb2ee),
+      specular: lin(0xbff0ff),
+      shininess: 70,
+      flatShading: true,
+      emissive: lin(0x042c48),
+    }),
+    edge = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 1), new THREE.LineBasicMaterial({ color: 0x0b2a44 })),
+    grp = new THREE.Group(),
+    spots = [
+      [[0, 0, 0, 1]],
+      [
+        [-0.55, -0.1, 0.2, 0.85],
+        [0.6, 0.15, -0.2, 1],
+      ],
+      [
+        [-0.75, -0.25, 0.25, 0.8],
+        [0.75, -0.2, 0.15, 0.85],
+        [0, 0.35, -0.3, 1.05],
+      ],
+    ][Math.min(3, n) - 1];
+  for (const [x, y, z, sc] of spots) {
+    const m = new THREE.Mesh(geo, mat),
+      e = edge.clone();
+    m.add(e);
+    m.position.set(x, y, z);
+    m.scale.setScalar(sc);
+    m.rotation.set(0.42, x * 0.9 + 0.3, x * -0.25);
+    grp.add(m);
+  }
+  const keepGrp = SHOW.grp.visible;
+  SHOW.grp.visible = false;
+  SHOW.disc.visible = false;
+  SHOW.sc.add(grp);
+  const r = SHOW.r,
+    pr = Math.min(2, devicePixelRatio || 1),
+    cam = new THREE.PerspectiveCamera(30, 1, 0.1, 30);
+  if (r.getPixelRatio() !== pr) r.setPixelRatio(pr);
+  r.setSize(170, 170, false);
+  cam.position.set(0, 1.5, 7.4);
+  cam.lookAt(0, 0, 0);
+  r.render(SHOW.sc, cam);
+  const url = r.domElement.toDataURL('image/png');
+  SHOW.sc.remove(grp);
+  SHOW.grp.visible = keepGrp;
+  SHOW.disc.visible = true;
+  geo.dispose();
+  mat.dispose();
+  edge.geometry.dispose();
+  edge.material.dispose();
+  GEM_THUMB[n] = url;
+  return url;
+}

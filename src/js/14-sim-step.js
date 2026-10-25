@@ -371,7 +371,7 @@ function worldStep(G, byId) {
         )
           continue;
         G.itemId = (G.itemId + 1) % 10000;
-        G.items.push({ id: G.itemId, ty: Math.random() < 0.42 ? 1 : 0, v: Math.round((50 + Math.random() * 70) / 5) * 5, x: p.x, z: p.z });
+        G.items.push({ id: G.itemId, ty: Math.random() < 0.42 ? 1 : 0, v: Math.round((75 + Math.random() * 90) / 5) * 5, x: p.x, z: p.z });
         break;
       }
     }
@@ -1404,7 +1404,7 @@ function snapOf(G) {
       if (b.worm) e.push(1, b.ws, Math.round(b.st * 100), Math.round((b.ex ?? b.x) * 10), Math.round((b.ez ?? b.z) * 10), b.bite, b.warnN);
       return e;
     }),
-    // heroes on worms: [hero id, worm id, time*100, swallowed, worm is a unit (1) or wild (0), worm yaw*100]
+    // heroes on worms: [hero id, worm id, time*100, swallowed, worm is a unit (1) or wild (0), worm yaw*100, script (HERO_S)]
     he: G.units
       .filter(u => u.hero)
       .map(u => [
@@ -1414,6 +1414,7 @@ function snapOf(G) {
         u.hero.sw,
         u.hero.unit ? 1 : 0,
         Math.round(((heroWormFind(G, u.hero) || {}).yaw || 0) * 100),
+        u.hero.s || 0,
       ]),
     wu: G.units
       .filter(u => KINDS[u.k].worm)

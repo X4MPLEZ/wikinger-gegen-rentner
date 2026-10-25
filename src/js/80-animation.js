@@ -80,7 +80,12 @@ const GAIT = {
   2: { stride: 0.36, knee: 0.58, arm: [0, 0.26], elbow: 0.2, bob: 0.008, sway: 0.01, roll: 0.022, twist: 0.05, rate: 2.9, lean: 0.05 },
   3: { stride: 0.34, knee: 0.52, arm: [0.06, 0.3], elbow: 0.3, bob: 0.01, sway: 0.012, roll: 0.03, twist: 0.04, rate: 3.3, lean: 0.05 },
 };
-// melee: combat-ready pose plus [wind-up, follow-through] per attack variant
+/* Melee moves per kind: the combat-ready pose and a list of moves. Each move is [wind-up, follow-through] plus what it is:
+   n = an ordinary blow (also in ego combos), a = only the computer uses it (butts, rams, shield bash), f = a finisher (the 3rd blow of a
+   combo; computer warriors now and then): spin = a full turn with the weapon out, jump = a leap into the blow (metres). W is the
+   wind-up of the steered warrior in seconds (the slash and the hit come at its end, 51-ego.js). sl = the slash: h sideways (d: -1 right
+   to left, 1 left to right), v overhead chop, u rising cut, r all round. Nobody stabs: every blow is a swing, a chop or a punch with the
+   whole body behind it (twist, lean, the front leg steps in). */
 const CPOSE = (() => {
   const r0 = pose({
     aL: -0.35,
@@ -113,82 +118,203 @@ const CPOSE = (() => {
   });
   const r4 = pose({ aL: -0.95, eL: -0.5, aR: -0.95, eR: -1.05, zR: 0.2, ln: 0.12, mh: 0.1 });
   const r5 = pose({ aL: -1.2, eL: -0.25, zL: 0.1, aR: -1.2, eR: -0.25, zR: -0.1, ln: 0.18 });
-  const g4a = [
-    pose({ aR: -2.85, eR: -1.1, ln: -0.16, tw: 0.2, mp: 0.1, mh: -0.4 }, r4),
-    pose({ aR: 0.05, eR: -0.12, ln: 0.42, tw: -0.2, mp: -0.28, mz: 0.28, mh: 0.65 }, r4),
-  ];
+  const mv = (r, w, s, o) => Object.assign({ v: [pose(w, r), pose(s, r)], n: 'n', W: 0.07, sl: { m: 'h', d: -1 } }, o);
+  const set = (ready, moves) => ({ ready, v: moves.map(m => m.v), m: moves });
   return {
-    0: {
-      ready: r0,
-      v: [
-        [
-          pose({ aR: -2.95, eR: -1.25, zR: 0.12, ln: -0.14, tw: 0.28, aL: -0.55, eL: -1.25, kL: 0.22, kR: 0.22, nx: -0.2 }, r0),
-          pose({ aR: 0.32, eR: -0.12, zR: -0.08, ln: 0.4, tw: -0.22, kL: 0.6, kR: 0.55, hop: -0.07, nx: 0.15 }, r0),
-        ], // overhead chop
-        [
-          pose({ aR: -1.4, zR: 1.25, eR: -0.35, tw: 0.78, ln: 0.06, yR: 0.3, fR: 1.45 }, r0),
-          pose({ aR: -1.25, zR: -0.6, eR: -0.18, tw: -0.85, ln: 0.22, yR: -0.3, fR: 1.45 }, r0),
-        ], // sweep
-        [
-          pose({ aL: -0.3, eL: -1.7, ln: -0.06, tw: -0.35, thL: 0.1 }, r0),
-          pose({ aL: -1.55, eL: -0.15, zL: 0.05, ln: 0.32, tw: 0.28, thL: -0.65, kL: 0.45, hop: 0.02 }, r0),
-        ], // shield bash
-        [
-          pose({ aR: -3.0, aL: -2.9, eR: -1.1, eL: -1.1, ln: -0.18, hop: 0.42, kL: 0.7, kR: 0.7, thL: -0.5, thR: -0.5 }, r0),
-          pose({ aR: 0.2, aL: 0.1, eR: -0.1, eL: -0.1, ln: 0.48, hop: -0.1, kL: 0.75, kR: 0.75 }, r0),
-        ], // jumping smash
-      ],
-    },
-    2: {
-      ready: r2,
-      v: [
-        [
-          pose({ aR: -0.6, zR: 1.3, eR: -0.3, tw: 0.62, yR: 0.2, fR: 1.45 }, r2),
-          pose({ aR: -1.45, zR: -0.45, eR: -0.1, tw: -0.58, ln: 0.32, yR: -0.2, fR: 1.45 }, r2),
-        ], // side swat
-        [
-          pose({ aR: -0.85, eR: -1.75, ln: 0.12, tw: 0.22, thR: 0.22 }, r2),
-          pose({ aR: -1.52, eR: 0, ln: 0.42, thR: -0.55, kR: 0.45, tw: -0.15 }, r2),
-        ], // jab
-        [
-          pose({ aR: -2.75, eR: -0.95, ln: 0.02, nx: -0.35 }, r2),
-          pose({ aR: -0.85, eR: -0.08, ln: 0.48, kL: 0.45, kR: 0.45, hop: -0.04 }, r2),
-        ], // overhead bonk
-        [
-          pose({ aR: -2.6, aL: -2.4, eR: -1.3, eL: -1.3, hop: 0.2, ln: -0.05 }, r2),
-          pose({ aR: -1.0, aL: -1.2, eR: -0.2, eL: -0.3, ln: 0.4 }, r2),
-        ], // furious flail
-      ],
-    },
-    4: {
-      ready: r4,
-      v: [
-        g4a,
-        [
-          pose({ aR: -1.35, zR: 1.2, eR: -0.35, tw: 0.65, yR: 0.3, mp: 0.08, mh: -0.3, fR: 1.45 }, r4),
-          pose({ aR: -1.2, zR: -0.5, eR: -0.15, tw: -0.65, ln: 0.2, yR: -0.3, mp: -0.25, mz: 0.25, mh: 0.6, fR: 1.45 }, r4),
-        ],
-        [pose({ ln: -0.1, mp: 0.14, mh: -0.5 }, r4), pose({ ln: 0.3, mp: -0.32, mz: 0.32, mh: 0.75 }, r4)], // the goat butts, the rider holds on
-        g4a,
-      ],
-    },
-    5: {
-      ready: r5,
-      v: [
-        [
-          pose({ aR: -2.75, eR: -1.95, zR: 0.2, ln: -0.08, tw: 0.25 }, r5),
-          pose({ aR: -1.5, eR: -0.05, zR: -0.1, ln: 0.32, tw: -0.3, mz: 0.3, mp: -0.06 }, r5),
-        ], // fist punch
-        [pose({ aR: -2.6, zR: 0.6, eR: -1.2, tw: 0.4 }, r5), pose({ aR: -1.8, zR: -0.6, eR: -0.4, tw: -0.4, ln: 0.2, mz: 0.22 }, r5)], // backhand
-        [pose({ ln: -0.12, mz: -0.12, mp: 0.06 }, r5), pose({ ln: 0.38, mz: 0.42, mp: -0.1 }, r5)], // ram lunge
-        [
-          pose({ aR: -2.75, eR: -1.95, zR: 0.2, ln: -0.08, tw: 0.25 }, r5),
-          pose({ aR: -1.5, eR: -0.05, zR: -0.1, ln: 0.32, tw: -0.3, mz: 0.3, mp: -0.06 }, r5),
-        ],
-      ],
-    },
+    0: set(r0, [
+      mv(
+        r0,
+        {
+          aR: -3.0,
+          eR: -1.3,
+          zR: 0.15,
+          ln: -0.22,
+          tw: 0.35,
+          aL: -0.7,
+          eL: -1.3,
+          kL: 0.2,
+          kR: 0.25,
+          thL: -0.3,
+          thR: 0.25,
+          nx: -0.25,
+          hop: 0.04,
+        },
+        { aR: 0.35, eR: -0.1, zR: -0.1, ln: 0.52, tw: -0.25, aL: -0.2, kL: 0.65, kR: 0.55, thL: -0.55, thR: 0.35, hop: -0.09, nx: 0.2 },
+        { sl: { m: 'v' } }
+      ), // overhead chop
+      mv(
+        r0,
+        { aR: -1.45, zR: 1.3, eR: -0.4, fR: 1.45, yR: 0.3, tw: 0.95, ln: 0.02, rl: 0.08, kL: 0.3, kR: 0.35, thL: -0.15, thR: 0.3 },
+        { aR: -1.3, zR: -0.7, eR: -0.15, fR: 1.45, yR: -0.35, tw: -1.0, ln: 0.28, rl: -0.08, kL: 0.5, kR: 0.4, thL: -0.45, thR: 0.2 },
+        { sl: { m: 'h', d: -1 } }
+      ), // forehand sweep
+      mv(
+        r0,
+        { aR: -1.35, zR: -0.75, eR: -1.5, fR: 1.45, yR: -0.2, tw: -0.9, ln: 0.05, kL: 0.35, kR: 0.3, thL: -0.3, thR: 0.1 },
+        { aR: -1.5, zR: 1.35, eR: -0.1, fR: 1.45, yR: 0.35, tw: 0.85, ln: 0.25, kL: 0.45, kR: 0.5, thL: -0.2, thR: 0.45 },
+        { sl: { m: 'h', d: 1 } }
+      ), // backhand sweep
+      mv(
+        r0,
+        { aR: 0.25, zR: -0.4, eR: -0.5, fR: 0.8, tw: -0.6, ln: 0.38, kL: 0.55, kR: 0.5, thL: -0.4 },
+        { aR: -2.7, zR: 0.9, eR: -0.2, fR: 0.8, tw: 0.55, ln: -0.15, hop: 0.08, kL: 0.15, kR: 0.2, nx: -0.2 },
+        { n: 'a', sl: { m: 'u' } }
+      ), // rising cut (computer only: its wind-up starts low, the steered warrior waits with the axe up)
+      mv(
+        r0,
+        { aL: -0.3, eL: -1.7, ln: -0.06, tw: -0.35, thL: 0.1 },
+        { aL: -1.55, eL: -0.15, zL: 0.05, ln: 0.36, tw: 0.28, thL: -0.65, kL: 0.45, hop: 0.02 },
+        { n: 'a', sl: { m: 'h', d: 1, s: 0.75 } }
+      ), // shield bash
+      mv(
+        r0,
+        { aR: -1.5, zR: 1.45, eR: -0.2, fR: 1.45, tw: 1.1, ln: 0.15, aL: -0.6, zL: -1.2, kL: 0.45, kR: 0.45 },
+        { aR: -1.5, zR: 1.4, eR: -0.05, fR: 1.45, tw: -0.2, ln: 0.2, zL: -1.3, aL: -0.4, kL: 0.35, kR: 0.35, thL: -0.2, thR: 0.2 },
+        { n: 'f', spin: 1, W: 0.12, sl: { m: 'r' } }
+      ), // whirlwind
+      mv(
+        r0,
+        { aR: -3.05, aL: -2.9, eR: -1.15, eL: -1.1, ln: -0.25, kL: 0.75, kR: 0.75, thL: -0.6, thR: -0.5 },
+        { aR: 0.25, aL: 0.15, eR: -0.1, eL: -0.1, ln: 0.6, hop: -0.12, kL: 0.85, kR: 0.85, thL: -0.5, thR: 0.3 },
+        { n: 'f', jump: 0.75, W: 0.17, sl: { m: 'v', s: 1.3 } }
+      ), // leaping smash
+    ]),
+    2: set(r2, [
+      mv(
+        r2,
+        { aR: -0.6, zR: 1.35, eR: -0.3, yR: 0.2, fR: 1.45, tw: 0.75, kR: 0.4, thR: 0.25 },
+        { aR: -1.45, zR: -0.5, eR: -0.1, yR: -0.25, fR: 1.45, tw: -0.7, ln: 0.38, thL: -0.35, kL: 0.45 },
+        { sl: { m: 'h', d: -1 } }
+      ), // side swat
+      mv(
+        r2,
+        { aR: -1.3, zR: -0.6, eR: -1.4, fR: 1.45, tw: -0.7, thL: -0.25 },
+        { aR: -1.2, zR: 1.3, eR: -0.1, fR: 1.45, tw: 0.7, ln: 0.3, thR: -0.3, kR: 0.4 },
+        { sl: { m: 'h', d: 1 } }
+      ), // backhand swat
+      mv(
+        r2,
+        { aR: -2.85, eR: -0.95, ln: -0.05, nx: -0.4, hop: 0.03 },
+        { aR: -0.75, eR: -0.08, ln: 0.55, kL: 0.5, kR: 0.5, hop: -0.05, thL: -0.35 },
+        { sl: { m: 'v' } }
+      ), // overhead bonk
+      mv(
+        r2,
+        { aR: -0.3, zR: 1.2, eR: -0.2, fR: 1.45, tw: 0.8, ln: 0.35, kL: 0.6, kR: 0.6 },
+        { aR: -0.4, zR: -0.7, eR: -0.1, fR: 1.45, tw: -0.85, ln: 0.55, kL: 0.7, kR: 0.7, thL: -0.4 },
+        { n: 'a', sl: { m: 'h', d: -1, s: 0.9, low: 1 } }
+      ), // sweep at the knees (computer only)
+      mv(
+        r2,
+        { aR: -1.55, zR: 1.5, eR: -0.1, tw: 1.0, aL: -0.8, zL: -1.1, kL: 0.4, kR: 0.4 },
+        { aR: -1.55, zR: 1.5, eR: -0.05, tw: -0.2, aL: -0.6, zL: -1.2, kL: 0.35, kR: 0.35 },
+        { n: 'f', spin: 1, W: 0.12, sl: { m: 'r' } }
+      ), // cane whirl
+      mv(
+        r2,
+        { aR: -2.8, aL: -2.6, eR: -1.2, eL: -1.2, ln: -0.15, kL: 0.6, kR: 0.6 },
+        { aR: -0.9, aL: -1.1, eR: -0.1, eL: -0.2, ln: 0.55, hop: -0.08, kL: 0.8, kR: 0.8 },
+        { n: 'f', jump: 0.5, W: 0.16, sl: { m: 'v', s: 1.2 } }
+      ), // the old man's leap
+    ]),
+    4: set(r4, [
+      mv(
+        r4,
+        { aR: -2.9, eR: -1.15, ln: -0.18, tw: 0.25, mp: 0.1, mh: -0.4 },
+        { aR: 0.1, eR: -0.1, ln: 0.45, tw: -0.2, mp: -0.28, mz: 0.28, mh: 0.65 },
+        { sl: { m: 'v' } }
+      ),
+      mv(
+        r4,
+        { aR: -1.35, zR: 1.2, eR: -0.35, tw: 0.65, yR: 0.3, mp: 0.08, mh: -0.3, fR: 1.45 },
+        { aR: -1.2, zR: -0.5, eR: -0.15, tw: -0.65, ln: 0.2, yR: -0.3, mp: -0.25, mz: 0.25, mh: 0.6, fR: 1.45 },
+        { sl: { m: 'h', d: -1 } }
+      ),
+      mv(
+        r4,
+        { aR: -1.3, zR: -0.7, eR: -1.4, fR: 1.45, tw: -0.7 },
+        { aR: -1.4, zR: 1.3, eR: -0.1, fR: 1.45, tw: 0.7, ln: 0.25, mz: 0.2, mh: 0.3 },
+        { sl: { m: 'h', d: 1 } }
+      ),
+      mv(
+        r4,
+        { ln: -0.1, mp: 0.14, mh: -0.5 },
+        { ln: 0.3, mp: -0.32, mz: 0.32, mh: 0.75 },
+        { n: 'a', sl: { m: 'h', d: 1, s: 0.8, low: 1 } }
+      ), // the goat butts
+      mv(
+        r4,
+        { aR: -3.0, eR: -1.2, ln: -0.3, mp: -0.4, mh: -0.6 },
+        { aR: 0.2, eR: -0.1, ln: 0.55, mp: 0.2, mz: 0.45, mh: 0.8 },
+        { n: 'f', W: 0.15, sl: { m: 'v', s: 1.3 } }
+      ), // the goat rears, the axe comes down with it
+      mv(
+        r4,
+        { aR: -1.5, zR: 1.4, eR: -0.2, fR: 1.45, tw: 1.1, mz: -0.2, mh: -0.3 },
+        { aR: -1.3, zR: -0.8, eR: -0.1, fR: 1.45, tw: -1.1, ln: 0.35, mz: 0.5, mh: 0.5 },
+        { n: 'f', W: 0.12, sl: { m: 'h', d: -1, s: 1.35 } }
+      ), // a lunging sweep
+    ]),
+    5: set(r5, [
+      mv(
+        r5,
+        { aR: -1.3, zR: 1.0, eR: -1.7, yR: 0.4, tw: 0.55 },
+        { aR: -1.55, zR: -0.45, eR: -0.5, yR: -0.3, tw: -0.55, ln: 0.3, mz: 0.2 },
+        { sl: { m: 'h', d: -1, s: 0.85 } }
+      ), // hook
+      mv(
+        r5,
+        { aR: -1.4, zR: -0.6, eR: -1.6, tw: -0.5 },
+        { aR: -1.5, zR: 1.2, eR: -0.2, tw: 0.55, ln: 0.2, mz: 0.15 },
+        { sl: { m: 'h', d: 1, s: 0.85 } }
+      ), // backhand slap
+      mv(r5, { aR: -2.9, eR: -1.6, ln: -0.1, tw: 0.2 }, { aR: -0.95, eR: -0.3, ln: 0.45, mz: 0.3, mp: 0.06 }, { sl: { m: 'v', s: 0.9 } }), // hammer fist
+      mv(r5, { ln: -0.12, mz: -0.12, mp: 0.06 }, { ln: 0.38, mz: 0.42, mp: -0.1 }, { n: 'a', sl: { m: 'h', d: 1, s: 0.8, low: 1 } }), // ram
+      mv(
+        r5,
+        { aR: -1.5, zR: 1.4, eR: -0.1, tw: 0.6, ln: 0.1 },
+        { aR: -1.5, zR: 1.4, eR: -0.05, tw: -0.1 },
+        { n: 'f', spin: 1, W: 0.12, sl: { m: 'r' } }
+      ), // scooter donut, fist out
+      mv(
+        r5,
+        { aR: -2.9, eR: -1.5, ln: -0.25, mp: -0.35 },
+        { aR: -0.9, eR: -0.2, ln: 0.5, mp: 0.12, mz: 0.35 },
+        { n: 'f', W: 0.15, sl: { m: 'v', s: 1.2 } }
+      ), // wheelie and a hammer fist
+    ]),
   };
 })();
+// move picking: ordinary moves, finishers, and the next move the arm already waits for
+const movesOf = (k, n) => {
+  const cp = CPOSE[k];
+  return cp ? cp.m.map((m, i) => (n.includes(m.n) ? i : -1)).filter(i => i >= 0) : [0];
+};
+const moveOf = (k, av) => (CPOSE[k] ? CPOSE[k].m[(av || 0) % CPOSE[k].m.length] : null);
+// a steered warrior's three blows: two different ordinary blows (a forehand is best followed by a backhand) and a finisher
+function comboSeq(k, first) {
+  const n = movesOf(k, 'n'),
+    f = movesOf(k, 'f'),
+    a = first !== undefined && n.includes(first) ? first : pick(n),
+    sa = moveOf(k, a).sl,
+    rest = n.filter(i => i !== a),
+    opp = rest.filter(i => {
+      const sb = moveOf(k, i).sl;
+      return sb.m !== sa.m || sb.d !== sa.d;
+    });
+  return [a, pick(opp.length && Math.random() < 0.75 ? opp : rest.length ? rest : n), f.length ? pick(f) : a];
+}
+// the trail an enemy's swing leaves (51-ego.js swooshFx), from the slash of its move
+function moveSwoosh(k, av) {
+  const m = moveOf(k, av),
+    sl = m ? m.sl : { m: 'h', d: -1 },
+    cav = k === 4 || k === 5,
+    h = (cav ? (k === 4 ? 1.72 : 1.35) : 1.1) * (sl.low ? 0.7 : 1);
+  if (sl.m === 'v') return { roll: -0.28, dir: 1, h: h + 0.1, sc: sl.s || 1 };
+  if (sl.m === 'u') return { roll: 0.25, dir: -1, h, sc: sl.s || 1 };
+  if (sl.m === 'r') return { roll: 0, dir: 1, h, sc: 1.15 };
+  return { roll: sl.d === 1 ? 0.05 : -0.1, dir: sl.d === 1 ? 1 : -1, h, sc: sl.s || 1 };
+}
 // ranged: the archer draws, releases, reaches over the shoulder, nocks; the Oma winds up, throws and pulls the next teeth from her mouth
 const ARCH = (() => {
   const AIM = pose({
@@ -258,15 +384,21 @@ function rangedPose(u, C, at, pre, cd) {
   return false;
 }
 /* One melee blow over time: from where the body was into the wind-up, a fast accelerating strike that overshoots a little, a short
-   hold on the follow-through (that is where the blow "lands"), then back to the ready pose. The steered warrior winds up faster
-   (STRIKE_W in 51-ego.js: the strike frame matches the moment the slash and the hit appear); the combo finisher takes more time. */
+   hold on the follow-through (that is where the blow "lands"), then the arm comes back up – part of the way into the next wind-up –
+   and stays there while the fight goes on: the warrior waits, weapon raised, for the next blow. A finisher spins the whole body
+   round or leaps into the blow. The steered warrior winds up for the move's W (the slash and the hit come right then, 51-ego.js). */
+const _cock = new Float32Array(NP);
 function meleeSwing(u, cp, C, at, pre) {
-  const v = cp.v[(u.av || 0) % cp.v.length],
-    fin = u.isPoss && u.cmbStep === 3 && now() - (u.ownStrike || 0) < 1500,
-    W = u.isPoss ? (fin ? 0.11 : 0.065) : 0.09,
-    S = u.isPoss ? 0.07 : 0.08,
-    H = fin ? 0.16 : 0.1,
-    R = fin ? 0.42 : 0.32;
+  const i = (u.av || 0) % cp.v.length,
+    v = cp.v[i],
+    m = cp.m[i],
+    fin = m.n === 'f',
+    W = u.isPoss ? m.W : m.W * 1.35 + 0.02,
+    S = fin ? 0.09 : 0.07,
+    H = fin ? 0.16 : 0.09,
+    R = fin ? 0.34 : 0.24,
+    nx = cp.v[(u.avN ?? i) % cp.v.length][0];
+  lerpPose(_cock, cp.ready, nx, u.isPoss ? 0.55 : 0.35); // the raised arm that waits for the next blow
   if (at < W) {
     const q = 1 - Math.pow(1 - at / W, 2); // ease out into the wind-up
     if (u.cFromOn) lerpPose(C, u.cFrom, v[0], q);
@@ -275,14 +407,24 @@ function meleeSwing(u, cp, C, at, pre) {
     const q = (at - W) / S;
     lerpPose(C, v[0], v[1], Math.min(1.12, q * q * 1.12)); // accelerating strike
   } else if (at < W + S + H) lerpPose(C, cp.ready, v[1], 1.12 - 0.12 * sstep(W + S, W + S + H, at));
-  else if (at < W + S + H + R) lerpPose(C, cp.ready, v[1], 1 - sstep(W + S + H, W + S + H + R, at));
-  else lerpPose(C, cp.ready, v[0], pre);
+  else if (at < W + S + H + R) lerpPose(C, v[1], _cock, sstep(W + S + H, W + S + H + R, at));
+  else lerpPose(C, _cock, nx, pre);
+  // the whole body: a full turn through the strike, or a leap that lands exactly on the strike frame
+  u.swYaw = m.spin ? -TAU * sstep(W - 0.02, W + S + H * 0.7, at) : 0;
+  if (m.jump && at < W + S) C[HOP] += at < W ? m.jump * Math.sin((at / W) * Math.PI * 0.62) : m.jump * 0.92 * (1 - sstep(W, W + S, at));
+  if (m.jump && at >= W + S && !u.landed) {
+    u.landed = 1;
+    const p = u.g.position;
+    if (typeof emitFX === 'function') emitFX('dust', p.x, p.y + 0.1, p.z, { n: 10, size: 1.1 });
+  } else if (at < W) u.landed = 0;
 }
+// a computer warrior's next blow: mostly ordinary ones (never the same twice in a row), now and then a finisher
 function pickAv(u) {
   const K = KINDS[u.k];
-  if (K.role === 'cav' && u.tgtBase) return 2;
-  const r = Math.random();
-  return r < 0.12 ? 3 : r < 0.5 ? 0 : r < 0.82 ? 1 : 2;
+  if (!CPOSE[u.k]) return 0;
+  if (K.role === 'cav' && u.tgtBase) return movesOf(u.k, 'a')[0] ?? 0;
+  const pool = Math.random() < 0.1 ? movesOf(u.k, 'f') : movesOf(u.k, 'na').filter(i => i !== u.av);
+  return pick(pool.length ? pool : movesOf(u.k, 'n'));
 }
 const FIDGETS = {
   0: ['stretch', 'scratch', 'look', 'cheer', 'flex', 'axeSpin', 'shieldBang'],
@@ -516,7 +658,7 @@ function humanRig(u, dt, moving, attacking) {
     P[NX] -= 0.02 * gp * mb * calm;
   }
   // combat: wind-up (anticipated from the attack rhythm), strike, follow-through, recovery
-  const cd = u.cdA || K.cd,
+  const cd = u.cdA || (u.isPoss && K.role === 'ranged' ? K.cd * CFG.possCd * (K.ego || NO_EGO).cd : K.cd),
     at = u.atkT;
   if (at < (u.atPrev ?? 99)) {
     u.preHeld = u.preCur || 0;
@@ -525,8 +667,14 @@ function humanRig(u, dt, moving, attacking) {
     if (u.cFromOn) (u.cFrom || (u.cFrom = new Float32Array(NP))).set(u.cLast);
   }
   u.atPrev = at;
-  // the steered warrior never winds up on his own: the player decides when the next blow comes
-  const pre = attacking && !u.isPoss ? sstep(cd * 0.55, cd * 0.95, at) * (at < cd * 1.8 ? 1 : Math.max(0, 1 - (at - cd * 1.8) / 0.4)) : 0;
+  // the steered melee warrior never winds up on his own: the player decides when the next blow comes. A steered archer draws the
+  // next arrow and the Oma winds up while reloading, so you see when the next shot is ready.
+  const pre =
+    u.isPoss && K.role === 'ranged'
+      ? sstep(cd * 0.5, cd * 0.92, at) * (at < cd * 3 ? 1 : Math.max(0, 1 - (at - cd * 3) / 0.4))
+      : attacking && !u.isPoss
+        ? sstep(cd * 0.55, cd * 0.95, at) * (at < cd * 1.8 ? 1 : Math.max(0, 1 - (at - cd * 1.8) / 0.4))
+        : 0;
   u.preCur = pre;
   const fighting = attacking || at < cd * 1.6;
   u.cw = lerp(u.cw, fighting ? 1 : 0, 1 - Math.exp(-dt * (fighting ? 10 : 3)));
@@ -651,7 +799,7 @@ function humanRig(u, dt, moving, attacking) {
   if (u.spin > 0) {
     u.spin -= dt;
     u.rig.rotation.y = ((0.6 - u.spin) / 0.6) * TAU * 2;
-  } else u.rig.rotation.y = 0;
+  } else u.rig.rotation.y = u.cw > 0.3 ? u.swYaw || 0 : 0; // the whirlwind finisher turns the whole body
   const target = moving ? Math.sin(t * 0.5) * 0.02 * calm : 0;
   u.wobV += (-(u.wob - target) * 90 - u.wobV * 14) * dt;
   u.wob += u.wobV * dt;

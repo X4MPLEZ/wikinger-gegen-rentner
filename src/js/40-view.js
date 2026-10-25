@@ -147,6 +147,7 @@ function disposeUnit(u) {
     u.aLoop = null;
   }
   removeOwnedObject(u.g);
+  if (u.hSplit && u.mount && u.mount.parent === scene) scene.remove(u.mount); // a hero's mount that was in the scene on its own
   hpGroup.remove(u.hp);
   if (u.cdSp) {
     scene.remove(u.cdSp);
@@ -573,9 +574,10 @@ function onAttack(u, at, cur, poss) {
   const K = KINDS[u.k],
     own = V.poss && V.poss.id === u.id,
     melee = (K.role === 'melee' || K.role === 'cav') && !K.bear && !K.worm;
-  if (own && melee) return; // the own blow already started on this screen (egoStrike in 51-ego.js), with its slash, hit and sound
+  if (own && (melee || K.role === 'ranged')) return; // the own blow / shot already started on this screen (51-ego.js), with its sound
   u.atkT = 0;
-  u.av = pickAv(u);
+  u.av = u.avN ?? pickAv(u);
+  u.avN = pickAv(u); // the arm already comes back up into the next blow
   if (poss && melee) {
     // a steered enemy: his combo is read from his rhythm (the same window as the host's), so the moves and the slash match
     const base = K.cd * CFG.possCd * (K.ego || NO_EGO).cd,
@@ -583,7 +585,9 @@ function onAttack(u, at, cur, poss) {
     u.cmbStep = (u.cmbStep || 0) < 3 && tn - (u.cmbT || -1e9) < base * CMB.win * 1000 + 150 ? (u.cmbStep || 0) + 1 : 1;
     u.cmbT = tn;
     u.ownStrike = tn;
-    u.av = (COMBO_AV[u.k] || [0, 1, 2])[u.cmbStep - 1];
+    if (u.cmbStep === 1 || !u.seq) u.seq = comboSeq(u.k);
+    u.av = u.seq[u.cmbStep - 1];
+    u.avN = u.cmbStep < 3 ? u.seq[u.cmbStep] : undefined;
   }
   if (K.worm) {
     if (at === -5) {
@@ -679,7 +683,7 @@ function onAttack(u, at, cur, poss) {
       u.av,
       u.cmbStep,
       u.team === V.myTeam ? 0xffd34d : 0xff4a3d,
-      STRIKE_W[u.cmbStep - 1],
+      (moveOf(u.k, u.av) || { W: 0.07 }).W,
       fol
     );
   } else if (!K.proj && poss && !own && !K.bear) {

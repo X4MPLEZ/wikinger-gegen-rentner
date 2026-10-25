@@ -56,6 +56,8 @@
     <div id="nadeDist" class="panel" hidden></div>
     <div id="xhair" hidden><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3v10M20 27v10M3 20h10M27 20h10" stroke-width="2.6" stroke-linecap="round"/><circle cx="20" cy="20" r="2.2"/></svg></div>
     <div id="speedFx"></div>
+    <div id="hitMk" aria-hidden="true"><svg viewBox="-30 -30 60 60"><g class="ink"><path d="M-9-9l-11-11M9-9l11-11M-9 9l-11 11M9 9l11 11"/></g><g class="hl"><path d="M-9-9l-11-11M9-9l11-11M-9 9l-11 11M9 9l11 11"/></g></svg></div>
+    <div id="speedLn" aria-hidden="true"></div>
     <div id="xhairTxt">KOPFSCHUSS!</div>
     <div class="stat panel ego-gold"><span id="egoResIco"></span><b id="egoGold">0</b></div>
     <div id="joy" hidden><i></i></div>
@@ -139,7 +141,7 @@
         <div class="online-actions" id="onlineActions" hidden><button class="btn small" id="btnCodeCopy">Code kopieren</button><button class="btn small" id="btnHostCancel">Abbrechen</button></div>
         <button class="btn small quick" id="btnPractice" hidden>Solange gegen den Computer üben</button>
       </div>
-      <div class="mfoot"><span></span><button class="linkbtn" id="btnGfx"><span class="sic" data-si="gfx"></span> Grafik</button><button class="linkbtn" id="btnSnd"><span class="sic" data-si="snd"></span> Sound</button><button class="linkbtn pcOnly" id="btnKeys"><span class="sic" data-si="keys"></span> Steuerung</button><button class="linkbtn" id="btnPriv">Datenschutz</button><button class="linkbtn" id="btnLang" aria-label="Sprache"><span class="sic" data-si="globe"></span> <span id="langNow" data-nol></span></button></div>
+      <div class="mfoot"><span></span><button class="linkbtn" id="btnGfx"><span class="sic" data-si="gfx"></span> Grafik</button><button class="linkbtn" id="btnSnd"><span class="sic" data-si="snd"></span> Sound</button><button class="linkbtn pcOnly" id="btnKeys"><span class="sic" data-si="keys"></span> Steuerung</button><button class="linkbtn" id="btnBug"><span class="sic" data-si="bug"></span> Fehler melden</button><button class="linkbtn" id="btnPriv">Datenschutz</button><button class="linkbtn" id="btnLang" aria-label="Sprache"><span class="sic" data-si="globe"></span> <span id="langNow" data-nol></span></button></div>
       <details class="help">
         <summary>So wird gespielt</summary>
         <div class="counter"><div data-l><b>Nahkampf</b>schlägt Reiter</div><div data-l><b>Reiter</b>überrennen Fernkampf</div><div data-l><b>Fernkampf</b>erledigt Nahkampf</div></div>
@@ -250,8 +252,28 @@
       <p>Online-Partien laufen direkt zwischen den beiden Geräten. Zum Verbinden nutzt das Spiel öffentliche Vermittlungsdienste (PeerJS, MQTT); diese sehen dabei deine IP-Adresse.</p>
       <p id="privFace">In der Liste der offenen Spiele stehen nur dein Spielername, dein Profilbild und dein Level. Dein eigenes Foto bekommt nur, wer mit dir über einen Code spielt.</p>
       <p>Wenn du dein Profil auf ein anderes Gerät überträgst, liegt es bis zu 10 Minuten auf diesen öffentlichen Diensten.</p>
+      <p>Wenn du einen Fehler meldest, gehen dein Text, der Screenshot und Angaben zu Gerät und Spiel per E-Mail an die Entwickler (über den Dienst FormSubmit).</p>
       <p>Das Spiel selbst setzt kein Tracking und keine Cookies ein.</p>
       <div class="row"><button class="btn gold" id="privBack">Fertig</button></div>
+    </div>
+  </div>
+
+  <div id="bugScr" class="screen" hidden>
+    <div class="card keyscard bugcard">
+      <h2 class="h2">Fehler melden</h2>
+      <p class="note">Was ist passiert? Je genauer du es beschreibst, desto schneller ist es behoben.</p>
+      <textarea id="bugTxt" maxlength="2000" rows="5" placeholder="Was hast du gemacht, was ist passiert, und was hättest du erwartet?"></textarea>
+      <div class="bugshot">
+        <img id="bugImg" alt="Screenshot">
+        <div class="bugside">
+          <label class="krow"><span>Screenshot mitsenden</span><input type="checkbox" id="bugUse" checked></label>
+          <button class="btn" id="bugPick" type="button">Anderes Bild wählen</button>
+          <input type="file" id="bugFile" accept="image/*" hidden>
+        </div>
+      </div>
+      <input id="bugMail" type="email" maxlength="120" autocomplete="email" placeholder="Deine E-Mail für Rückfragen (freiwillig)">
+      <p class="note" id="bugMsg" role="status"></p>
+      <div class="row"><button class="btn" id="bugBack">Zurück</button><button class="btn gold" id="bugSend">Senden</button></div>
     </div>
   </div>
 
@@ -280,6 +302,7 @@
       <button class="btn" id="btnGfx2"><span class="sic" data-si="gfx"></span> Grafik</button>
       <button class="btn" id="btnSnd2"><span class="sic" data-si="snd"></span> Sound</button>
       <button class="btn pcOnly" id="btnKeys2"><span class="sic" data-si="keys"></span> Steuerung</button>
+      <button class="btn" id="btnBug2"><span class="sic" data-si="bug"></span> Fehler melden</button>
       <button class="btn" id="btnQuit">Aufgeben</button>
     </div>
   </div>

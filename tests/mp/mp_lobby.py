@@ -41,7 +41,7 @@ with sync_playwright() as p:
     h=page(ctx,'h'); g=page(ctx,'g')
     h.evaluate("__wvr.FACE.mine={id:'f1',net:'data:image/jpeg;base64,'+'A'.repeat(900),crop:null}")
     # the host's profile: level 10 with the Trainingsanzug skin for the Rentner and a picture of his own
-    h.evaluate("()=>{const W=__wvr,P=W.PLAYER; P.xp=1700; P.lvC=10; W.PLAYER=P; W.profEquip('r1'); W.profEquip('oma');}")
+    h.evaluate("()=>{const W=__wvr,P=W.PLAYER; P.xp=2600; P.lvC=13; W.PLAYER=P; W.profEquip('r1'); W.profEquip('oma');}")
     h.click('#btnQuick')
     res['hostPub']=wait(h, "__wvr.NET.role==='host' && __wvr.NET.pub===true && !document.querySelector('#btnPractice').hidden")
     res['listed']=wait(g, "document.querySelectorAll('#lobbyList .lrow').length>0", 40)
@@ -100,8 +100,8 @@ with sync_playwright() as p:
     b.close()
 print(res)
 print('errs', errs[:5])
-ok = (res['hostPub'] and res['listed'] and res['rows'] and 'Lv 10' in res['rows'][0] and res['match1'] and res['noFace'] and res['clearedAfterStart']==[]
-      and res['vsCard'] and res['guestSeesSkin'] == 'r1' and res['guestSeesName'] == [10, 'oma']
+ok = (res['hostPub'] and res['listed'] and res['rows'] and 'Lv 13' in res['rows'][0] and res['match1'] and res['noFace'] and res['clearedAfterStart']==[]
+      and res['vsCard'] and res['guestSeesSkin'] == 'r1' and res['guestSeesName'] == [13, 'oma']
       and res['quickJoin'] and res['practising'] and res['banner'] and res['guestToldPractice'] and res['match3'] and res['bannerGone']
       and res['declinedTold'] and res['stillPractising'] and res['clearedAfterDecline']==[]
       and res['xferCode'] and res['xferGot'] == [777, 123, 5, 42, True] and res['xferUsedUp'] and not errs)

@@ -83,6 +83,10 @@ const HINTS = [
         ? TR('Wähle genau einen Krieger und tippe „Übernehmen“, um selbst zu kämpfen.')
         : TR('Wähle genau einen Krieger und klicke „Übernehmen“, um selbst zu kämpfen.'),
   },
+  {
+    id: 'counter',
+    text: () => TR('Konter: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Am Knopf steht, gegen wen eine Einheit stark ist.'),
+  },
   { id: 'mode', text: () => TR('„Laufen“ ignoriert Gegner, praktisch für einen Rückzug. „Angreifen“ kämpft unterwegs.') },
   {
     id: 'lasso',
@@ -111,12 +115,12 @@ function hintTick() {
   if (!h) return;
   if (h.id === 'select' && !ownUnits().length) return;
   if (h.id === 'order' && !V.selected.size) return;
-  if (['lasso', 'mode', 'poss', 'home'].includes(h.id) && ownUnits().length < 3) return;
+  if (['lasso', 'mode', 'poss', 'home', 'counter'].includes(h.id) && ownUnits().length < 3) return;
   if (now() - hintState.shownAt < 6000 && hintState.cur === h.id) return;
   hintState.cur = h.id;
   hintState.shownAt = now();
   toast(h.text(), 5000);
-  if (['lasso', 'mode', 'poss', 'home'].includes(h.id)) {
+  if (['lasso', 'mode', 'poss', 'home', 'counter'].includes(h.id)) {
     hintDone(h.id);
     hintState.cur = h.id; // still showing
   }

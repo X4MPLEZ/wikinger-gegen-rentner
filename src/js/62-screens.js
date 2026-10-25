@@ -1,6 +1,6 @@
 /* 62-screens.js - SCREENS: menu, lobby, pause (Aufgeben asks twice; online it tells the opponent: quitMatch), graphics/sound/keys settings, the menu scene. */
 function showScreen(id) {
-  ['menu', 'lobby', 'pause', 'end', 'faceScr', 'keysScr', 'gfxScr', 'sndScr', 'langScr', 'profScr', 'privScr'].forEach(
+  ['menu', 'lobby', 'pause', 'end', 'faceScr', 'keysScr', 'gfxScr', 'sndScr', 'langScr', 'profScr', 'privScr', 'bugScr'].forEach(
     s => ($('#' + s).hidden = s !== id)
   );
   fitText();
@@ -561,3 +561,145 @@ function menuPose() {
     } catch (_) {}
   }
 })();
+
+/* ---------- bug report (start page and pause): a text, a screenshot of the game (or a picture of one's own) and what the game knows about
+   the device go by e-mail to the developers. A page alone cannot send mail: the form is posted to FormSubmit (formsubmit.co), into a hidden
+   frame. (The very first report to the address makes FormSubmit ask once, by e-mail, to confirm it.) ---------- */
+const BUG = { to: 'rentnervswikinger@gmail.com', from: 'menu', shot: null, url: '', busy: false, frame: null };
+function bugShot(blob) {
+  BUG.shot = blob;
+  if (BUG.url) URL.revokeObjectURL(BUG.url);
+  BUG.url = blob ? URL.createObjectURL(blob) : '';
+  const im = $('#bugImg');
+  im.src = BUG.url;
+  im.hidden = !blob;
+  $('#bugUse').checked = !!blob;
+}
+function bugOpen(from) {
+  BUG.from = from;
+  $('#bugMsg').textContent = '';
+  bugShot(null);
+  // the picture of the game as it is: read right after the next frame was drawn (the drawing buffer is not kept)
+  requestAnimationFrame(() => {
+    try {
+      renderer.domElement.toBlob(b => b && !BUG.busy && bugShot(b), 'image/jpeg', 0.82);
+    } catch (_) {}
+  });
+  showScreen('bugScr');
+  setTimeout(() => $('#bugTxt').focus(), 50);
+}
+function bugInfo() {
+  const map = (typeof MAP !== 'undefined' && MAP && MAP.type) || '-';
+  return [
+    ['Version', 'NET ' + NET_VER],
+    ['Seite', location.origin + location.pathname],
+    [
+      'Modus',
+      V.mode +
+        (V.playing ? ' (in der Partie)' : '') +
+        ' · Karte ' +
+        map +
+        (G && G.chaos ? ' · Chaos' : '') +
+        (G && G.fog ? ' · Nebel' : ''),
+    ],
+    ['Grafik', QS.mode() + ' · Stufe ' + QS.lvl + (QS.ultra ? ' · Sehr hoch' : '')],
+    ['Bildschirm', innerWidth + '×' + innerHeight + ' @' + (devicePixelRatio || 1) + (COARSE ? ' · Touch' : '')],
+    ['Sprache', LANG],
+    ['Gerät', navigator.userAgent],
+  ];
+}
+function bugSend() {
+  if (BUG.busy) return;
+  const txt = $('#bugTxt').value.trim(),
+    mail = $('#bugMail').value.trim(),
+    msg = $('#bugMsg');
+  if (txt.length < 6) {
+    msg.textContent = TR('Bitte beschreib kurz, was passiert ist.');
+    $('#bugTxt').focus();
+    return;
+  }
+  const last = +store.get('wvr-bug') || 0;
+  if (Date.now() - last < 60000) {
+    msg.textContent = TR('Danke! Bitte warte eine Minute bis zum nächsten Bericht.');
+    return;
+  }
+  BUG.busy = true;
+  $('#bugSend').disabled = true;
+  msg.textContent = TR('Wird gesendet …');
+  if (!BUG.frame) {
+    BUG.frame = document.createElement('iframe');
+    BUG.frame.name = 'bugFrame';
+    BUG.frame.title = 'bug';
+    BUG.frame.style.display = 'none';
+    document.body.appendChild(BUG.frame);
+  }
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = 'https://formsubmit.co/' + BUG.to;
+  f.enctype = 'multipart/form-data';
+  f.target = 'bugFrame';
+  f.style.display = 'none';
+  const add = (n, v) => {
+    const i = document.createElement('input');
+    i.type = 'hidden';
+    i.name = n;
+    i.value = v;
+    f.appendChild(i);
+  };
+  add('_subject', 'Fehlerbericht – Rentner gegen Wikinger');
+  add('_captcha', 'false');
+  add('_template', 'table');
+  add('Beschreibung', txt);
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+    add('E-Mail', mail);
+    add('_replyto', mail);
+  }
+  for (const [k, v] of bugInfo()) add(k, v);
+  if (BUG.shot && $('#bugUse').checked)
+    try {
+      const fi = document.createElement('input'),
+        dt = new DataTransfer();
+      fi.type = 'file';
+      fi.name = 'attachment';
+      dt.items.add(
+        new File([BUG.shot], BUG.shot.type === 'image/png' ? 'screenshot.png' : 'screenshot.jpg', { type: BUG.shot.type || 'image/jpeg' })
+      );
+      fi.files = dt.files;
+      f.appendChild(fi);
+    } catch (_) {} // an old browser: the report goes without the picture
+  const done = ok => {
+    if (!BUG.busy) return;
+    BUG.busy = false;
+    clearTimeout(BUG.t);
+    $('#bugSend').disabled = false;
+    if (ok) {
+      store.set('wvr-bug', String(Date.now()));
+      msg.textContent = TR('Danke! Dein Bericht ist unterwegs.');
+      $('#bugTxt').value = '';
+      SFX.play('ding');
+      setTimeout(() => !$('#bugScr').hidden && showScreen(BUG.from), 1600);
+    } else msg.textContent = TR('Senden hat nicht geklappt. Bist du online? Versuch es gleich noch einmal.');
+  };
+  BUG.frame.onload = () => done(true);
+  BUG.t = setTimeout(() => done(false), 20000);
+  document.body.appendChild(f);
+  if (!navigator.onLine) {
+    f.remove();
+    done(false);
+    return;
+  }
+  f.submit();
+  setTimeout(() => f.remove(), 1000);
+}
+$('#btnBug').addEventListener('click', () => bugOpen('menu'));
+$('#btnBug2').addEventListener('click', () => bugOpen('pause'));
+$('#bugBack').addEventListener('click', () => showScreen(BUG.from));
+$('#bugSend').addEventListener('click', bugSend);
+$('#bugTxt').addEventListener('input', () => !BUG.busy && ($('#bugMsg').textContent = ''));
+$('#bugPick').addEventListener('click', () => $('#bugFile').click());
+$('#bugFile').addEventListener('change', e => {
+  const fl = e.target.files && e.target.files[0];
+  if (fl && /^image\//.test(fl.type) && fl.size < 8e6) bugShot(fl);
+  else if (fl) $('#bugMsg').textContent = TR('Das Bild ist zu groß (höchstens 8 MB).');
+  e.target.value = '';
+});

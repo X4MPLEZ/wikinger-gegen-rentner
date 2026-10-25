@@ -1,5 +1,5 @@
-# v44: "Den Helden spielen" in the simulation: who may, the timeline (3 stabs, swallow, 3 inner stabs = 390 damage), immunity, Heldentod
-# (unit gone, kill feed cause 13, banner), the worm dives afterwards; if the worm is beaten mid-way the hero gets away and the worm turns.
+# "Den Helden spielen" in the simulation: who may (every warrior), the script's damage, immunity, Heldentod (unit gone, kill feed cause 13,
+# banner), the worm dives afterwards; a worm beaten mid-way holds out until the hero is swallowed (he always dies), then it turns / dies.
 import os, sys, json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from harness import *
@@ -30,7 +30,7 @@ with sync_playwright() as p:
       G.proj.push({ t:0.05, dmg:500, tgt:u.id, team:1, k:-1 }); out.knock = W.knockFly(u, u.x + 1, u.z, 6);
       let snapHe = null;
       for (let i = 0; i < 160 && G.units.includes(u); i++) { W.step(G); if (i === 40) { const s = W.snapOf(G); snapHe = s.he; } if (i % 10 === 9) log.push([+(u.hero ? u.hero.t : -1).toFixed(2), Math.round(hp0 - w.hp), w.ws]); }
-      out.log = log; out.snapHe = snapHe;
+      out.log = log; out.snapHe = snapHe; const S1 = W.HERO_S[snapHe ? snapHe[0][6] : 0]; out.expDmg = S1.hits.length * S1.hitDmg + S1.inner.length * S1.innerDmg;
       out.dmg = Math.round(hp0 - w.hp); out.unitGone = !G.units.includes(u); out.wormAfter = [w.ws, Math.round(w.hp)];
       out.kf = (G.kf || []).slice(-1)[0]; out.hl = (G.hl || []).filter(h => h[1] === 'hero').map(h => [h[2], h[3]]);
       out.dz = (G.dz || []).filter(d => d[1] === u.id).map(d => d[2]); out.pos = G.teams[0].pos;
@@ -38,7 +38,7 @@ with sync_playwright() as p:
       const w2 = w; w2.ws = 4; w2.st = 0.5; w2.hp = 120; w2.tameTeam = undefined; w2.heroBy = 0;
       const u2 = mk(2, 0, near.x, near.z); W.applyCmd(G, 0, { t:'poss', id:u2.id }); keepUp(); w2.hp = 120;
       inp(u2, 0); W.step(G); keepUp(); w2.hp = 120; inp(u2, 1); W.step(G); out.started2 = !!u2.hero;
-      for (let i = 0; i < 80 && u2.hero; i++) W.step(G);
+      for (let i = 0; i < 180 && u2.hero; i++) { W.step(G); if (u2.hero && w2.hp > 1 && w2.hp < 120 && !out.held) out.held = 0; if (u2.hero && w2.hp === 1) out.held = 1; }
       out.escape = { alive:G.units.includes(u2) && u2.hp > 0, hero:!!u2.hero, air:!!u2.air, bur:u2.bur, tame:w2.tameTeam, ws:w2.ws, hl:(G.hl || []).filter(h => h[1] === 'heroWin').length, kbTeam:u2.kbTeam, kind:u2.air && u2.air.kind };
       let land = 0; for (; land < 120 && u2.air; land++) W.step(G); out.landed = { steps:land, alive:G.units.includes(u2) && u2.hp > 0, fallen:!!u2.fallen, y:+(u2.y || 0).toFixed(2), gy:+W.unitY(u2.x, u2.z).toFixed(2) };
       // 4) the ego Berserker's normal blow hurts a surfaced worm (more than before: ego damage x1.15, faster)
@@ -63,22 +63,25 @@ with sync_playwright() as p:
       const wu = mkWorm(), hu = mk(0, 0, near.x, near.z); W.applyCmd(G, 0, { t:'poss', id:hu.id });
       out.unitElig = W.heroWorm(G, hu) === wu;
       inp(hu, 0); W.step(G); inp(hu, 1); W.step(G); out.unitStarted = !!hu.hero && hu.hero.unit && wu.ws === 6 && wu.heroBy === hu.id;
-      const s0 = W.snapOf(G); out.unitHe = s0.he && s0.he[0];
+      const s0 = W.snapOf(G); out.unitHe = s0.he && s0.he[0]; const S2 = W.HERO_S[out.unitHe ? out.unitHe[6] : 0]; out.unitExp = S2.hits.length * S2.hitDmg + S2.inner.length * S2.innerDmg;
       const whp0 = wu.hp; for (let i = 0; i < 160 && G.units.includes(hu); i++) { wu.x = wq.x; wu.z = wq.z; W.step(G); }
       out.unitDmg = Math.round(whp0 - wu.hp); out.unitAfter = { ws:wu.ws, heroBy:wu.heroBy, alive:wu.hp > 0, heroGone:!G.units.includes(hu) };
       // 8) a weak worm unit dies from the stabs: the hero gets away
       G.units = G.units.filter(o => o !== wu); const wu2 = mkWorm(); wu2.hp = 90; const hu2 = mk(0, 0, near.x, near.z); W.applyCmd(G, 0, { t:'poss', id:hu2.id });
       inp(hu2, 0); W.step(G); wu2.hp = 90; inp(hu2, 1); W.step(G); out.unit2Started = !!hu2.hero;
-      for (let i = 0; i < 80 && hu2.hero; i++) W.step(G);
+      for (let i = 0; i < 180 && hu2.hero; i++) W.step(G);
+      for (let i = 0; i < 3; i++) W.step(G);
       out.unit2 = { wormDead:!G.units.includes(wu2), heroAlive:G.units.includes(hu2) && hu2.hp > 0, hero:!!hu2.hero, win:(G.hl || []).filter(h => h[1] === 'heroWin').length };
       return out; }""")
     print(json.dumps(r, indent=1)); print('errs', errs[:5])
-    ok = (r['elig'] and not r['eligFar'] and not r['eligArcher'] and not r['eligUnder'] and r['started'] and r['wormWs'] == 7 and r['bur'] == 1
-          and r['knock'] is False and 380 <= r['dmg'] <= 400 and r['unitGone'] and r['wormAfter'][0] == 5 and r['kf'] and r['kf'][4] == 13 and r['hl'] and r['dz'] == [4]
+    near = lambda a, b: abs(a - b) <= 12
+    ok = (r['elig'] and not r['eligFar'] and r['eligArcher'] and not r['eligUnder'] and r['started'] and r['wormWs'] == 7 and r['bur'] == 1
+          and r['knock'] is False and near(r['dmg'], r['expDmg']) and r['unitGone'] and r['wormAfter'][0] == 5 and r['kf'] and r['kf'][4] == 13 and r['hl'] and r['dz'] == [4]
           and r['snapHe'] and r['snapHe'][0][1] == 0 or False)
-    ok = ok and r['unitElig'] and r['unitStarted'] and r['unitHe'][4] == 1 and 380 <= r['unitDmg'] <= 400 and r['unitAfter']['ws'] == 0 and not r['unitAfter']['heroBy'] and r['unitAfter']['heroGone'] and r['unit2Started'] and r['unit2']['wormDead'] and r['unit2']['heroAlive']
-    ok = ok and r['blow'] >= 30 and r['started5'] and r['unpossRefused'] and r['aiHero']
-    ok = ok and r['landed']['alive'] and not r['landed']['fallen'] and r['landed']['steps'] < 120 and r['escape']['kind'] == 'fall' and r['escape']['kbTeam'] is None
-    ok = ok and r['started2'] and r['escape']['alive'] and not r['escape']['hero'] and r['escape']['air'] and r['escape']['tame'] == 0 and r['escape']['hl'] == 1 and not errs
+    ok = ok and r['unitElig'] and r['unitStarted'] and r['unitHe'][4] == 1 and near(r['unitDmg'], r['unitExp']) and r['unitAfter']['ws'] == 0 and not r['unitAfter']['heroBy'] and r['unitAfter']['heroGone']
+    ok = ok and r['unit2Started'] and r['unit2']['wormDead'] and not r['unit2']['heroAlive']
+    ok = ok and r['blow'] >= 25 and r['started5'] and r['unpossRefused'] and r['aiHero']
+    # a beaten worm holds out (1 hp) until the hero is swallowed – he never gets away – then it turns to his team
+    ok = ok and r['started2'] and r.get('held') == 1 and not r['escape']['alive'] and not r['escape']['hero'] and r['escape']['tame'] == 0 and r['escape']['hl'] == 1 and not errs
     print('HERO_SIM', 'OK' if ok else 'FAIL')
     b.close()

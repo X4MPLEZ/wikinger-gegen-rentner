@@ -362,13 +362,20 @@ function wormHolePose(st, ws, t, bite) {
     o.reach = st < 0.26 ? sstep(0.04, 0.24, st) : st < 0.4 ? 1 : 1 - sstep(0.4, 1.25, st) * 0.85;
     o.grip = sstep(0.27, 0.4, st);
     o.carry = sstep(0.42, 1.25, st);
-    if (st > 0.45) {
+    if (STRIKE_EMPTY) {
+      // caught nobody: the grabbers close on air, it looks round, puzzled – no swallowing
+      o.carry = 0;
+      o.grip = 1 - sstep(0.45, 0.8, st);
+      o.jaw = st < 0.55 ? lerp(o.jaw, 0, sstep(0.42, 0.55, st)) : 0.2 + 0.12 * Math.sin(st * 5);
+      o.sway = Math.sin(st * 4) * 0.6;
+      o.pitch = lerp(o.pitch, -0.35, sstep(0.45, 0.9, st));
+    } else if (st > 0.45) {
       const r = sstep(0.45, 1.25, st) * (1 - sstep(1.45, 1.9, st));
       o.h += 0.9 * r;
       o.f -= 0.7 * r;
       o.pitch = lerp(o.pitch, 0.95, r);
     }
-    if (st > 1.42) {
+    if (st > 1.42 && !STRIKE_EMPTY) {
       o.pitch = lerp(o.pitch, -0.3, sstep(1.42, 1.9, st));
       o.grip = 1 - sstep(1.45, 1.8, st);
       o.carry *= 1 - sstep(1.45, 1.8, st);
@@ -379,7 +386,7 @@ function wormHolePose(st, ws, t, bite) {
     o.pitch = -0.35 + 0.12 * Math.sin(t * 0.9);
     o.jaw = 0.2 + 0.25 * Math.max(0, Math.sin(t * 2.3));
     o.reach = 0.12 + 0.1 * Math.sin(t * 3.1);
-  } else if (ws === 'hero') heroWormPose(st, t, o);
+  } else if (ws === 'hero') heroWormPose(st, t, o, HERO_CUR || HERO_S[0]);
   else if (ws === 'dive') {
     const q = sstep(0, 0.8, st);
     o.h = lerp(5, -3.5, q) + Math.sin(q * Math.PI) * 1.2;
@@ -400,10 +407,16 @@ function wormHolePose(st, ws, t, bite) {
   }
   return o;
 }
+let HERO_CUR = null, // the hero script of the worm being posed (set from its view, 72-hero-view.js)
+  STRIKE_EMPTY = false; // its burst out of the sand caught nobody
 function wormRig(u, dt, moving) {
+  HERO_CUR = u.heroS || null;
   const W = u.wP || (u.wP = { ws: 'crawl', st: 9 }),
     t = (u.ph = (u.ph || 0) + dt);
   W.st += dt;
+  if (W.ws !== 'strike') W.hadPrey = 0;
+  else if (u.held && u.held.some(Boolean)) W.hadPrey = 1;
+  STRIKE_EMPTY = W.ws === 'strike' && !W.hadPrey && W.st > 0.42;
   if (u.atkT !== undefined) u.atkT += dt;
   const sinking = (W.ws === 'under' || W.ws === 'dive') && W.from === 'crawl' && W.st < 0.55,
     rising = W.ws === 'crawl' && W.from === 'under' && W.st < 0.6;

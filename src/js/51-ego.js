@@ -25,15 +25,12 @@ function enterEgo() {
   const id = [...V.selected][0],
     u = V.units.get(id);
   if (!u || u.team !== V.myTeam) return;
-  if (u.hen) {
-    toast(TR('Ein Huhn lässt sich nicht steuern – es pickt lieber.'), 1800);
-    return;
-  }
   sendCmd({ t: 'poss', id });
   const K = KINDS[u.k];
   V.poss = {
     id,
     k: u.k,
+    hen: !!u.hen,
     x: u.g.position.x,
     z: u.g.position.z,
     yaw: u.g.rotation.y,
@@ -654,7 +651,17 @@ function egoAttack() {
     P.at = [+pt.x.toFixed(2), +pt.y.toFixed(2), +pt.z.toFixed(2)];
     const m = freeArrowMesh(P.k);
     fx.shots.push({ m, p: from.clone().addScaledVector(dir, 0.5), d: dir.clone(), k: P.k, t: 0, life: (K.range * 2.5) / CFG.arrowSpeed });
-    EG.kick = Math.max(EG.kick, 0.12);
+    EG.kick = Math.max(EG.kick, 0.16);
+    EG.punch = Math.max(EG.punch || 0, 0.35); // the release punches the view a little
+    SFX.play(P.k === 1 ? 'bow' : 'teeth', { vol: 1.1 });
+    const mu = V.units.get(P.id);
+    if (mu) mu.atkT = 0; // release at once: then the draw (or the wind-up) of the next shot plays through the reload
+    const ch = $('#xhair');
+    if (ch) {
+      ch.classList.remove('fire');
+      void ch.offsetWidth;
+      ch.classList.add('fire');
+    }
   } else if (K.worm) {
     P.ad = null;
     const yw = P.yaw,
@@ -669,41 +676,43 @@ function egoAttack() {
     EG.kick = Math.max(EG.kick, 0.18);
   }
 }
-/* ---------- the blow of a steered melee warrior: it starts at once on the own screen (no waiting for the host), the combo step picks the
-   move (COMBO_AV), a cartoon slash cuts through the air, and the targets in reach are hit right at the strike frame: hit-stop, sparks,
-   shake and sound. The damage itself stays with the host (possAttack); this is only what the hand feels. ---------- */
-const COMBO_AV = { 0: [1, 2, 3], 2: [0, 1, 2], 4: [1, 0, 2], 5: [0, 1, 2] };
-// the shape of the slash per kind and move: h = sideways sweep (dir: +1 left to right), v = overhead, t = thrust
-const SLASH = {
-  0: [{ m: 'v' }, { m: 'h', d: -1 }, { m: 'h', d: 1, s: 0.75 }, { m: 'v', s: 1.3 }],
-  2: [{ m: 'h', d: -1 }, { m: 't' }, { m: 'v' }, { m: 'h', d: 1 }],
-  4: [{ m: 'v' }, { m: 'h', d: -1 }, { m: 't', s: 1.2 }],
-  5: [{ m: 't' }, { m: 'h', d: 1 }, { m: 't', s: 1.3 }],
-};
-const STRIKE_W = [0.065, 0.065, 0.11]; // wind-up before the strike frame, per combo step (80-animation uses the same)
+/* ---------- the blow of a steered melee warrior: it starts at once on the own screen (no waiting for the host), the combo picks the
+   moves (comboSeq in 80-animation.js: two different blows and a finisher – a whirlwind or a leap), a cartoon slash cuts through the
+   air, and the targets in reach are hit right at the strike frame: hit-stop, a white flash on them, sparks, an impact star behind
+   which the own head may stand (no drawing through the skull), a hit marker on the screen, shake and sound. The damage itself stays
+   with the host (possAttack); this is only what the hand feels. ---------- */
 function egoStrike(P, K, step) {
-  const mu = V.units.get(P.id),
-    av = (COMBO_AV[P.k] || [0, 1, 2])[step - 1],
-    fin = step === 3;
+  const mu = V.units.get(P.id);
+  if (step === 1 || !P.seq) P.seq = comboSeq(P.k, P.nextFirst);
+  const av = P.seq[step - 1],
+    fin = step === 3,
+    mv = moveOf(P.k, av) || { W: 0.07 };
+  P.nextFirst = step < 3 ? undefined : comboSeq(P.k)[0];
   if (mu) {
     mu.atkT = 0;
     mu.av = av;
+    mu.avN = step < 3 ? P.seq[step] : P.nextFirst; // the arm comes back up into this one and waits
     mu.cmbStep = step;
     mu.ownStrike = now();
   }
-  const W = STRIKE_W[step - 1];
+  const W = mv.W;
   slashFx(P, K, av, step, P.rageT > 0 ? 0xff6a3d : fin ? 0xffa62b : 0xffd34d, W);
   SFX.play(fin ? 'whoosh' : u2swing(P.k), { vol: fin ? 1.2 : 1.05 });
+  if (fin && mv.spin) setTimeout(() => V.poss === P && SFX.play('whoosh', { vol: 0.8 }), 90);
   EG.kick = Math.max(EG.kick, fin ? 0.26 : 0.14);
-  setTimeout(() => egoStrikeHit(P, K, step), (W + 0.035) * 1000);
+  setTimeout(() => egoStrikeHit(P, K, step, mv), (W + 0.035) * 1000);
 }
 const u2swing = k => (k === 2 ? 'swingR' : 'swing');
-function egoStrikeHit(P, K, step) {
+function egoStrikeHit(P, K, step, mv) {
   if (V.poss !== P) return;
   const fin = step === 3,
     reach = K.range + K.r + (fin ? 1.4 : 1.0),
-    cone = fin ? 1.4 : 1.15,
+    cone = fin ? Math.PI : 1.15, // a finisher (whirlwind, leap) hits all round
     hits = [];
+  if (fin && mv && mv.jump) {
+    shake(0.45); // the landing
+    emitFX('dust', P.x, (P.fy ?? groundY(P.x, P.z)) + 0.1, P.z, { n: 16, size: 1.4 });
+  }
   for (const u of V.units.values()) {
     if (u.team === V.myTeam || u.dead || !u.g.visible || u.fogHid) continue;
     const dx = u.g.position.x - P.x,
@@ -713,26 +722,57 @@ function egoStrikeHit(P, K, step) {
     hits.push({ u, d });
   }
   hits.sort((a, b) => a.d - b.d);
-  hits.length = Math.min(hits.length, fin ? 3 : 2);
+  hits.length = Math.min(hits.length, fin ? 4 : 2);
   if (!hits.length) return;
   const mu = V.units.get(P.id);
-  if (mu) mu.hitStop = fin ? 0.11 : 0.055; // the swing freezes for a heartbeat on contact
-  shake(fin ? 0.55 : 0.2);
-  EG.kick = Math.max(EG.kick, fin ? 0.4 : 0.22);
+  if (mu) mu.hitStop = fin ? 0.11 : 0.06; // the swing freezes for a heartbeat on contact
+  shake(fin ? 0.55 : 0.22);
+  EG.kick = Math.max(EG.kick, fin ? 0.4 : 0.24);
   if (fin) EG.punch = 1;
   for (const h of hits) {
-    const p = h.u.g.position;
-    h.u.flash = 0.18;
-    h.u.hitV = (h.u.hitV || 0) + (fin ? 5 : 3);
-    h.u.hitStop = fin ? 0.11 : 0.055;
-    emitFX('hit', p.x, p.y + 1.2, p.z, { dx: p.x - P.x, dz: p.z - P.z, n: fin ? 12 : 7, size: fin ? 0.95 : 0.65 });
-    impactStar(p.x, p.y + 1.3, p.z, fin);
+    const p = h.u.g.position,
+      dx = p.x - P.x,
+      dz = p.z - P.z,
+      l = Math.hypot(dx, dz) || 1;
+    h.u.flash = fin ? 0.26 : 0.18;
+    h.u.hitV = (h.u.hitV || 0) + (fin ? 6 : 3.5);
+    h.u.hitStop = fin ? 0.11 : 0.06;
+    emitFX('hit', p.x, p.y + 1.2, p.z, { dx, dz, n: fin ? 14 : 8, size: fin ? 1.0 : 0.7 });
+    // the star sits on the side facing the striker, in the scene: the own head may hide it, it never shines through the skull
+    impactStar(p.x - (dx / l) * 0.45, p.y + 1.3, p.z - (dz / l) * 0.45, fin);
   }
+  hitMark(hits[0].u.g.position, fin);
   const p0 = hits[0].u.g.position;
   SFX.play(HIT_SFX[P.k] || 'axe', { vol: 1.15 });
+  SFX.play('hitmark', { vol: fin ? 0.9 : 0.6 });
   if (fin) SFX.play('crash', { vol: 0.7 });
-  if (step > 1) word(fin ? TR('KOMBO!') : '×' + step, p0.x, p0.y + 3, p0.z, { color: fin ? '#ffcf3d' : '#ffffff', scale: fin ? 1.7 : 1.3 });
-  else if (Math.random() < 0.25 && QUOTES[P.k].hit.length) word(pick(QUOTES[P.k].hit), p0.x, p0.y + 3, p0.z);
+  if (step > 1)
+    word(fin ? TR('KOMBO!') : '×' + step, p0.x, p0.y + 3.2, p0.z, { color: fin ? '#ffcf3d' : '#ffffff', scale: fin ? 1.7 : 1.3 });
+  else if (Math.random() < 0.25 && QUOTES[P.k].hit.length) word(pick(QUOTES[P.k].hit), p0.x, p0.y + 3.2, p0.z);
+}
+// the hit marker on the screen: four comic strokes snap out around the spot where the blow landed (a finisher adds speed lines at the edges)
+function hitMark(p, fin) {
+  const el = $('#hitMk');
+  if (!el) return;
+  const sp = toScreen(p.x, p.y + 1.2, p.z);
+  el.style.left = Math.round(sp.x) + 'px';
+  el.style.top = Math.round(sp.y) + 'px';
+  el.classList.remove('on', 'fin');
+  void el.offsetWidth;
+  el.classList.add('on');
+  if (fin) el.classList.add('fin');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('on', 'fin'), 420);
+  if (fin) {
+    const sl = $('#speedLn');
+    if (sl) {
+      sl.classList.remove('on');
+      void sl.offsetWidth;
+      sl.classList.add('on');
+      clearTimeout(sl._t);
+      sl._t = setTimeout(() => sl.classList.remove('on'), 380);
+    }
+  }
 }
 /* a comic impact star where a blow lands: a spiky white-yellow burst with an ink edge, pops up and fades in a quarter second */
 const STAR_GEO = (() => {
@@ -750,26 +790,20 @@ const STAR_GEO = (() => {
 })();
 function impactStar(x, y, z, big) {
   const g = new THREE.Group(),
-    ink = new THREE.MeshBasicMaterial({ color: 0x1b1430, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
-    fill = new THREE.MeshBasicMaterial({
-      color: big ? 0xffa62b : 0xffe14d,
-      transparent: true,
-      depthTest: false,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    }),
-    core = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
+    mat = c => new THREE.MeshBasicMaterial({ color: c, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false }),
+    ink = mat(0x1b1430),
+    fill = mat(big ? 0xffa62b : 0xffe14d),
+    core = mat(0xffffff);
   const a = new THREE.Mesh(STAR_GEO, ink),
     b = new THREE.Mesh(STAR_GEO, fill),
     c = new THREE.Mesh(STAR_GEO, core);
   a.scale.setScalar(1.18);
   c.scale.setScalar(0.5);
-  b.position.z = 0.01;
-  c.position.z = 0.02;
+  b.position.z = 0.02;
+  c.position.z = 0.04;
   g.add(a, b, c);
   g.position.set(x, y, z);
-  g.renderOrder = 12;
-  [a, b, c].forEach(m => (m.renderOrder = 12));
+  [a, b, c].forEach((m, i) => (m.renderOrder = 12 + i));
   g.rotation.z = Math.random() * TAU;
   scene.add(g);
   fx.swings.push({ star: true, m: g, mats: [ink, fill, core], t: 0, big });
@@ -831,20 +865,22 @@ const SLASH_BASE = new THREE.ShaderMaterial({
 SLASH_BASE.userData.shared = true;
 function slashFx(P, K, av, step, col, delay = 0, follow = null) {
   if (fx.swings.length > 40) return;
-  const sh = (SLASH[P.k] || SLASH[0])[av % (SLASH[P.k] || SLASH[0]).length],
+  const mv = moveOf(P.k, av),
+    sh = mv ? mv.sl : { m: 'h', d: -1 },
     fin = step === 3,
     cav = K.role === 'cav',
+    ring = sh.m === 'r',
     reach = (K.range + 1.1) * (sh.s || 1) * (fin ? 1.18 : 1),
     g = new THREE.Group(),
     mk = (lag, scale, colr) => {
       const m = SLASH_BASE.clone();
-      m.uniforms.uMode.value = sh.m === 't' ? 1 : 0;
-      m.uniforms.uSpan.value = sh.m === 'v' ? 2.2 : 2.7;
-      m.uniforms.uR0.value = 0.45;
-      m.uniforms.uR1.value = reach * scale * (sh.m === 'v' ? 0.85 : 1);
+      m.uniforms.uMode.value = 0;
+      m.uniforms.uSpan.value = ring ? TAU * 0.97 : sh.m === 'v' || sh.m === 'u' ? 2.2 : 2.7;
+      m.uniforms.uR0.value = ring ? reach * 0.35 : 0.45;
+      m.uniforms.uR1.value = reach * scale * (sh.m === 'v' || sh.m === 'u' ? 0.85 : 1);
       m.uniforms.uLen.value = reach * 1.15 * scale;
       m.uniforms.uCol.value.set(colr);
-      m.uniforms.uFlip.value = sh.d === 1 ? 1 : 0;
+      m.uniforms.uFlip.value = sh.d === 1 || sh.m === 'u' ? 1 : 0;
       const me = new THREE.Mesh(SLASH_GEO, m);
       me.renderOrder = 9;
       me.frustumCulled = false;
@@ -853,22 +889,25 @@ function slashFx(P, K, av, step, col, delay = 0, follow = null) {
     };
   const layers = [mk(0, 1, col), mk(0.07, 0.86, col)]; // the slash and its echo
   layers[1].m.uniforms.uFade.value = 0.6;
-  const y = (P.fy ?? groundY(P.x, P.z)) + (cav ? 1.85 : 1.35);
+  const y = (P.fy ?? groundY(P.x, P.z)) + (cav ? 1.85 : 1.35) * (sh.low ? 0.62 : 1);
   g.position.set(P.x, y, P.z);
   g.rotation.order = 'YXZ';
   g.rotation.y = P.yaw;
   g.rotation.x = -0.42; // tipped towards the camera behind: a slash seen edge-on would be invisible
-  if (sh.m === 'h')
+  if (ring) {
+    g.rotation.x = -0.12; // all round, almost flat: the whirlwind
+    g.rotation.y = P.yaw + Math.PI * 0.5;
+  } else if (sh.m === 'h')
     g.rotation.z = (sh.d === 1 ? 1 : -1) * (fin ? 0.3 : 0.18); // tilted like the blow
   else if (sh.m === 'v') {
     g.rotation.z = -0.95; // a diagonal chop from high right down to low left in front
     g.position.y += 0.45;
   } else {
-    g.rotation.x = -0.75; // a thrust points away from the camera: stand it up more so its streak is seen
-    g.position.y += 0.1;
+    g.rotation.z = 0.95; // a rising cut: from low left up to high right
+    g.position.y += 0.3;
   }
   scene.add(g);
-  fx.swings.push({ slash: true, m: g, layers, t: -delay, dur: fin ? 0.16 : 0.12, follow: follow || P, yaw: P.yaw });
+  fx.swings.push({ slash: true, m: g, layers, t: -delay, dur: ring ? 0.2 : fin ? 0.16 : 0.12, follow: follow || P, yaw: P.yaw });
 }
 const swingGeo = new THREE.RingGeometry(0.7, 2.3, 28, 1, -1.25, 2.5).rotateX(-Math.PI / 2);
 function swingFx(P, K, col, quiet) {
@@ -1011,33 +1050,6 @@ swooshMesh.frustumCulled = false;
 swooshMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 swooshMesh.renderOrder = 8;
 scene.add(swooshMesh);
-// per character and attack variant: tilt of the swing plane around the facing axis (0 flat, negative: the blow comes down from the right), sweep direction (1: right to left), height, reach factor
-const SWOOSH_V = {
-  0: [
-    { roll: -0.28, dir: 1, h: 1.2 },
-    { roll: -0.1, dir: -1, h: 1.1 },
-    { roll: 0.05, dir: 1, h: 1.0, sc: 0.75 },
-    { roll: -0.3, dir: 1, h: 1.2, sc: 1.12 },
-  ],
-  2: [
-    { roll: 0.1, dir: -1, h: 1.0 },
-    { roll: -0.05, dir: 1, h: 1.05, sc: 0.85 },
-    { roll: -0.28, dir: 1, h: 1.15 },
-    { roll: 0.25, dir: -1, h: 1.1 },
-  ],
-  4: [
-    { roll: -0.28, dir: 1, h: 1.75 },
-    { roll: -0.1, dir: -1, h: 1.7 },
-    { roll: 0, dir: 1, h: 0.9, sc: 0.85 },
-    { roll: -0.28, dir: 1, h: 1.75 },
-  ],
-  5: [
-    { roll: -0.15, dir: 1, h: 1.35, sc: 0.85 },
-    { roll: 0.15, dir: -1, h: 1.35 },
-    { roll: 0, dir: 1, h: 0.75, sc: 0.9 },
-    { roll: -0.15, dir: 1, h: 1.35, sc: 0.85 },
-  ],
-};
 const SW_Q = { a: new THREE.Quaternion(), b: new THREE.Quaternion(), Y: new THREE.Vector3(0, 1, 0), Z: new THREE.Vector3(0, 0, 1) };
 function swooshFx(u, K) {
   if (swooshes.length >= SWOOSH_CAP || !u.g.parent || !u.g.visible) return;
@@ -1046,7 +1058,7 @@ function swooshFx(u, K) {
     d = Math.hypot(P.x - L.x, P.z - L.z),
     fade = d < 24 ? 1 : 1 - (d - 24) / 46;
   if (fade <= 0.05) return;
-  const sv = (SWOOSH_V[u.k] || SWOOSH_V[0])[(u.av || 0) % 4],
+  const sv = moveSwoosh(u.k, u.av),
     gs = u.g.scale.x || 1;
   swooshes.push({
     u,
@@ -1102,6 +1114,7 @@ function swooshClear() {
 }
 function egoSpecial() {
   const P = V.poss;
+  if (P && P.hen) return; // a chicken only pecks
   if (!P || P.down || P.dance || P.heroOn || (V.latest && V.latest.pz > 0)) return;
   if (KINDS[P.k].worm) {
     // one press digs in, the next bursts out and swallows everyone around

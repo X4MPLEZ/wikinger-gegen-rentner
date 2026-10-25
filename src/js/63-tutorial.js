@@ -707,23 +707,21 @@ function tutSteps(nar, adv) {
         done: () => false,
       },
     ];
+  /* The first tutorial: as short as possible, only what nobody finds out alone – recruit, send, take over and fight, attack the base.
+     Counters, AUTO, the other warriors' tricks, rushes and perks come as tips in the matches (HINTS, 52-hud.js) or in the Profi-Schule. */
   const steps = [
-    {
-      t: TR(
-        "Moin! Ich bin {0}. In drei Minuten machst du aus {1} Kleinholz. Merk dir nur eins: Hier fliegt alles, was man umrennt. Los geht's!",
-        nar.name,
-        E.name
-      ),
-      next: true,
-    },
     {
       t: COARSE
         ? TR(
-            'Unten siehst du die runden Knöpfe: Bild = Einheit, Zahl = Preis. Tippe zweimal auf „{0}“ – {1} hab ich dir zugesteckt.',
-            nm('melee'),
-            F.res
+            'Moin, ich bin {0}! Hier fliegt alles, was man umhaut. Tippe unten zweimal auf „{1}“ – das Geld hab ich dir zugesteckt.',
+            nar.name,
+            nm('melee')
           )
-        : TR('Bilde 2× „{0}“ aus. {1} hab ich dir zugesteckt.', nm('melee'), F.res),
+        : TR(
+            'Moin, ich bin {0}! Hier fliegt alles, was man umhaut. Bilde unten 2× „{1}“ aus – das Geld hab ich dir zugesteckt.',
+            nar.name,
+            nm('melee')
+          ),
       allow: ['spawn0'],
       hl: '.spawn[data-slot="0"] .main',
       start: () => {
@@ -736,12 +734,8 @@ function tutSteps(nar, adv) {
     {
       id: 'firstFlag',
       t: pc
-        ? TR(
-            'Wähle „Alle“ ({0}), dann {1} auf die Fahne mit dem Pfeil. Deine beiden Krieger müssen erst dorthin laufen.',
-            kl('selAll'),
-            kl('order')
-          )
-        : TR('Tippe „Alle“ und dann auf die Fahne mit dem Pfeil. Deine beiden Krieger müssen erst dorthin laufen.'),
+        ? TR('Wähle „Alle“ ({0}), dann {1} auf die Fahne mit dem Pfeil. Fahnen bringen Gold.', kl('selAll'), kl('order'))
+        : TR('Tippe „Alle“ und dann auf die Fahne mit dem Pfeil. Fahnen bringen Gold.'),
       allow: ['order'],
       hlFn: () => (V.selected.size ? null : '[data-sel="all"]'),
       world: () => FLAGS[nf],
@@ -757,53 +751,6 @@ function tutSteps(nar, adv) {
       },
       done: () => tutMovementDone(FLAGS[nf]) && G.flags[nf].owner === me,
     },
-    {
-      t: TR('Jede Fahne bringt mehr {0} pro Sekunde. Je mehr Fahnen du hast, desto mehr Einkommen – schau oben links!', F.res),
-      hl: '#inc',
-      next: true,
-    },
-    {
-      t: COARSE
-        ? TR(
-            'Konter: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Drei Fernkämpfer stehen an der mittleren Fahne. Bilde 2 „{0}“ aus und tippe mit Auswahl auf die Gegner!',
-            nm('cav')
-          )
-        : TR(
-            'Konter: Nah schlägt Reiter, Reiter schlagen Fern, Fern schlägt Nah. Drei Fernkämpfer stehen an der mittleren Fahne. Bilde 2 „{0}“ aus und rechtsklicke mit Auswahl auf die Gegner!',
-            nm('cav')
-          ),
-      allow: ['spawn2', 'order'],
-      hl: '.spawn[data-slot="2"] .main',
-      world: () => FLAGS[mid],
-      start: () => {
-        gold(190);
-        tutEnemies(mid);
-        V.selected.clear();
-        for (const id of TUT.enemyIds) {
-          const u = G.units.find(u => u.id === id);
-          if (u) {
-            delete u.tutStill;
-            delete u.tutDummy;
-            u.cd = 0.4;
-            u.hp = Math.min(u.hp, KINDS[u.k].hp * 0.55);
-          }
-        }
-        focus(FLAGS[mid]);
-      },
-      done: () => TUT.enemyIds.length && TUT.enemyIds.every(id => !G.units.some(u => u.id === id)),
-    },
-    {
-      t: COARSE
-        ? TR(
-            'Faul sein erlaubt: Halte den runden Knopf von „{0}“ lange gedrückt – das schaltet AUTO ein (grüner Ring). Dann wird sie von selbst nachgebildet, solange das Geld reicht.',
-            nm('ranged')
-          )
-        : TR('Faul sein erlaubt: Tippe bei „{0}“ auf AUTO. Dann wird sie von selbst nachgebildet, solange das Geld reicht.', nm('ranged')),
-      allow: ['auto'],
-      hl: COARSE ? '.spawn[data-slot="1"] .main' : '.spawn[data-slot="1"] .auto',
-      start: () => gold(120),
-      done: () => Object.values(T().auto).some(Boolean),
-    },
     possStep(
       kOf('melee'),
       [
@@ -811,11 +758,14 @@ function tutSteps(nar, adv) {
         [0, 7],
         [2.2, 6],
       ],
-      0.3,
-      TR('Jetzt der Clou: Tippe auf deinen „{0}“ beim Pfeil und dann auf „Übernehmen“.', nm('melee'))
+      0.55,
+      TR(
+        'Fahne erobert – jetzt das Beste: Tippe auf deinen „{0}“ beim Pfeil und dann auf „Übernehmen“. Du steuerst ihn selbst!',
+        nm('melee')
+      )
     ),
     {
-      t: TR('Du steckst drin! Hau die drei Puppen um. {0} = Schlag, {1} = Raserei.', atk, spc),
+      t: TR('Hau die drei Puppen um! Drei Schläge schnell hintereinander sind eine KOMBO – der dritte haut alle um. {0} = Schlag.', atk),
       hl: '#egoAtk',
       start: () => {
         TUT.enterAt = now() + 1500;
@@ -824,92 +774,24 @@ function tutSteps(nar, adv) {
       done: dead,
     },
     {
-      t: TR('„{0}“: Ziel mit dem Kreuz und schieß die drei da hinten ab! {1} = Fächerschuss.', nm('ranged'), spc),
-      start: () =>
-        prep(
-          kOf('ranged'),
-          [
-            [-4, 13],
-            [0, 15],
-            [4, 13],
-          ],
-          0.25
-        ),
-      after: egoKeep,
-      done: dead,
-    },
-    {
-      t: TR(
-        '„{0}“! Der Riesenkopf wird von einem Spieler gesteuert. Ramm ihn mit {1} um: Wer fliegt, kegelt alle um, die im Weg stehen. Erwisch ihn für einen {2}!',
-        nm('cav'),
-        spc,
-        rush
-      ),
-      start: () => {
-        prep(kOf('cav'), [], 0);
-        cavDummy();
-        TUT.r0 = T().rush;
-      },
-      after: () => {
-        egoKeep();
-        if (TUT.dummy && !G.units.some(u => u.id === TUT.dummy) && T().rush === TUT.r0) {
-          cavDummy();
-          $('#tutText').textContent = TR('Den musst DU erwischen! Da kommt der Nächste.');
-        }
-      },
-      world: () => {
-        const d = G.units.find(u => u.id === TUT.dummy);
-        return d ? { x: d.x, z: d.z } : null;
-      },
-      done: () => T().rush !== TUT.r0,
-    },
-    {
-      t: TR(
-        'Und jetzt das „{0}“: Der rote Kreis zeigt, wo es einschlägt. {1} schießt, {2} = Dreifach-Salve. {3}',
-        nm('siege'),
-        atk,
-        spc,
-        myFac === 'viking'
-          ? TR('Der Fels rollt danach weiter und walzt alles um.')
-          : TR('Die Torte hinterlässt eine Sahnepfütze, in der jeder klebt.')
-      ),
-      start: () => {
-        prep(
-          kOf('siege'),
-          [
-            [-2.2, 15],
-            [0, 16.5],
-            [2.2, 15],
-            [0, 13.5],
-          ],
-          0.22
-        );
-      },
-      after: egoKeep,
-      done: dead,
-    },
-    {
       t: pc
-        ? TR("Klasse! Mit {0} oder „Verlassen“ geht's zurück in die Feldherren-Ansicht.", kl('exit'))
-        : TR('Klasse! Tippe auf „Verlassen“, um zurückzukehren.'),
-      allow: ['exit'],
-      hl: '#egoExit',
-      start: () => {
-        TUT.egoId = null;
-      },
-      done: () => !V.poss,
-    },
-    {
-      t: TR('Finale! Ich hab dir eine Armee geschickt. „Alle“ wählen und {0} angreifen!', E.base),
+        ? TR('Finale! Raus mit {0} („Verlassen“), dann „Alle“ wählen und {1} angreifen!', kl('exit'), E.base)
+        : TR('Finale! Raus mit „Verlassen“, dann „Alle“ wählen und {0} angreifen!', E.base),
       free: true,
+      hlFn: () => (V.poss ? '#egoExit' : V.selected.size ? null : '[data-sel="all"]'),
       world: () => BASES[1],
       start: () => {
-        clearTut();
+        TUT.egoId = null;
         G.towerOff[0] = false;
         army(['melee', 'melee', 'melee', 'ranged', 'ranged', 'cav']);
         tutFinale();
-        homeCam();
-        applyCam();
+      },
+      after: () => {
+        if (!V.poss && !TUT.camHome) {
+          TUT.camHome = true;
+          homeCam();
+          applyCam();
+        }
       },
       done: () => false,
     },
@@ -950,6 +832,7 @@ function startTutorial(adv) {
     camSeq: null,
     egoId: null,
     dIds: [],
+    camHome: false,
   });
   TUT.adv = !!adv;
   TUT.steps = tutSteps(nar, !!adv);

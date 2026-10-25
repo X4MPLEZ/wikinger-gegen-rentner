@@ -62,8 +62,8 @@ const AVATARS = [
   { id: 'goatCrown', k: 4, bg: ['#ffe89a', '#7a4f12'], deco: 'crown', u: { lv: 30 } },
 ];
 /* Army skins: colour swaps for the models of one faction (old colour -> new colour; no chains) plus their own extra pieces (skinExtras in
-   25-worm-model.js). Klassisch is free; three come with Ruhmespfad levels 10/20/30 (only there, never in the shop), one per faction is
-   bought with Juwelen. */
+   25-worm-model.js). Klassisch is free; three per faction come with the Ruhmespfad (Wikinger at levels 10/20/28, Rentner at 13/23/30 – only there, never
+   in the shop), one per faction is bought with Juwelen. */
 const SKINS = {
   v0: { fac: 'viking', n: TR('Klassisch'), u: { free: 1 }, sw: null, c: ['#326a9e', '#9aa3ad'] },
   v1: {
@@ -99,7 +99,7 @@ const SKINS = {
   v3: {
     fac: 'viking',
     n: TR('Gold-Jarl'),
-    u: { lv: 30 },
+    u: { lv: 28 },
     c: ['#2a2a30', '#d9a441'],
     sw: {
       0x326a9e: 0x2a2a30,
@@ -115,7 +115,7 @@ const SKINS = {
   r1: {
     fac: 'rentner',
     n: TR('Trainingsanzug'),
-    u: { lv: 10 },
+    u: { lv: 13 },
     c: ['#2e8b6e', '#f3ead2'],
     sw: {
       0x995a8d: 0x2e8b6e,
@@ -133,7 +133,7 @@ const SKINS = {
   r2: {
     fac: 'rentner',
     n: TR('Strandurlaub'),
-    u: { lv: 20 },
+    u: { lv: 23 },
     c: ['#e8913a', '#f2d06b'],
     sw: {
       0x995a8d: 0xe8913a,
@@ -209,27 +209,27 @@ const LEVEL_REWARDS = {
   7: { gems: 40 },
   8: { av: 'archerStars' },
   9: { gems: 50 },
-  10: { sk: ['v1', 'r1'] },
+  10: { sk: ['v1'] },
   11: { gems: 50 },
   12: { av: 'berserkerFire' },
-  13: { gems: 50 },
+  13: { sk: ['r1'] },
   14: { gems: 60 },
   15: { gems: 60 },
   16: { gems: 60 },
   17: { gems: 60 },
   18: { av: 'racerHalo' },
   19: { gems: 70 },
-  20: { sk: ['v2', 'r2'] },
+  20: { sk: ['v2'] },
   21: { gems: 70 },
   22: { gems: 70 },
-  23: { gems: 80 },
+  23: { sk: ['r2'] },
   24: { gems: 80 },
   25: { av: 'berserkerCrown' },
   26: { gems: 80 },
   27: { gems: 90 },
-  28: { gems: 90 },
+  28: { sk: ['v3'] },
   29: { gems: 90 },
-  30: { sk: ['v3', 'r3'], av: 'goatCrown', gems: 200 },
+  30: { sk: ['r3'], av: 'goatCrown', gems: 200 },
 };
 const lvNeed = L => 100 + 20 * (L - 1);
 function lvOf(xp) {

@@ -403,7 +403,8 @@ function updateFreeArrows(dt) {
     a.t += dt;
     const step = CFG.arrowSpeed * dt,
       n = 4;
-    let done = a.t > a.life;
+    let done = a.t > a.life,
+      hitU = null;
     for (let j = 0; j < n && !done; j++) {
       a.p.addScaledVector(a.d, step / n);
       if (a.p.y < Math.max(WL, groundY(a.p.x, a.p.z))) {
@@ -433,18 +434,65 @@ function updateFreeArrows(dt) {
           hy = u.g.position.y + hb.y;
         if (h2 + (a.p.y - hy) ** 2 < (hb.r * 1.12) ** 2 || (h2 < 0.25 && a.p.y > u.g.position.y && a.p.y < hy)) {
           done = true;
+          hitU = u;
           break;
         }
       }
     }
     a.m.position.copy(a.p);
     orientProj(a.m, a.d, a.k, dt);
+    shotTrail(a);
     if (done) {
-      puff(a.p.x, a.p.y, a.p.z, 0xfff1a8, 2, 0.4);
-      projPut(a.m);
+      if (a.tr) {
+        scene.remove(a.tr);
+        a.tr.geometry.dispose();
+      }
+      if (hitU) {
+        // it lands: the target flinches and flashes, sparks fly, an arrow stays stuck in it for a moment
+        hitU.flash = 0.16;
+        hitU.hitV = (hitU.hitV || 0) + 2.5;
+        emitFX('hit', a.p.x, a.p.y, a.p.z, { dx: a.d.x, dz: a.d.z, n: 6, size: 0.55 });
+        if (a.k === 1 && fx.stuck.length < 24) {
+          const inv = new THREE.Matrix4().copy(hitU.g.matrixWorld).invert();
+          hitU.g.add(a.m);
+          a.m.position.copy(a.p).applyMatrix4(inv);
+          a.m.position.addScaledVector(a.d.clone().transformDirection(inv), 0.25);
+          a.m.lookAt(a.m.position.clone().add(a.d.clone().transformDirection(inv)));
+          fx.stuck.push({ m: a.m, u: hitU, t: 0 });
+        } else projPut(a.m);
+      } else {
+        puff(a.p.x, a.p.y, a.p.z, 0xfff1a8, 2, 0.4);
+        projPut(a.m);
+      }
       fx.shots.splice(i, 1);
     }
   }
+  for (let i = fx.stuck.length - 1; i >= 0; i--) {
+    const st = fx.stuck[i];
+    st.t += dt;
+    if (st.t > 1.1 || !st.u.g.parent || st.u.dead) {
+      st.u.g.remove(st.m);
+      projPut(st.m);
+      fx.stuck.splice(i, 1);
+    }
+  }
+}
+// a thin bright streak behind an own shot: you see where it flies
+const TRAIL_MAT = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, depthWrite: false, fog: false });
+TRAIL_MAT.userData.shared = true;
+function shotTrail(a) {
+  if (!a.tr) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+    a.tr = new THREE.Line(g, TRAIL_MAT);
+    a.tr.frustumCulled = false;
+    scene.add(a.tr);
+  }
+  const pa = a.tr.geometry.attributes.position,
+    len = Math.min(2.4, a.t * CFG.arrowSpeed);
+  pa.setXYZ(0, a.p.x - a.d.x * len, a.p.y - a.d.y * len, a.p.z - a.d.z * len);
+  pa.setXYZ(1, a.p.x, a.p.y, a.p.z);
+  pa.needsUpdate = true;
 }
 function orientProj(m, d, k, dt) {
   if (k === 3) {
@@ -455,6 +503,17 @@ function orientProj(m, d, k, dt) {
 function clearFreeArrows() {
   for (const [, v] of fpView) projPut(v.m);
   fpView.clear();
-  fx.shots.forEach(a => projPut(a.m));
+  fx.shots.forEach(a => {
+    projPut(a.m);
+    if (a.tr) {
+      scene.remove(a.tr);
+      a.tr.geometry.dispose();
+    }
+  });
   fx.shots.length = 0;
+  fx.stuck.forEach(st => {
+    st.u.g.remove(st.m);
+    projPut(st.m);
+  });
+  fx.stuck.length = 0;
 }

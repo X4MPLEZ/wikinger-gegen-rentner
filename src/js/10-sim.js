@@ -231,7 +231,7 @@ function applyCmd(G, team, c) {
   } else if (c.t === 'poss') {
     const u = G.units.find(v => v.id === c.id && v.team === team);
     // not a fallen warrior, not one that falls off the map, not a worm the enemy hero is riding
-    if (!u || u.hp <= 0 || u.fall > 0 || u.heroBy || u.hen) return;
+    if (!u || u.hp <= 0 || u.fall > 0 || u.heroBy) return;
     if (T.pos) {
       const o = G.units.find(v => v.id === T.pos);
       if (o && o !== u && (o.dance > 0 || o.hero)) return; // the dance and the hero lock hold for switching, too (like 'unposs')
@@ -636,6 +636,10 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   }
   if (attK >= 0 && KINDS[attK].role === 'ranged' && KINDS[e.k].role === 'siege') d *= 1.25;
   e.hp -= d;
+  if (e.heroBy && e.hp <= 0) {
+    e.hp = 1; // a worm with a hero on it holds out until the hero is swallowed (heroEnd finishes it)
+    e.heroBeat = team + 1;
+  }
   e.hurt = 2.5;
   e.lh = [attK, team, head ? 1 : 0];
   if (attK === 3 && e.hp > 0 && !KINDS[e.k].bear && !KINDS[e.k].worm) e.slowT = 1.5;
@@ -1001,7 +1005,8 @@ function possAttack(G, u, byId) {
     (step ? CMB.cd[step - 1] : 1);
   u.atk = (u.atk + 1) % 100;
   u.at = 0;
-  const dmg = K.dmg * CFG.possDmg[K.role] * EG.dmg * (u.rage > 0 ? 1.3 : 1) * homeMul(G, u) * (step ? CMB.dmg[step - 1] : 1);
+  const dmg =
+    K.dmg * CFG.possDmg[K.role] * EG.dmg * (u.rage > 0 ? 1.3 : 1) * homeMul(G, u) * (step ? CMB.dmg[step - 1] : 1) * (u.hen ? HEN.dmg : 1);
   if (K.role === 'siege') {
     const In = G.teams[u.team].posIn;
     let tx = u.x + Math.sin(u.yaw) * 12,
@@ -1090,10 +1095,10 @@ function possAttack(G, u, byId) {
       G.proj.push({ t: 0.5, dmg, tgt: -2, team: u.team, k: u.k });
     }
   } else {
-    const fin = step === 3; // the finisher reaches a little wider and hits up to three
-    let hits = enemiesInCone(G, u, K.range + K.r + (fin ? 1.4 : 1.0), fin ? 1.4 : 1.15)
+    const fin = step === 3; // the finisher (a whirlwind or a leap) reaches a little wider, all round, and hits up to four
+    let hits = enemiesInCone(G, u, K.range + K.r + (fin ? 1.4 : 1.0), fin ? Math.PI : 1.15)
       .sort((a, b) => a.d - b.d)
-      .slice(0, fin ? 3 : 2);
+      .slice(0, fin ? 4 : 2);
     const charge = K.role === 'cav' && u.run > 1.2 ? (u.k === 5 ? 2.3 : 1.9) : 1;
     for (const b of G.bears.slice()) {
       if (!bearHere(b)) continue;
@@ -1106,7 +1111,8 @@ function possAttack(G, u, byId) {
       }
     }
     hits.forEach(h => {
-      hit(G, h.e.id, dmg * charge, u.team, byId, u.k, true);
+      hit(G, h.e.id, dmg * charge, u.team, byId, u.hen ? -1 : u.k, true); // a chicken has no hard counters
+      if (u.hen) return;
       traitHit(G, u, h.e, charge > 1);
       if (u.k === 0 && u.rage > 0 && pkL(G, u.team, 'walhalla')) knockFly(h.e, u.x, u.z, 3.5);
       else if (
@@ -1121,13 +1127,14 @@ function possAttack(G, u, byId) {
     if (hits.length) u.at = hits[0].e.id;
     else if (baseInReach(u, K.range + 1)) {
       u.at = -2;
-      hit(G, -2, dmg, u.team, byId, u.k);
+      hit(G, -2, dmg * (u.hen ? HEN.base / HEN.dmg : 1), u.team, byId, u.k);
     }
   }
   u.run = 0;
 }
 function possSpecial(G, u, byId) {
   const K = KINDS[u.k];
+  if (u.hen) return; // a chicken only pecks
   if (K.worm) {
     // ego sandworm: one press digs in (then it swims under the sand where you steer it), the next bursts out and swallows everyone around
     if (u.ws === 1 || (u.ws === 5 && u.wst >= 0.3)) {
@@ -1656,6 +1663,10 @@ function hitBear(G, b, dmg, team, attK, bp, head, src) {
   else if (attK >= 0 && KINDS[attK].role !== 'siege') d *= 0.7;
   if (head) d *= b.worm ? WORM_HEAD_MUL : 3;
   b.hp -= d;
+  if (b.heroBy && b.hp <= 0) {
+    b.hp = 1; // a hero is on it: it holds out until he is swallowed (heroEnd finishes it)
+    b.heroBeat = team + 1;
+  }
   b.aggro = team;
   b.at = 3;
   // a wild polar bear holds a grudge: whoever hurt it (even from far away) is charged down
