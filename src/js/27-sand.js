@@ -534,7 +534,7 @@ function shoot(kind, from, to, dur, follow) {
   const m = projGet(kind);
   scene.add(m);
   m.position.copy(from);
-  fx.projs.push({
+  const p = {
     m,
     kind,
     from: from.clone(),
@@ -542,6 +542,13 @@ function shoot(kind, from, to, dur, follow) {
     t: 0,
     dur: Math.max(0.12, dur),
     follow,
-    arc: kind === 'boulder' || kind === 'cake' ? Math.min(12, from.distanceTo(to) * 0.55) : Math.min(4, from.distanceTo(to) * 0.18),
-  });
+    arc:
+      kind === 'fass'
+        ? Math.min(16, from.distanceTo(to) * 0.7) // the Feuerfass flies a high arc
+        : kind === 'boulder' || kind === 'cake'
+          ? Math.min(12, from.distanceTo(to) * 0.55)
+          : Math.min(4, from.distanceTo(to) * 0.18),
+  };
+  fx.projs.push(p);
+  return p;
 }

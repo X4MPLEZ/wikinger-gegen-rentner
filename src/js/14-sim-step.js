@@ -244,7 +244,7 @@ function worldStep(G, byId) {
     let tg = null,
       bd = 64;
     for (const u of G.units) {
-      if (u.hp <= 0 || u.fall > 0 || u.pj || u.grab || u.bur) continue;
+      if (u.hp <= 0 || u.fall > 0 || u.pj || u.grab || u.bur || aloft(u)) continue;
       const d2 = (u.x - b.x) ** 2 + (u.z - b.z) ** 2;
       if (d2 < bd) {
         bd = d2;
@@ -321,7 +321,8 @@ function worldStep(G, byId) {
     const dx = tx - b.x,
       dz = tz - b.z,
       d = Math.hypot(dx, dz);
-    if (d > 0.3) {
+    if (d > 0.3 && !(b.trapT > 0)) {
+      // (a bear in a trap stays put)
       if (!b.path || b.repath <= 0 || Math.hypot((b.pgx || 0) - tx, (b.pgz || 0) - tz) > 3) {
         b.repath = 1.5;
         b.pgx = tx;
@@ -445,6 +446,7 @@ function step(G) {
       }
     } else T.qt = 0;
   }
+  specStep(G, byId); // fuses, fire, traps (16-sim-fass-falle.js)
   // Simultaneous resolution: everyone alive at the start of the tick acts this tick, so list order never decides a duel.
   for (const u of G.units) {
     u.a0 = u.hp > 0;
@@ -494,6 +496,21 @@ function step(G) {
       possStep(G, u, byId);
       continue;
     }
+    if (u.fh > 0) {
+      // a chicken let go in the air sinks first (over water or rocks it drifts to the nearest land)
+      u.fh = Math.max(0, u.fh - HFLY.down * DT);
+      if (!walkable(u.x, u.z)) {
+        u.fh = Math.max(u.fh, 0.8);
+        const q = nearestWalkable(MAP, u.x, u.z),
+          dx = q.x - u.x,
+          dz = q.z - u.z,
+          d = Math.hypot(dx, dz) || 1,
+          s = Math.min(d, 5 * DT);
+        u.x += (dx / d) * s;
+        u.z += (dz / d) * s;
+      }
+      continue;
+    }
     const K = KINDS[u.k],
       o = u.ord;
     u.cd -= DT;
@@ -521,6 +538,9 @@ function step(G) {
       continue;
     }
     if (K.worm && wormUnitStep(G, u, byId)) continue;
+    if (K.spec === 'bomb') fassAuto(G, u);
+    else if (K.spec === 'trap') fallenAuto(G, u);
+    const panic = burnPanic(G, u); // burning: runs about instead of fighting
     if (u.wind) {
       u.wind.t -= DT;
       if (u.wind.t <= 0) {
@@ -530,15 +550,17 @@ function step(G) {
         G.proj.push({
           sx: u.x,
           sz: u.z,
-          t: Math.max(0.6, dd / K.pspeed) * Math.max(0.4, hw.k),
+          t: Math.max(0.6, dd / K.pspeed) * Math.max(0.4, hw.k) * (u.fass ? 1.25 : 1),
           dmg: K.dmg * (u.chick > 0 ? 0.3 : 1),
           tgt: w.tgt,
           team: u.team,
           k: u.k,
-          aoe: K.aoe,
+          aoe: u.fass ? FASS.cataR : K.aoe,
           tx: hw.tx,
           tz: hw.tz,
+          fass: u.fass ? 1 : 0, // a loaded catapult shoots its Feuerfass
         });
+        u.fass = 0;
         u.wind = null;
       }
       continue;
@@ -563,7 +585,13 @@ function step(G) {
         u.re = 0;
       }
     }
-    if (u.tgt > 0 && (!tgt || tgt.hp <= 0 || (o.target === undefined && Math.hypot(tgt.x - o.x, tgt.z - o.z) > leash + 3))) {
+    if (
+      u.tgt > 0 &&
+      (!tgt ||
+        tgt.hp <= 0 ||
+        (aloft(tgt) && K.role !== 'ranged') ||
+        (o.target === undefined && Math.hypot(tgt.x - o.x, tgt.z - o.z) > leash + 3))
+    ) {
       tgt = null;
       u.tgt = -1;
       u.re = 0;
@@ -581,7 +609,7 @@ function step(G) {
         bd = scan * scan;
       let bs = 1e9;
       for (const e of G.units) {
-        if (e.team === u.team || e.hp <= 0 || e.tutDummy || e.pj || e.air || e.grab || e.bur) continue;
+        if (e.team === u.team || e.hp <= 0 || e.tutDummy || e.pj || e.air || e.grab || e.bur || (K.role !== 'ranged' && aloft(e))) continue;
         const d = (e.x - u.x) ** 2 + (e.z - u.z) ** 2;
         if (d < bd && Math.hypot(e.x - o.x, e.z - o.z) < leash) {
           const sc =
@@ -642,7 +670,8 @@ function step(G) {
       tr = 0;
       ty = groundY(eb.x, eb.z);
     }
-    if (tx !== undefined) {
+    if (panic) {
+    } else if (tx !== undefined) {
       const dist = Math.hypot(tx - u.x, tz - u.z),
         d = dist - tr;
       const range = K.range + desertRange(K) + (K.role === 'ranged' && u.y - ty > 1.2 ? CFG.hillBonus : 0) + (u.eng > 0 ? 0.45 : 0);
@@ -706,7 +735,7 @@ function step(G) {
             hit(
               G,
               u.at,
-              K.dmg * hm * charge * (u.hen ? (u.at === -2 ? HEN.base : HEN.dmg) : u.chick > 0 ? 0.3 : 1) * (rage ? 1.5 : 1),
+              K.dmg * hm * charge * (u.hen ? (u.at === -2 ? HEN.base : HEN.dmg) : u.chick > 0 ? 0.3 : 1) * (rage ? 1.5 : 1) * specDmg(u),
               u.team,
               byId,
               u.k
@@ -748,6 +777,10 @@ function step(G) {
       }
     } else if (u.navPad !== undefined || Math.hypot(o.x - u.x, o.z - u.z) > 0.3)
       steer(G, u, o.x, o.z, K.speed * (K.role === 'cav' ? pk(G, u.team, 'cavspd', [1, 1.5]) : 1) * (u.hen ? HEN.speed : 1));
+    if (u.trapT > 0) {
+      u.vx = 0; // caught: can still strike whoever comes close, but not take a step
+      u.vz = 0;
+    }
     const ox = u.x,
       oz = u.z;
     {
@@ -818,10 +851,10 @@ function step(G) {
   for (let i = 0; i < us.length; i++) {
     const a = us[i],
       ra = KINDS[a.k].r;
-    if (a.pj || a.fall > 0 || a.hp <= 0 || a.grab || a.bur) continue;
+    if (a.pj || a.fall > 0 || a.hp <= 0 || a.grab || a.bur || a.fh > 0.4) continue;
     for (let j = i + 1; j < us.length; j++) {
       const b = us[j];
-      if (b.pj || b.fall > 0 || b.hp <= 0 || b.grab || b.bur) continue;
+      if (b.pj || b.fall > 0 || b.hp <= 0 || b.grab || b.bur || b.fh > 0.4) continue;
       const dx = b.x - a.x,
         dz = b.z - a.z,
         d2 = dx * dx + dz * dz,
@@ -841,8 +874,10 @@ function step(G) {
         const sa = KINDS[a.k].role === 'siege',
           sb = KINDS[b.k].role === 'siege';
         if (sa !== sb && a.team === b.team) continue;
-        let wa = a.poss ? 0 : b.poss ? 1 : sa !== sb ? (sa ? 0 : 1) : mb / (ma + mb),
-          wb = b.poss ? 0 : a.poss ? 1 : sa !== sb ? (sb ? 0 : 1) : ma / (ma + mb);
+        const fa = a.poss || a.trapT > 0,
+          fb = b.poss || b.trapT > 0; // the steered and the caught are not pushed
+        let wa = fa ? 0 : fb ? 1 : sa !== sb ? (sa ? 0 : 1) : mb / (ma + mb),
+          wb = fb ? 0 : fa ? 1 : sa !== sb ? (sb ? 0 : 1) : ma / (ma + mb);
         if (a.eng > 0 && !(b.eng > 0) && !b.poss) {
           wa *= 0.3;
           wb = 1 - wa;
@@ -873,7 +908,7 @@ function step(G) {
     }
     a.x = clampX(a.x);
     a.z = clampZ(a.z);
-    if (!walkable(a.x, a.z) && !a.pj && !a.fall && !a.air && !a.poss && !(a.kb && a.kb.left > 0 && a.down > 0)) {
+    if (!walkable(a.x, a.z) && !a.pj && !a.fall && !a.air && !a.poss && !(a.fh > 0) && !(a.kb && a.kb.left > 0 && a.down > 0)) {
       const p = nearestWalkableBelow(a.x, a.z),
         dx = p.x - a.x,
         dz = p.z - a.z,
@@ -907,10 +942,14 @@ function step(G) {
       );
       continue;
     }
+    if (p.fass) {
+      blast(G, p.tx, p.tz, p.team, byId, 'cata', -1, !!p.bp); // the catapult's Feuerfass
+      continue;
+    }
     if (p.aoe) {
       const sg = KINDS[p.k] && KINDS[p.k].role === 'siege';
       for (const e of us) {
-        if (e.team === p.team || e.hp <= 0 || e.grab || e.bur) continue;
+        if (e.team === p.team || e.hp <= 0 || e.grab || e.bur || aloft(e)) continue;
         const dd = Math.hypot(e.x - p.tx, e.z - p.tz);
         if (dd >= p.aoe) continue;
         if (!sg) {
@@ -1087,14 +1126,15 @@ function step(G) {
           continue;
         }
         const hb = headBox(e),
-          hy = e.y + hb.y,
+          ey = e.y + (e.fh || 0), // (a flying chicken)
+          hy = ey + hb.y,
           R = KINDS[e.k].r * 0.9;
         if (KINDS[e.k].role !== 'siege' && h2 + (p.y - hy) ** 2 < (hb.r * 1.12) ** 2 && !(e.down > 0)) {
           hit(G, e.id, p.dmg * CFG.headMul, p.team, byId, p.k, true, true);
           p.t = 0;
           break;
         }
-        if (h2 < R * R && p.y > e.y - 0.2 && p.y < hy - hb.r * 0.5) {
+        if (h2 < R * R && p.y > ey - 0.2 && p.y < hy - hb.r * 0.5) {
           hit(G, e.id, p.dmg, p.team, byId, p.k, true, false);
           p.t = 0;
           break;
@@ -1136,6 +1176,7 @@ function step(G) {
       }
     }
   }
+  fassDuds(G, byId); // a felled Feuerfass bursts
   for (const u of us) if (u.hp <= 0 && u.poss) egoCooldownsKeep(G, G.teams[u.team], u); // the fallen ego's cooldowns carry over to the next
   for (const u of us)
     if (u.hp <= 0 && u.poss && !u.rushed && u.egoHit && u.egoHit.team !== u.team) {
@@ -1144,18 +1185,20 @@ function step(G) {
       if (G.t - h.t <= (alive ? 2 : 1)) giveRush(G, h.team, u);
     }
   for (const u of us)
-    if (u.hp <= 0 && (u.squash || u.smash || u.fallen || u.air || u.swal)) {
+    if (u.hp <= 0 && (u.squash || u.smash || u.fallen || u.air || u.swal || u.boomDie || u.dudDie || u.blastV)) {
+      // 5: a Feuerfass that went off (or burst when felled), 6: blown away by a blast – both fly off charred (73-deaths.js)
+      const bv = u.boomDie || u.dudDie ? [0, 10.5, 0] : u.blastV && !u.air && !u.fallen ? u.blastV : null;
       G.dzS = ((G.dzS || 0) + 1) % 10000;
       (G.dz || (G.dz = [])).push([
         G.dzS,
         u.id,
-        u.swal ? 4 : u.fallen || u.air ? 3 : u.squash ? 1 : 2,
+        u.swal ? 4 : bv ? (u.boomDie || u.dudDie ? 5 : 6) : u.fallen || u.air ? 3 : u.squash ? 1 : 2,
         Math.round(u.x * 10),
         Math.round(u.y * 10),
         Math.round(u.z * 10),
-        Math.round((u.air ? u.air.vx : 0) * 100),
-        Math.round((u.air ? u.air.vy : 0) * 100),
-        Math.round((u.air ? u.air.vz : 0) * 100),
+        Math.round((bv ? bv[0] : u.air ? u.air.vx : 0) * 100),
+        Math.round((bv ? bv[1] : u.air ? u.air.vy : 0) * 100),
+        Math.round((bv ? bv[2] : u.air ? u.air.vz : 0) * 100),
       ]);
       if (G.dz.length > 64) G.dz.shift();
     }
@@ -1169,35 +1212,38 @@ function step(G) {
         if (T.revN % 4 === 0) (T.revQ || (T.revQ = [])).push([G.t + 4, u.k]);
       }
       const lh = u.lh || [-9, -1, 0],
-        cause = u.swal
-          ? lh[0] === -8
-            ? 13
-            : 11
-          : lh[0] === -7
-            ? 12
-            : u.fallen || u.air
-              ? 3
-              : u.squash
-                ? 1
-                : u.smash
-                  ? 2
-                  : u.inHole || u.cold > 0
-                    ? 6
-                    : lh[0] === -2
-                      ? 7
-                      : lh[0] === -3
-                        ? 8
-                        : lh[0] === -4
-                          ? 9
-                          : lh[0] === -5
-                            ? 10
-                            : lh[0] === -1
-                              ? 5
-                              : lh[2]
-                                ? 4
-                                : 0;
+        cause =
+          u.lhC && !u.swal && !u.fallen && !u.air
+            ? u.lhC // blast 14, fire 15, trap 16
+            : u.swal
+              ? lh[0] === -8
+                ? 13
+                : 11
+              : lh[0] === -7
+                ? 12
+                : u.fallen || u.air
+                  ? 3
+                  : u.squash
+                    ? 1
+                    : u.smash
+                      ? 2
+                      : u.inHole || u.cold > 0
+                        ? 6
+                        : lh[0] === -2
+                          ? 7
+                          : lh[0] === -3
+                            ? 8
+                            : lh[0] === -4
+                              ? 9
+                              : lh[0] === -5
+                                ? 10
+                                : lh[0] === -1
+                                  ? 5
+                                  : lh[2]
+                                    ? 4
+                                    : 0;
       const kt = cause === 3 ? (u.kbTeam ?? lh[1]) : lh[1];
-      if (u.hen) continue; // a chicken of the Hühnerarmee is not news
+      if (u.hen || u.boomDie) continue; // a chicken of the Hühnerarmee is not news, nor a Feuerfass that went off as planned
       G.kfS = ((G.kfS || 0) + 1) % 10000;
       (G.kf || (G.kf = [])).push([G.kfS, u.k, kt ?? -1, lh[0] >= 0 ? lh[0] : -1, cause, u.poss ? 1 : 0]);
       if (G.kf.length > 6) G.kf.shift();
@@ -1282,9 +1328,11 @@ function snapOf(G) {
     const T = G.teams[i];
     return T.q.length ? Math.round((T.qt / buildTime(G, i, T.q[0])) * 100) : 0;
   };
+  // kinds as one base-36 character each (kind 12 = 'c', 13 = 'd'): the queue and the AUTO set stay short strings
   const au = T =>
     Object.keys(T.auto)
       .filter(k => T.auto[k])
+      .map(k => (+k).toString(36))
       .join('');
   return {
     t: +G.t.toFixed(2),
@@ -1293,7 +1341,7 @@ function snapOf(G) {
     fa: [T0.fac, T1.fac],
     sd: G.seed,
     g: [T0.gold | 0, T1.gold | 0],
-    q: [T0.q.join(''), T1.q.join('')],
+    q: [T0.q.map(k => k.toString(36)).join(''), T1.q.map(k => k.toString(36)).join('')],
     qp: [qp(0), qp(1)],
     au: [au(T0), au(T1)],
     in: [+incomeOf(G, 0).toFixed(1), +incomeOf(G, 1).toFixed(1)],
@@ -1441,6 +1489,10 @@ function snapOf(G) {
       ]),
     pd: (G.padSt || []).map(st => [st.n, Math.ceil(st.cd * 10), st.arm > 0 ? 1 : 0]),
     fz: G.units.filter(u => u.fall > 0).map(u => u.id),
+    hf: G.units.filter(u => u.fh > 0.05).map(u => [u.id, Math.round(u.fh * 10)]), // flying chickens: [id, height*10]
+    xe: G.xe ? G.xe.slice() : [],
+    tr: (G.traps || []).map(t => [t.id, t.team, Math.round(t.x * 10), Math.round(t.z * 10), t.st, t.own]), // bear traps
+    gn: G.gone ? G.gone.slice() : [], // warriors gone without dying (a Feuerfass in the catapult)
     af: G.units
       .filter(u => u.air)
       .map(u => [
@@ -1487,7 +1539,12 @@ function snapOf(G) {
           (u.frenzy > 0 ? 64 : 0) |
           (u.slowT > 0 ? 128 : 0) |
           ((u.kbN || 0) << 8) |
-          (u.hen ? 32768 : 0),
+          (u.hen ? 32768 : 0) |
+          (u.burn > 0 ? 65536 : 0) |
+          (u.fuse > 0 ? 131072 : 0) |
+          (u.trapT > 0 ? 262144 : 0) |
+          (u.fass ? 524288 : 0) |
+          (u.trapC ? 1048576 : 0),
       ];
       if (u.poss)
         e.push(

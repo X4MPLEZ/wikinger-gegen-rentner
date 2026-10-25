@@ -33,6 +33,7 @@ function heroTargetView(P, r = HERO.rC + 0.4) {
   return best;
 }
 function egoHero() {
+  if (!$('#egoLoad').hidden && egoLoad()) return; // the same key: a Feuerfass next to an own catapult climbs in (75-fass-falle-view.js)
   const P = V.poss;
   if (!P || P.heroOn || P.heroReq || !HERO.kinds.includes(P.k)) return;
   if (heroTargetView(P) === null) {

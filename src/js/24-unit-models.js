@@ -346,8 +346,13 @@ function ubRegister(u) {
     if (!g.userData.sharedUnitGeo && !sharedDetailGeometries.has(g)) return;
     if (!g.boundingSphere) g.computeBoundingSphere();
     let inRig = false; // under u.rig? (the whole body is switched off through the rig, e.g. while the unit is a chicken)
-    for (let o = m.parent; o && o !== u.g; o = o.parent) if (o === u.rig) inRig = true;
+    const anc = []; // every group between the part and the unit: hiding one (a laid trap, a hat) hides the part
+    for (let o = m.parent; o && o !== u.g; o = o.parent) {
+      if (o === u.rig) inRig = true;
+      else anc.push(o);
+    }
     m.userData.inRig = inRig;
+    m.userData.anc = anc;
     u.parts.push(m);
     m.layers.set(1);
   });
@@ -417,8 +422,9 @@ function unitBatch() {
       const near = (u.g.position.x - px) ** 2 + (u.g.position.z - pz) ** 2 < d2,
         lod = QS.lowPoly || (u.g.position.x - cx) ** 2 + (u.g.position.z - cz) ** 2 > ld2,
         rigOff = !!u.rig && !u.rig.visible;
-      for (const m of u.parts) {
-        if (m.userData.ubOff || !m.visible || !m.parent || !m.parent.visible || (rigOff && m.userData.inRig)) continue;
+      parts: for (const m of u.parts) {
+        if (m.userData.ubOff || !m.visible || !m.parent || (rigOff && m.userData.inRig)) continue;
+        for (const a of m.userData.anc) if (!a.visible) continue parts;
         const e = ubEntry(m, near && !u.fogHid, lod); // nothing hidden in the fog throws a shadow into the clearing
         if (e.n >= e.cap) {
           const im = ubMake(e.im.geometry, e.im.material, e.cast, e.r, e.cap * 2);
@@ -530,7 +536,11 @@ function buildRider(k, parent, P, seated) {
       });
     } // fur-trimmed boots, cross-bound leg wraps
     else if (k === 1) mesh(UG.cuff, leather, 0, -0.17, 0, sh);
-    else if (k === 2) mesh(UG.hem, lam(0x46474e), 0, -0.19, 0, sh); // trouser turn-ups over the shoes
+    else if (k === 2)
+      mesh(UG.hem, lam(0x46474e), 0, -0.19, 0, sh); // trouser turn-ups over the shoes
+    else if (k === 13)
+      mesh(UG.cuff, lam(0x5a4a38), 0, -0.17, 0, sh); // wool socks over the boots
+    else if (k === 12) mesh(UG.cuff, fur, 0, -0.17, 0, sh);
     return [l, sh];
   };
   if (seated)
@@ -620,6 +630,53 @@ function buildRider(k, parent, P, seated) {
     mesh(UG.lace, lam(0xffffff), 0, 0.6, 0, torso);
     const pk = mesh(UG.pocket, lam(0xf0c6dc), 0.075, 0.7, 0.3, torso);
     pk.rotation.set(-0.23, 0.25, 0);
+  }
+  if (k === 12) {
+    // Feuerfass: a bushy soot-black beard with glowing singed tips, a scorched leather apron, leather bracers, a powder horn and soot
+    const bd = mesh(UG.beard, lam(0x2b2420), 0, -0.04, 0.3, neck);
+    bd.scale.set(1.18, 1.15, 0.62);
+    [-1, 1].forEach(s2 => {
+      const mu = mesh(UG.tuft, lam(0x231d1a), s2 * 0.14, 0.33, 0.55, neck);
+      mu.scale.set(2.1, 0.8, 0.85);
+      mu.rotation.z = s2 * 0.55;
+      const br = mesh(UG.tuft, lam(0x231d1a), s2 * 0.2, 0.72, 0.5, neck); // bushy brows
+      br.scale.set(1.6, 0.55, 0.6);
+      br.rotation.z = -s2 * 0.25;
+    });
+    for (let i = 0; i < 4; i++)
+      mesh(UG.tuft, lam(i % 2 ? 0xe0702a : 0xf0a040), -0.15 + i * 0.1, -0.38 + (i % 2) * 0.05, 0.4, neck).scale.setScalar(0.55);
+    const ap = mesh(UG.apron, lam(0x4a3424), 0, 0.8, 0.0, torso);
+    ap.scale.set(0.92, 1.05, 0.88);
+    mesh(new THREE.BoxGeometry(0.035, 0.32, 0.02), lam(0x3a2a1c), -0.12, 1.0, 0.19, torso).rotation.z = 0.25; // apron straps
+    mesh(new THREE.BoxGeometry(0.035, 0.32, 0.02), lam(0x3a2a1c), 0.12, 1.0, 0.19, torso).rotation.z = -0.25;
+    mesh(UG.buckle, gold, 0, 0.62, 0.2, torso);
+    [foreL, foreR].forEach(a => mesh(UG.bracer, leather, 0, -0.085, 0, a));
+    [armL, armR].forEach(a => mesh(UG.armring, lam(0x4a4f57), 0, -0.07, 0, a));
+    const horn = mesh(new THREE.ConeGeometry(0.055, 0.28, 8), lam(0xe6d8b8), -0.21, 0.52, 0.02, torso);
+    horn.rotation.set(0.2, 0, 2.1);
+    mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 7), lam(0x6b4423), -0.31, 0.6, 0.03, torso).rotation.z = 2.1;
+    [
+      [0.1, 1.08, 0.18],
+      [-0.08, 0.72, 0.205],
+      [0.14, 0.86, 0.17],
+    ].forEach(([x, y, z]) => (mesh(new THREE.SphereGeometry(0.05, 6, 4), lam(0x2a2826), x, y, z, torso).scale.z = 0.25)); // soot smudges
+  }
+  if (k === 13) {
+    // Fallenleger: a hunting jacket with big pockets and a collar, green braces, a checked shirt at the neck, a whistle on a cord
+    [-1, 1].forEach(s2 => {
+      const pk = mesh(UG.pocket, lam(dk), s2 * 0.12, 0.74, 0.19, torso);
+      pk.scale.set(1.35, 1.3, 1);
+      pk.rotation.y = s2 * 0.5;
+      mesh(UG.button, lam(0x6b4423), s2 * 0.12, 0.79, 0.205, torso);
+      const lap = mesh(new THREE.BoxGeometry(0.07, 0.16, 0.02), lam(dk), s2 * 0.07, 1.18, 0.15, torso);
+      lap.rotation.set(-0.35, 0, s2 * 0.45);
+    });
+    mesh(UG.collar, lam(0x3f7a3a), 0, 1.29, 0, torso).scale.setScalar(1.1); // green neckerchief
+    mesh(new THREE.BoxGeometry(0.07, 0.07, 0.03), lam(0xc23a30), 0, 1.25, 0.12, torso); // checked shirt
+    mesh(new THREE.BoxGeometry(0.035, 0.035, 0.032), lam(0xf3ead2), 0.018, 1.265, 0.122, torso);
+    mesh(new THREE.TorusGeometry(0.15, 0.007, 3, 14, Math.PI).rotateZ(Math.PI), lam(0xd8c08a), 0, 1.2, 0.13, torso).rotation.x = 0.45; // cord
+    mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.07, 6).rotateZ(Math.PI / 2), lam(0xc9ced4), 0, 1.06, 0.2, torso); // whistle
+    [0.84, 0.98].forEach(y => mesh(UG.button, lam(0x6b4423), 0, y, 0.195, torso));
   }
   if (k === 5) {
     // E-Mobil racer: scarf flying behind, belt buckle

@@ -55,9 +55,11 @@ with sync_playwright() as p:
        const u=G.units.filter(u=>u.team===0).pop(); if(!u) return 'no unit';
        W.camS.x=u.x; W.camS.z=u.z; W.applyCam(); // (the unit must be on screen to be counted in the batches)
        const cnt=()=>W.UB.list.reduce((a,e)=>a+e.n,0);
-       await new Promise(r=>setTimeout(r,200)); const before=cnt();
-       u.chick=8; await new Promise(r=>setTimeout(r,600)); const after=cnt();
-       const v=W.V.units.get(u.id); return {before, after, rigVisible: v && v.rig.visible, chickM: !!(v && v.chickM && v.chickM.visible)};}""")
+       G.teams.forEach(t=>{ t.q.length=0; t.gold=-1e6; }); // no new warriors while counting
+       await new Promise(r=>setTimeout(r,1500)); const before=cnt();
+       u.chick=8; let v=null; // (slow software GL: the snapshot with the chicken may take a few frames)
+       for(let i=0;i<20;i++){ await new Promise(r=>setTimeout(r,200)); v=W.V.units.get(u.id); if(v&&v.chickM&&v.chickM.visible) break; }
+       const after=cnt(); T.gold=999; return {before, after, rigVisible: v && v.rig.visible, chickM: !!(v && v.chickM && v.chickM.visible)};}""")
     # hints are remembered across matches
     pg.click('.spawn[data-slot="0"] .main'); pg.wait_for_timeout(300)
     R['hintsStored'] = pg.evaluate("localStorage.getItem('wvr-hints')")

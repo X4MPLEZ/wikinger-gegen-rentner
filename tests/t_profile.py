@@ -79,7 +79,7 @@ with sync_playwright() as p:
           and r['equipSkin'] == [True, 'v1', False, 'v1'] and r['pub'] == [10, 10, 'goat', 'v1', 'r0']
           and r['badPeer'][0] is None and peer['lv'] == 30 and peer['av'] == 'opa' and peer['sk']['viking'] == 'v0' and peer['sk']['rentner'] == 'r0'
           and r['clean'][:5] == [0, 0, 23, r['clean'][3], 'v0'] and r['clean'][5] == ['goat'] and r['clean'][6] == ['firstWin'] and r['clean'][7] == 1e9
-          and r['skins'] == {'0': 'v1', '1': 'v1', '4': 'v1', '6': 'v1'}
+          and r['skins'] == {'0': 'v1', '1': 'v1', '4': 'v1', '6': 'v1', '12': 'v1'}
           and r['shop'][:3] == [False, False, True] and r['shop'][3] == 9499 and r['shop'][4]
           and r['quests'][0] == [] and r['quests'][1] == ['win2', 'kills40'] and r['quests'][2] == ['play3', 'bonus'] and r['quests'][4] == [1, 1, 1] and r['quests'][5] == 1
           and r['questGems'] >= r['questOnly']

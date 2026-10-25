@@ -565,7 +565,7 @@ function menuPose() {
 /* ---------- bug report (start page and pause): a text, a screenshot of the game (or a picture of one's own) and what the game knows about
    the device go by e-mail to the developers. A page alone cannot send mail: the form is posted to FormSubmit (formsubmit.co), into a hidden
    frame. (The very first report to the address makes FormSubmit ask once, by e-mail, to confirm it.) ---------- */
-const BUG = { to: 'rentnervswikinger@gmail.com', from: 'menu', shot: null, url: '', busy: false, frame: null };
+const BUG = { to: 'rentnervswikinger@gmail.com', from: 'menu', shot: null, url: '', busy: false, frame: null, grab: false };
 function bugShot(blob) {
   BUG.shot = blob;
   if (BUG.url) URL.revokeObjectURL(BUG.url);
@@ -579,14 +579,46 @@ function bugOpen(from) {
   BUG.from = from;
   $('#bugMsg').textContent = '';
   bugShot(null);
-  // the picture of the game as it is: read right after the next frame was drawn (the drawing buffer is not kept)
-  requestAnimationFrame(() => {
-    try {
-      renderer.domElement.toBlob(b => b && !BUG.busy && bugShot(b), 'image/jpeg', 0.82);
-    } catch (_) {}
-  });
+  BUG.grab = true; // the picture of the game as it is: taken by bugGrab() right after the next frame was drawn (frame() in 82-frame)
   showScreen('bugScr');
   setTimeout(() => $('#bugTxt').focus(), 50);
+}
+// Called by the frame loop in the same task as the render, so the WebGL drawing buffer still holds the picture (it is not kept). The
+// picture is copied into a small 2D canvas at once (at most 1280 px wide): small enough for a phone upload, and the copy is kept.
+function bugGrab() {
+  BUG.grab = false;
+  try {
+    const src = renderer.domElement,
+      k = Math.min(1, 1280 / Math.max(src.width, src.height, 1)),
+      c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(src.width * k));
+    c.height = Math.max(1, Math.round(src.height * k));
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    const keep = b => b && !BUG.busy && !BUG.shot && bugShot(b);
+    let sent = false;
+    try {
+      c.toBlob(
+        b => {
+          sent = true;
+          keep(b || bugBlob(c));
+        },
+        'image/jpeg',
+        0.82
+      );
+    } catch (_) {}
+    setTimeout(() => !sent && keep(bugBlob(c)), 1500); // an old browser without toBlob (or one that never calls back)
+  } catch (_) {}
+}
+function bugBlob(c) {
+  try {
+    const d = c.toDataURL('image/jpeg', 0.82),
+      bin = atob(d.slice(d.indexOf(',') + 1)),
+      a = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+    return new Blob([a], { type: 'image/jpeg' });
+  } catch (_) {
+    return null;
+  }
 }
 function bugInfo() {
   const map = (typeof MAP !== 'undefined' && MAP && MAP.type) || '-';
@@ -626,47 +658,16 @@ function bugSend() {
   BUG.busy = true;
   $('#bugSend').disabled = true;
   msg.textContent = TR('Wird gesendet …');
-  if (!BUG.frame) {
-    BUG.frame = document.createElement('iframe');
-    BUG.frame.name = 'bugFrame';
-    BUG.frame.title = 'bug';
-    BUG.frame.style.display = 'none';
-    document.body.appendChild(BUG.frame);
-  }
-  const f = document.createElement('form');
-  f.method = 'POST';
-  f.action = 'https://formsubmit.co/' + BUG.to;
-  f.enctype = 'multipart/form-data';
-  f.target = 'bugFrame';
-  f.style.display = 'none';
-  const add = (n, v) => {
-    const i = document.createElement('input');
-    i.type = 'hidden';
-    i.name = n;
-    i.value = v;
-    f.appendChild(i);
-  };
-  add('_subject', 'Fehlerbericht – Rentner gegen Wikinger');
-  add('_captcha', 'false');
-  add('_template', 'table');
-  add('Beschreibung', txt);
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
-    add('E-Mail', mail);
-    add('_replyto', mail);
-  }
-  for (const [k, v] of bugInfo()) add(k, v);
-  if (BUG.shot && $('#bugUse').checked)
-    try {
-      const fi = document.createElement('input'),
-        dt = new DataTransfer();
-      fi.type = 'file';
-      fi.name = 'attachment';
-      dt.items.add(
-        new File([BUG.shot], BUG.shot.type === 'image/png' ? 'screenshot.png' : 'screenshot.jpg', { type: BUG.shot.type || 'image/jpeg' })
-      );
-      fi.files = dt.files;
-      f.appendChild(fi);
-    } catch (_) {} // an old browser: the report goes without the picture
+  const fields = [
+    ['_subject', 'Fehlerbericht – Rentner gegen Wikinger'],
+    ['_captcha', 'false'],
+    ['_template', 'table'],
+    ['Beschreibung', txt],
+  ];
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) fields.push(['E-Mail', mail], ['_replyto', mail]);
+  fields.push(...bugInfo());
+  const shot = BUG.shot && $('#bugUse').checked ? BUG.shot : null,
+    fname = shot && shot.type === 'image/png' ? 'screenshot.png' : 'screenshot.jpg';
   const done = ok => {
     if (!BUG.busy) return;
     BUG.busy = false;
@@ -680,14 +681,57 @@ function bugSend() {
       setTimeout(() => !$('#bugScr').hidden && showScreen(BUG.from), 1600);
     } else msg.textContent = TR('Senden hat nicht geklappt. Bist du online? Versuch es gleich noch einmal.');
   };
-  BUG.frame.onload = () => done(true);
-  BUG.t = setTimeout(() => done(false), 20000);
-  document.body.appendChild(f);
-  if (!navigator.onLine) {
-    f.remove();
-    done(false);
-    return;
+  if (!navigator.onLine) return done(false);
+  BUG.t = setTimeout(() => done(false), 30000);
+  // The same multipart form a <form enctype="multipart/form-data"> would post, built with FormData: the picture goes in as a real file
+  // (FormSubmit mails it as an attachment). No DataTransfer trick needed (Safari on the iPhone dropped the file that way). The answer of a
+  // cross-origin post cannot be read ('no-cors'), so arriving at the server counts as sent.
+  try {
+    const fd = new FormData();
+    for (const [k, v] of fields) fd.append(k, v);
+    if (shot) fd.append('attachment', shot, fname);
+    fetch('https://formsubmit.co/' + BUG.to, { method: 'POST', body: fd, mode: 'no-cors' }).then(
+      () => done(true),
+      () => bugPostForm(fields, shot, fname, done)
+    );
+  } catch (_) {
+    bugPostForm(fields, shot, fname, done);
   }
+}
+// Fallback without fetch/FormData: a real form posted into a hidden frame (the picture only where the browser lets a page fill a file input).
+function bugPostForm(fields, shot, fname, done) {
+  if (!BUG.frame) {
+    BUG.frame = document.createElement('iframe');
+    BUG.frame.name = 'bugFrame';
+    BUG.frame.title = 'bug';
+    BUG.frame.style.display = 'none';
+    document.body.appendChild(BUG.frame);
+  }
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = 'https://formsubmit.co/' + BUG.to;
+  f.enctype = 'multipart/form-data';
+  f.target = 'bugFrame';
+  f.style.display = 'none';
+  for (const [n, v] of fields) {
+    const i = document.createElement('input');
+    i.type = 'hidden';
+    i.name = n;
+    i.value = v;
+    f.appendChild(i);
+  }
+  if (shot)
+    try {
+      const fi = document.createElement('input'),
+        dt = new DataTransfer();
+      fi.type = 'file';
+      fi.name = 'attachment';
+      dt.items.add(new File([shot], fname, { type: shot.type || 'image/jpeg' }));
+      fi.files = dt.files;
+      f.appendChild(fi);
+    } catch (_) {}
+  BUG.frame.onload = () => done(true);
+  document.body.appendChild(f);
   f.submit();
   setTimeout(() => f.remove(), 1000);
 }
@@ -697,9 +741,37 @@ $('#bugBack').addEventListener('click', () => showScreen(BUG.from));
 $('#bugSend').addEventListener('click', bugSend);
 $('#bugTxt').addEventListener('input', () => !BUG.busy && ($('#bugMsg').textContent = ''));
 $('#bugPick').addEventListener('click', () => $('#bugFile').click());
+// A picture of one's own (on a phone usually a screenshot: a PNG of several MB) is drawn into a JPEG of at most 1600 px like the game's
+// own picture, so the upload stays small (FormSubmit takes 10 MB per report, older limits 5 MB) and a slow phone line gets it through.
+// What the browser cannot decode goes as it is, up to 8 MB.
+function bugPicked(fl) {
+  const url = URL.createObjectURL(fl),
+    im = new Image();
+  const asIs = () => {
+    URL.revokeObjectURL(url);
+    if (fl.size < 8e6) bugShot(fl);
+    else $('#bugMsg').textContent = TR('Das Bild ist zu groß (höchstens 8 MB).');
+  };
+  im.onload = () => {
+    try {
+      const w = im.naturalWidth,
+        h = im.naturalHeight,
+        k = Math.min(1, 1600 / Math.max(w, h, 1)),
+        c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(w * k));
+      c.height = Math.max(1, Math.round(h * k));
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      c.toBlob(b => (b && (b.size < fl.size || fl.size >= 8e6) ? (URL.revokeObjectURL(url), bugShot(b)) : asIs()), 'image/jpeg', 0.85);
+    } catch (_) {
+      asIs();
+    }
+  };
+  im.onerror = asIs;
+  im.src = url;
+}
 $('#bugFile').addEventListener('change', e => {
   const fl = e.target.files && e.target.files[0];
-  if (fl && /^image\//.test(fl.type) && fl.size < 8e6) bugShot(fl);
+  if (fl && (/^image\//.test(fl.type) || /\.(hei[cf]|jpe?g|png|webp|gif)$/i.test(fl.name || ''))) bugPicked(fl);
   else if (fl) $('#bugMsg').textContent = TR('Das Bild ist zu groß (höchstens 8 MB).');
   e.target.value = '';
 });

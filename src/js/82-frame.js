@@ -150,6 +150,8 @@ function frame() {
   });
   if (pf) pm('scene');
   puffTick(dt);
+  boomTick(dt);
+  trapTick(dt);
   sandTick(dt);
   rippleTick(dt);
   for (let i = fx.projs.length - 1; i >= 0; i--) {
@@ -160,6 +162,14 @@ function frame() {
     const prev = fxPrev.copy(p.m.position);
     p.m.position.lerpVectors(p.from, p.to, k);
     p.m.position.y += Math.sin(k * Math.PI) * p.arc;
+    if (p.kind === 'fass') {
+      fassFly(p, dt, k); // tumbling, smoking, sparking (75-fass-falle-view.js); the bang itself comes from the host (s.xe)
+      if (k >= 1) {
+        projPut(p.m);
+        fx.projs.splice(i, 1);
+      }
+      continue;
+    }
     if (p.kind === 'arrow') {
       if (prev.distanceToSquared(p.m.position) > 1e-6) p.m.lookAt(fxAim.copy(p.m.position).multiplyScalar(2).sub(prev));
     } else {
@@ -218,6 +228,8 @@ function frame() {
   for (let i = fx.words.length - 1; i >= 0; i--) {
     const w = fx.words[i];
     w.t += dt;
+    // a speech bubble of the own warrior from before the takeover would fill the ego view: it fades out at once
+    if (w.follow && V.poss && w.follow.id === V.poss.id) w.t = Math.max(w.t, w.life * 0.75);
     const k = w.t / w.life;
     if (w.follow && w.follow.g.parent) {
       w.s.position.x = w.follow.g.position.x;
@@ -298,6 +310,7 @@ function frame() {
   if (QS.shEvery > 1 && ++QS.fc % QS.shEvery === 0) renderer.shadowMap.needsUpdate = true;
   if (POST.on) postRender(dt);
   else renderer.render(scene, camera);
+  if (BUG.grab) bugGrab(); // a bug report wants the picture of this frame
   showTick(dt); // the 3D showcase in the profile (own small renderer)
   QS.cpuLast = performance.now() - QS.frameT0 + QS.simMs;
   QS.simMs = 0; // main-thread work this frame (render + logic + simulation)
@@ -355,7 +368,9 @@ function renderUnits(t, dt) {
     bm = B ? unitMap(B) : null;
   V.renderSnap = A;
   const aa = airMap(A),
-    ba = B ? airMap(B) : null;
+    ba = B ? airMap(B) : null,
+    ha = hfMap(A),
+    hb = B ? hfMap(B) : null;
   const k = B ? clamp((rt - A.t) / Math.max(0.001, B.t - A.t), 0, 1) : 0,
     camQ = camera.quaternion;
   for (const u of V.units.values()) {
@@ -387,18 +402,24 @@ function renderUnits(t, dt) {
       bf = ba && ba.get(u.id),
       flight = mine ? V.poss.air : af;
     const px = u.g.position.x,
-      pz = u.g.position.z,
-      y =
-        mine && V.poss.fy !== undefined
-          ? V.poss.fy
-          : af
-            ? bf
-              ? lerp(af[2], bf[2], k) / 10
-              : eb
-                ? lerp(af[2] / 10, unitY(eb[2] / 10, eb[3] / 10), k)
-                : af[2] / 10
-            : unitY(x, z);
-    const wet = !flight && u.padY === undefined && !(mine && V.poss.pj) && inWater(x, z);
+      pz = u.g.position.z;
+    let y =
+      mine && V.poss.fy !== undefined
+        ? V.poss.fy
+        : af
+          ? bf
+            ? lerp(af[2], bf[2], k) / 10
+            : eb
+              ? lerp(af[2] / 10, unitY(eb[2] / 10, eb[3] / 10), k)
+              : af[2] / 10
+          : unitY(x, z);
+    {
+      // a flying chicken (HFLY): the own one predicted, the others between two snapshots
+      const h0 = ha.get(u.id) || 0;
+      u.flyH = mine ? V.poss.fh || 0 : (hb ? lerp(h0, hb.get(u.id) || 0, k) : h0) / 10;
+      if (!mine && u.flyH > 0) y += u.flyH;
+    }
+    const wet = !flight && u.padY === undefined && !(mine && V.poss.pj) && inWater(x, z) && !(u.flyH > 0.3);
     waterMotionFX(u, x, y, z, wet, dt);
     u.dryT = wet ? 0 : (u.dryT || 0) + dt;
     u.wet = wet && !u.arm;

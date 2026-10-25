@@ -30,7 +30,9 @@ function resetView() {
   });
   V.dying.length = 0;
   V.geSeen = undefined;
+  V.xeSeen = undefined;
   V.discoUntil = 0;
+  boomReset(); // explosions, scorch marks, traps (75-fass-falle-view.js)
   if (V.dzCause) V.dzCause.clear();
   fx.projs.forEach(p => projPut(p.m));
   fx.projs.length = 0;
@@ -146,6 +148,7 @@ function disposeUnit(u) {
     u.aLoop.stop();
     u.aLoop = null;
   }
+  if (u.fuseRing) fuseRingDrop(u);
   removeOwnedObject(u.g);
   if (u.hSplit && u.mount && u.mount.parent === scene) scene.remove(u.mount); // a hero's mount that was in the scene on its own
   hpGroup.remove(u.hp);
@@ -182,6 +185,15 @@ function airMap(s) {
   const m = new Map();
   for (const e of s.af || []) m.set(e[0], e);
   airMaps.set(s, m);
+  return m;
+}
+const hfMaps = new WeakMap();
+// flying chickens in a snapshot: id -> height*10
+function hfMap(s) {
+  if (hfMaps.has(s)) return hfMaps.get(s);
+  const m = new Map();
+  for (const e of s.hf || []) m.set(e[0], e[1]);
+  hfMaps.set(s, m);
   return m;
 }
 function unitMap(s) {
@@ -244,6 +256,7 @@ function processSnap(s) {
       } else if (prev) {
         puff(x, u.g.position.y + 0.6, z, 0xf6f1e7, 4);
         if (Math.random() < 0.35) say(u, QUOTES[u.k].spawn);
+        if (KINDS[u.k].spec) specTip(u);
         if (!KINDS[u.k].bear && !KINDS[u.k].worm && !air) {
           u.g.scale.setScalar(0.01);
           u.pop = 0;
@@ -318,7 +331,28 @@ function processSnap(s) {
       if (((poss && pe[7] & 1) || (!poss && (u.k === 0 || u.k === 2))) && e[8] !== pe[8]) onSpecial(u, cur); // perk whirls and rages of ordinary units too
     }
     u.hpPct = e[4];
+    // the newest states (16-sim-fass-falle.js): burning, a lit fuse, caught in a trap, a catapult with a Feuerfass in it, a trap in the hand
+    u.burning = (e[7] & 65536) === 65536;
+    u.fuseOn = (e[7] & 131072) === 131072;
+    u.trapped = (e[7] & 262144) === 262144;
+    u.fassLoaded = (e[7] & 524288) === 524288;
+    if (u.k === 13) {
+      const c = (e[7] & 1048576) === 1048576;
+      if (pe && u.trapC && !c) u.layT = 0.55; // he bends down and lays it
+      u.trapC = c;
+    }
+    if (V.poss && V.poss.id === id) {
+      if (u.trapped && !V.poss.trap)
+        egoHint(
+          COARSE ? TR('In der Falle! Tippe Angriff, um dich loszureißen!') : TR('In der Falle! Drück Angriff, um dich loszureißen!'),
+          2000
+        );
+      V.poss.trap = u.trapped;
+      V.poss.burning = u.burning;
+      V.poss.fuse = u.fuseOn;
+    }
   }
+  xeProcess(s); // explosions, the chicken's dive, snapping traps, a Feuerfass climbing into a catapult
   if (s.ge && s.ge.length) {
     for (const e of s.ge) {
       if (V.geSeen !== undefined && (e[0] - V.geSeen + 10000) % 10000 === 0) continue;
@@ -409,6 +443,10 @@ function processSnap(s) {
         }
         const u = V.units.get(id);
         if (!u) continue;
+        if (s.gn && s.gn.includes(id)) {
+          goneQuiet(u, id); // climbed into a catapult: no death
+          continue;
+        }
         for (const [aid, ae] of cur)
           if (ae[5] === id) {
             const au = V.units.get(aid);
@@ -427,8 +465,8 @@ function processSnap(s) {
         if (terminal && terminal.length >= 6) {
           u.g.position.set(terminal[3] / 10, terminal[4] / 10, terminal[5] / 10);
           u.fallY = undefined;
-          if (dc === 3 && terminal[4] / 10 > unitY(terminal[3] / 10, terminal[5] / 10) + 0.25)
-            u.deadAir = { vx: (terminal[6] || 0) / 100, vy: (terminal[7] || 0) / 100, vz: (terminal[8] || 0) / 100 };
+          if ((dc === 3 && terminal[4] / 10 > unitY(terminal[3] / 10, terminal[5] / 10) + 0.25) || dc === 5 || dc === 6)
+            u.deadAir = { vx: (terminal[6] || 0) / 100, vy: (terminal[7] || 0) / 100, vz: (terminal[8] || 0) / 100 }; // (5/6: blown up)
         }
         if (
           V.poss &&
@@ -445,7 +483,14 @@ function processSnap(s) {
         if ((Math.random() < 0.3 || u.isPoss) && u.dv !== 'drama' && u.dv !== 'gone') say(u, QUOTES[u.k].die);
         if (V.poss && V.poss.id === id) {
           exitEgo(false);
-          toast(u.heroOn ? TR('HELDENTOD! Dein Krieger hat sich dem Sandwurm geopfert.') : TR('Dein Krieger ist gefallen!'), 2800);
+          toast(
+            u.heroOn
+              ? TR('HELDENTOD! Dein Krieger hat sich dem Sandwurm geopfert.')
+              : dc === 5 && u.k === 12
+                ? TR('KAWUMM! Dein Feuerfass ist hochgegangen.')
+                : TR('Dein Krieger ist gefallen!'),
+            2800
+          );
         }
       }
   if (ps) {
@@ -494,8 +539,8 @@ function processSnap(s) {
   V.prevMap = cur;
   V.prevSnap = s;
 }
-const HIT_SFX = { 0: 'axe', 2: 'stick', 4: 'buttHit', 5: 'scooterHit', 8: 'bearHit', 9: 'bearHit' },
-  SP_SFX = { 0: 'rage', 1: 'volley', 2: 'spin', 3: 'teethFan', 4: 'whoosh', 5: 'motor' };
+const HIT_SFX = { 0: 'axe', 2: 'stick', 4: 'buttHit', 5: 'scooterHit', 8: 'bearHit', 9: 'bearHit', 12: 'bonk', 13: 'stick' },
+  SP_SFX = { 0: 'rage', 1: 'volley', 2: 'spin', 3: 'teethFan', 4: 'whoosh', 5: 'motor', 12: 'fuse', 13: 'trapSet' };
 const KF_WEAPON = {
     0: TR('Axt'),
     1: TR('Pfeil'),
@@ -509,8 +554,13 @@ const KF_WEAPON = {
     9: TR('Pranke'),
     10: TR('Maul'),
     11: TR('Maul'),
+    12: TR('Fass'),
+    13: TR('Falle'),
   },
   KF_CAUSE = {
+    14: TR('gesprengt'),
+    15: TR('verbrannt'),
+    16: TR('in die Falle getappt'),
     11: TR('verschlungen'),
     12: TR('gebissen'),
     13: TR('Heldentod'),
@@ -614,9 +664,11 @@ function onAttack(u, at, cur, poss) {
         tz = e[14] / 10,
         from = u.g.position.clone();
       from.y += 3;
-      const to = shellTarget(u.team, tx, tz);
-      shoot(K.proj, from, to, Math.max(0.5, from.distanceTo(to) / K.pspeed), null);
+      const to = shellTarget(u.team, tx, tz),
+        fass = !!u.fassLoaded, // a loaded catapult shoots its Feuerfass (75-fass-falle-view.js)
+        pr = shoot(fass ? 'fass' : K.proj, from, to, Math.max(0.5, from.distanceTo(to) / K.pspeed) * (fass ? 1.25 : 1), null);
       SFX.play('catapult', { x: from.x, z: from.z });
+      if (fass) fassShot(u, pr);
     }
     return;
   }
@@ -646,12 +698,14 @@ function onAttack(u, at, cur, poss) {
       tgt = hz.base ? new THREE.Vector3(hz.tx, hz.y, hz.tz) : new THREE.Vector3(to.x, unitY(to.x, to.z), to.z);
     u.atkT = -SIEGE_WIND;
     SFX.play('creak', { x: u.g.position.x, z: u.g.position.z, vol: 0.9 });
+    const fass = !!u.fassLoaded;
     setTimeout(() => {
       if (!u.g.parent) return;
       const from = u.g.position.clone();
       from.y += 3;
-      shoot(K.proj, from, tgt, Math.max(0.6, from.distanceTo(tgt) / K.pspeed), null);
+      const pr = shoot(fass ? 'fass' : K.proj, from, tgt, Math.max(0.6, from.distanceTo(tgt) / K.pspeed) * (fass ? 1.25 : 1), null);
       SFX.play('catapult', { x: from.x, z: from.z });
+      if (fass) fassShot(u, pr);
     }, SIEGE_WIND * 1000);
     return;
   }
@@ -775,6 +829,7 @@ function onSpecial(u, cur) {
       }, i * 180);
     return;
   }
+  if (u.k === 13 && u.team !== V.myTeam) return; // an enemy trap is not announced
   word(SP_WORD[u.k], p.x, p.y + 4.6, p.z, { color: '#ff9b54', scale: 1.2 });
   SFX.play(SP_SFX[u.k] || 'special', { x: p.x, z: p.z, vol: 1.1 });
   if (u.k === 4) SFX.play('goat', { x: p.x, z: p.z });

@@ -936,11 +936,82 @@ function setChicken(u, on, hen) {
     puff(u.g.position.x, u.g.position.y + 1, u.g.position.z, 0xffffff, 6, 0.6);
   }
 }
+// non-indexed geometries (position + normal) into one
+function mergeGeos(parts) {
+  let n = 0;
+  for (const g of parts) n += g.attributes.position.count;
+  const pos = new Float32Array(n * 3),
+    nor = new Float32Array(n * 3);
+  let o = 0;
+  for (const g of parts) {
+    pos.set(g.attributes.position.array, o * 3);
+    nor.set(g.attributes.normal.array, o * 3);
+    o += g.attributes.position.count;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  return geo;
+}
+// a flying chicken's wings (HFLY): a feathered fan per side, pivot at the shoulder; one shared geometry and material
+let WING_GEO = null;
+function chickenWings(u) {
+  if (!WING_GEO) {
+    const parts = [];
+    for (let i = 0; i < 4; i++) {
+      const f = new THREE.SphereGeometry(0.2, 8, 6).toNonIndexed();
+      f.applyMatrix4(new THREE.Matrix4().makeScale(1.25 - i * 0.12, 0.13, 0.55));
+      f.applyMatrix4(new THREE.Matrix4().makeRotationY(-0.35 + i * 0.22));
+      f.applyMatrix4(new THREE.Matrix4().makeTranslation(0.22 + i * 0.05, -i * 0.02, -0.06 - i * 0.07));
+      parts.push(f);
+    }
+    WING_GEO = mergeGeos(parts);
+    WING_GEO.userData.shared = true;
+  }
+  const mat = lam(0xf4f2ec);
+  u.wings = [-1, 1].map(s => {
+    const w = new THREE.Group(),
+      m = new THREE.Mesh(WING_GEO, mat);
+    m.scale.x = s;
+    m.castShadow = true;
+    w.add(m);
+    w.position.set(s * 0.3, 0.72, 0);
+    u.chickM.add(w);
+    return w;
+  });
+  u.flyV = 0;
+}
+function chickenFly(u, dt) {
+  const h = u.flyH || 0;
+  u.flyV = lerp(u.flyV || 0, (h - (u.flyHp ?? h)) / Math.max(dt, 1e-3), 1 - Math.exp(-dt * 8));
+  u.flyHp = h;
+  const on = h > 0.15;
+  if (!u.wings) {
+    if (!on) return;
+    chickenWings(u);
+  }
+  u.wings.forEach(w => (w.visible = on));
+  if (!on) return;
+  const dive = u.flyV < -5,
+    rise = u.flyV > 0.4,
+    f = rise ? 24 : 9,
+    a = dive ? 0 : rise ? 1.05 : 0.4;
+  u.flap = (u.flap || 0) + dt * f;
+  u.wings.forEach((w, i) => {
+    const s = i ? 1 : -1;
+    w.rotation.z = s * (dive ? -0.25 : 0.25 + Math.sin(u.flap) * a);
+    w.rotation.y = s * (dive ? 1.15 : 0.1);
+  });
+  u.chickM.rotation.x = dive ? 0.9 : u.speed > 2 ? 0.35 : 0.12; // leans into the flight, beak down in a dive
+  u.chickM.position.y = rise ? Math.sin(u.flap) * 0.06 : 0;
+  if (rise && Math.random() < dt * 4) puff(u.g.position.x, u.g.position.y + 0.5, u.g.position.z, 0xffffff, 1, 0.25); // a feather
+}
 function updateStatusFx(u, dt, x, y, z) {
   if (u.chick && u.chickM) {
     u.chickM.position.y = Math.abs(Math.sin(clock * 14)) * 0.15;
     u.chickM.rotation.z = Math.sin(clock * 20) * 0.08;
     u.chickM.rotation.x = u.atkT < 0.35 ? Math.sin((u.atkT / 0.35) * Math.PI) * 0.7 : 0;
+    if (u.hen) chickenFly(u, dt);
     // thirty chickens of the Hühnerarmee cackle much less each than a single cursed warrior
     if (Math.random() < dt * (u.hen ? 0.05 : 0.7)) {
       word(Math.random() < 0.5 ? TR('GACK!') : TR('BOCK!'), x, y + 2.6, z, { color: '#ffffff', scale: 0.8 });
@@ -963,7 +1034,9 @@ function updateStatusFx(u, dt, x, y, z) {
     if (Math.random() < dt * 6) puff(x + (Math.random() - 0.5) * 0.4, y + hb.y + hb.r, z + (Math.random() - 0.5) * 0.4, 0xffffff, 1, 0.25);
     if (Math.random() < dt * 2) SFX.play('chomp', { x, z, vol: 0.5 });
   } else if (u.biteM) u.biteM.visible = false;
+  specFx(u, dt, x, y, z); // fire, fuse, catapult barrel (75-fass-falle-view.js)
 }
+
 function danceRig(u, dt) {
   const mv = V.poss && V.poss.id === u.id && V.poss.mv;
   if (mv) {

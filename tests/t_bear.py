@@ -30,7 +30,7 @@ with sync_playwright() as p:
       };
       out.ai = run('ai'); out.ego = run('ego');
       // control: an untouched bear ignores an archer 18 m away
-      G.units.length = 0; G.bears.length = 0; const bear = { id:502, x:spot.x, z:spot.z, hx:spot.x, hz:spot.z, yaw:0, cd:0, atk:0, mv:0, wt:99, wx:spot.x, wz:spot.z, hp:520, mhp:520 };
+      G.units.length = 0; G.bears.length = 0; const bear = { id:502, x:spot.x, z:spot.z, hx:spot.x, hz:spot.z, yaw:0, cd:0, atk:0, mv:0, wt:99, wx:spot.x + 25, wz:spot.z, hp:520, mhp:520 }; // strolls sideways (a random stroll could lead it towards the archer)
       G.bears.push(bear); const a = mk(G, 0, 1, spot.x, spot.z - 18); a.ord = { x:a.x, z:a.z, mv:false };
       for (let i = 0; i < 100; i++) W.step(G); out.calm = +Math.hypot(a.x - bear.x, a.z - bear.z).toFixed(1);
       return out; }""")

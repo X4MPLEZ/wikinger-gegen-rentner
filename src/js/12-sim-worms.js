@@ -61,6 +61,7 @@ const canBurrow = (x, z) =>
 const wormEdible = u =>
   u.hp > 0 &&
   !u.air &&
+  !aloft(u) &&
   !u.pj &&
   !(u.fall > 0) &&
   !u.grab &&
@@ -190,6 +191,7 @@ function wormSwallow(G, W, byId) {
       }
       n++;
     }
+    if (u.swal && u.k === 12) fassBelly(G, W, u, byId); // a swallowed Feuerfass goes off in the belly
   }
   if (n >= 3) highlight(G, 'gulp', wild ? -1 : W.team, n, W.ex ?? W.x, W.ez ?? W.z);
   return n;

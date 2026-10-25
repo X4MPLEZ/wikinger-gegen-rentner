@@ -515,6 +515,7 @@ const BIND_DEF = {
   s2: ['Digit2', ''],
   s3: ['Digit3', ''],
   s4: ['Digit4', ''],
+  s5: ['Digit5', ''],
   selMelee: ['KeyZ', ''],
   selRanged: ['KeyX', ''],
   selCav: ['KeyC', ''],
@@ -554,6 +555,7 @@ const BIND_GROUPS = [
       ['s2', TR('Einheit 2 ausbilden')],
       ['s3', TR('Einheit 3 ausbilden')],
       ['s4', TR('Einheit 4 ausbilden')],
+      ['s5', TR('Einheit 5 ausbilden')],
       ['selMelee', TR('Nahkämpfer wählen')],
       ['selRanged', TR('Fernkämpfer wählen')],
       ['selCav', TR('Reiter wählen')],
@@ -728,6 +730,7 @@ function refreshKbd() {
   kb('#egoAtk', kl('attack'));
   kb('#egoSp', kl('special'));
   kb('#egoHero', kl('hero'));
+  kb('#egoLoad', kl('hero'));
   kb('#egoJump', kl('jump'));
   kb('#egoNade', kl('nade'));
   kb('#egoExit', kl('exit'));
@@ -751,6 +754,7 @@ function egoAct(c, down, e) {
       EG.fireK = true;
       egoAttack();
     }
+    if (isB('special', c)) EG.spK = true; // held: a chicken keeps rising
     if (isB('special', c) && !(e && e.repeat)) egoSpecial();
     if (isB('jump', c)) egoJump();
     if (isB('nade', c) && !(e && e.repeat)) nadeStart();
@@ -781,6 +785,7 @@ function egoAct(c, down, e) {
     }
   } else {
     if (isB('attack', c)) EG.fireK = false;
+    if (isB('special', c)) EG.spK = false;
     if (isB('nade', c)) nadeRelease();
   }
 }
@@ -818,7 +823,7 @@ addEventListener('keydown', e => {
     egoAct(c, true, e);
     return;
   }
-  for (let i = 1; i <= 4; i++)
+  for (let i = 1; i <= 5; i++)
     if (isB('s' + i, c) && !e.repeat) {
       if (e.shiftKey) {
         const a = $$('.spawn')[i - 1];
@@ -927,7 +932,7 @@ function rebindTo(c) {
 }
 function sameCtx(a, b) {
   const ego = ['attack', 'special', 'jump', 'nade', 'exit', 'hero'],
-    rts = ['take', 'order', 'rally', 'selAll', 'desel', 'mode', 'home', 's1', 's2', 's3', 's4', 'selMelee', 'selRanged', 'selCav'];
+    rts = ['take', 'order', 'rally', 'selAll', 'desel', 'mode', 'home', 's1', 's2', 's3', 's4', 's5', 'selMelee', 'selRanged', 'selCav'];
   const ca = ego.includes(a) ? 'e' : rts.includes(a) ? 'r' : 'b',
     cb = ego.includes(b) ? 'e' : rts.includes(b) ? 'r' : 'b';
   return ca === cb || ca === 'b' || cb === 'b';

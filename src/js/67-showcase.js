@@ -61,7 +61,7 @@ function showUnit(k, skin) {
   SHOW.cache.set(key, u);
   return u;
 }
-/* what to show: { fac, skin } = melee, ranged and rider of that faction; { k, skin } = one unit */
+/* what to show: { fac, skin } = the squad of that faction (melee, ranged, rider and the special warrior); { k, skin } = one unit */
 function showSet(spec) {
   if (!showInit()) return false;
   const key = JSON.stringify(spec);
@@ -73,11 +73,18 @@ function showSet(spec) {
   const place =
     ks.length === 1
       ? [[0, 0, 0]]
-      : [
-          [-1.05, 0.25, 0.25],
-          [1.05, 0.25, -0.25],
-          [0, -0.55, 0],
-        ];
+      : ks.length === 3
+        ? [
+            [-1.05, 0.25, 0.25],
+            [1.05, 0.25, -0.25],
+            [0, -0.55, 0],
+          ]
+        : [
+            [-1.25, 0.35, 0.3],
+            [1.25, 0.35, -0.3],
+            [-0.5, -0.65, 0.15],
+            [0.62, -0.75, -0.15],
+          ];
   ks.forEach((k, i) => {
     let u;
     try {
@@ -93,6 +100,7 @@ function showSet(spec) {
     SHOW.units.push(u);
   });
   SHOW.single = ks.length === 1;
+  SHOW.n = ks.length;
   return true;
 }
 // put the showcase canvas into an element of the page (the canvas moves; only one showcase is on screen at a time)
@@ -110,7 +118,7 @@ function showFrame(w, h) {
   if (s.x !== w || s.y !== h) r.setSize(w, h, false);
   const c = SHOW.cam,
     single = SHOW.single,
-    d = single ? 6.2 : 7.4;
+    d = single ? 6.2 : SHOW.n > 3 ? 8.3 : 7.4;
   c.aspect = w / h;
   c.fov = c.aspect < 1 ? 36 : 28;
   c.updateProjectionMatrix();

@@ -1310,6 +1310,65 @@ const SFX = (() => {
       [392, 494, 587, 784].forEach((f, i) => tone(b, 'sawtooth', f, f, t + i * 0.1, i === 3 ? 0.6 : 0.1, 0.07, { lp: 2400, a: 0.02 }));
       for (let i = 0; i < 8; i++) tone(b, 'sine', R(3000, 5000), 0, t + 0.3 + i * 0.05, 0.12, 0.05);
     },
+    // a chicken's wing beat: a soft feathery whump
+    flap(b, t) {
+      noise(b, 'bandpass', R(500, 700), R(250, 350), t, 0.09, 0.22, 1.2);
+      noise(b, 'lowpass', 900, 200, t + 0.01, 0.07, 0.12);
+    },
+    // the Feuerfass: the fuse hisses and spits ...
+    fuse(b, t) {
+      noise(b, 'highpass', 4200, 2600, t, 0.9, 0.16);
+      for (let i = 0; i < 10; i++) noise(b, 'bandpass', R(2500, 6000), 0, t + R(0, 0.85), 0.02, 0.18, 5);
+      tone(b, 'sine', 1800, 2600, t, 0.9, 0.025);
+    },
+    // ... and the barrel goes up: a sharp crack, a deep body, a rolling tail and falling debris
+    blast(b, t) {
+      noise(b, 'highpass', 2500, 0, t, 0.04, 0.7);
+      thump(b, 70, t, 1.2, 1);
+      noise(b, 'lowpass', 3000, 60, t, 1.7, 0.95);
+      tone(b, 'sine', 62, 22, t, 1.5, 1);
+      tone(b, 'triangle', 160, 38, t, 0.5, 0.35);
+      crackle(b, t + 0.1, 1.4, 0.2, 60, 600, 4200);
+      for (let i = 0; i < 7; i++) noise(b, 'bandpass', R(900, 2600), R(400, 700), t + 0.45 + i * R(0.07, 0.15), 0.08, 0.16, 3);
+    },
+    // a smaller pop: a barrel that bursts when its carrier falls
+    dud(b, t) {
+      noise(b, 'highpass', 2200, 0, t, 0.03, 0.4);
+      thump(b, 90, t, 0.6, 0.6);
+      noise(b, 'lowpass', 2000, 90, t, 0.8, 0.5);
+      crackle(b, t + 0.08, 0.6, 0.12, 30, 700, 3500);
+    },
+    // flames on a warrior
+    burn(b, t) {
+      swell(b, 'bandpass', 300, 900, t, 0.5, 0.12, 1.4);
+      crackle(b, t, 0.5, 0.1, 18, 900, 4000);
+    },
+    // the barrel climbs into the catapult: wood on wood, a creak, a lid thud
+    load(b, t) {
+      thump(b, 140, t, 0.3, 0.5);
+      noise(b, 'bandpass', 700, 300, t, 0.25, 0.3, 3);
+      tone(b, 'sawtooth', 90, 70, t + 0.12, 0.5, 0.05, { lp: 500, q: 8, vib: 9, vibD: 5 });
+      thump(b, 110, t + 0.4, 0.25, 0.45);
+    },
+    // a whistling barrel in the air
+    fassFly(b, t) {
+      tone(b, 'sine', 1500, 700, t, 1.2, 0.07, { vib: 7, vibD: 30 });
+      noise(b, 'highpass', 3500, 2500, t, 1.1, 0.06);
+    },
+    // the bear trap: set (a ratchety click) and snapping shut (a steel clang with a bite)
+    trapSet(b, t) {
+      metal(b, R(1300, 1500), t, 0.12, 0.08);
+      noise(b, 'bandpass', 3000, 0, t, 0.02, 0.2, 6);
+      metal(b, R(900, 1000), t + 0.1, 0.18, 0.1);
+      noise(b, 'bandpass', 2400, 0, t + 0.1, 0.02, 0.22, 6);
+    },
+    trapSnap(b, t) {
+      noise(b, 'highpass', 3000, 0, t, 0.025, 0.7);
+      metal(b, R(600, 700), t, 0.6, 0.3);
+      metal(b, R(1500, 1700), t + 0.005, 0.35, 0.16);
+      thump(b, 160, t, 0.25, 0.6);
+      tone(b, 'square', 2600, 1400, t + 0.01, 0.04, 0.08, { lp: 5000 });
+    },
   };
   /* --- recorded foley layered with the synth: every hit, step and creak is a real recording, varied per play --- */
   const NEW = {

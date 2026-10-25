@@ -3,7 +3,7 @@
 import json, sys, statistics as S
 from collections import defaultdict, Counter
 r = json.load(open(sys.argv[1]))
-KN = ['Berserker','Bogenschützin','Krückstock-Opa','Gebiss-Oma','Ziegenreiter','E-Mobil','W-Katapult','T-Katapult','Bär','Bär','Wurm','Wurm']
+KN = ['Berserker','Bogenschützin','Krückstock-Opa','Gebiss-Oma','Ziegenreiter','E-Mobil','W-Katapult','T-Katapult','Bär','Bär','Wurm','Wurm','Feuerfass','Fallenleger']
 def wr(games):
     n = len(games); v = sum(1 for g in games if g['winFac'] == 'viking'); return f"Wikinger {v}/{n} = {100*v/max(1,n):.0f}%"
 print('games', len(r), 'unfinished', sum(1 for g in r if g['over'] < 0))
@@ -20,7 +20,7 @@ for mp in ['wiesen', 'wueste', 'arktis', 'klippen']:
     print(f"{mp:8s}", '  '.join(f"{m}: {sum(1 for x in r if x['map']==mp and x['mode']==m and x['winFac']=='viking')}/{sum(1 for x in r if x['map']==mp and x['mode']==m)}" for m in ['classic','chaos','fog']))
 print('\n== side (team 0 starts? map symmetry): team 0 wins', sum(1 for x in r if x['over'] == 0), '/', len(r))
 print('\n== units trained per game (median) by faction')
-for fac, kinds in [('viking', [0, 1, 4, 6]), ('rentner', [2, 3, 5, 7])]:
+for fac, kinds in [('viking', [0, 1, 4, 6, 12]), ('rentner', [2, 3, 5, 7, 13])]:
     cnt = defaultdict(list)
     for x in r:
         t = x['facs'].index(fac)

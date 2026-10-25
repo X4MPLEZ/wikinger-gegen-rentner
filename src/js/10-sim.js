@@ -252,12 +252,15 @@ function applyCmd(G, team, c) {
     u.lj = undefined;
     u.lg = undefined;
     u.lhx = undefined;
+    u.ldv = undefined;
     u.spcd = Math.max(0, (T.spAt || 0) - G.t); // the special and grenade cooldowns belong to the team: switching warriors does not reset them
     u.gcd = Math.max(0, (T.gAt || 0) - G.t);
     u.rage = 0;
     u.yaw = 0;
     T.pos = u.id;
     T.posIn = null;
+  } else if (c.t === 'load') {
+    fassLoad(G, team, c); // the steered Feuerfass climbs into the own catapult (16-sim-fass-falle.js)
   } else if (c.t === 'unposs') {
     {
       const o = T.pos && G.units.find(v => v.id === T.pos);
@@ -582,6 +585,7 @@ function spawnUnit(G, team, k) {
     spcd: 0,
     yaw: 0,
   });
+  if (k === 13) G.units[G.units.length - 1].trapC = 1; // the Fallenleger comes with his trap in the hand
   if (pkL(G, team, 'giant')) makeGiant(G.units[G.units.length - 1]);
 }
 // Desert: open sight lines, ranged units and catapults shoot farther.
@@ -642,6 +646,7 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   }
   e.hurt = 2.5;
   e.lh = [attK, team, head ? 1 : 0];
+  e.lhC = 0; // (a blast, fire or a trap set their own cause after the hit)
   if (attK === 3 && e.hp > 0 && !KINDS[e.k].bear && !KINDS[e.k].worm) e.slowT = 1.5;
   counterHit(G, e, attK, team, bp);
   if (attK === 3 && G.chaos && pkL(G, team, 'bite')) {
@@ -876,7 +881,7 @@ function steer(G, u, gx, gz, speed) {
 function enemiesInCone(G, u, maxD, maxAng) {
   const out = [];
   for (const e of G.units) {
-    if (e.team === u.team || e.hp <= 0 || e.pj || e.grab || e.bur || (e.air && Math.abs((e.y || 0) - (u.y || 0)) > 2)) continue; // airborne, swallowed or burrowed units are out of reach
+    if (e.team === u.team || e.hp <= 0 || e.pj || e.grab || e.bur || aloft(e) || (e.air && Math.abs((e.y || 0) - (u.y || 0)) > 2)) continue; // airborne, flying, swallowed or burrowed units are out of reach
     const dx = e.x - u.x,
       dz = e.z - u.z,
       d = Math.hypot(dx, dz);
@@ -1006,7 +1011,14 @@ function possAttack(G, u, byId) {
   u.atk = (u.atk + 1) % 100;
   u.at = 0;
   const dmg =
-    K.dmg * CFG.possDmg[K.role] * EG.dmg * (u.rage > 0 ? 1.3 : 1) * homeMul(G, u) * (step ? CMB.dmg[step - 1] : 1) * (u.hen ? HEN.dmg : 1);
+    K.dmg *
+    CFG.possDmg[K.role] *
+    EG.dmg *
+    (u.rage > 0 ? 1.3 : 1) *
+    homeMul(G, u) *
+    (step ? CMB.dmg[step - 1] : 1) *
+    (u.hen ? HEN.dmg : 1) *
+    specDmg(u);
   if (K.role === 'siege') {
     const In = G.teams[u.team].posIn;
     let tx = u.x + Math.sin(u.yaw) * 12,
@@ -1030,16 +1042,18 @@ function possAttack(G, u, byId) {
     G.proj.push({
       sx: u.x,
       sz: u.z,
-      t: Math.max(0.5, dist / K.pspeed) * Math.max(0.35, hp0.k),
+      t: Math.max(0.5, dist / K.pspeed) * Math.max(0.35, hp0.k) * (u.fass ? 1.25 : 1), // a barrel flies a higher, slower arc
       dmg: K.dmg * 1.6,
       tgt: -1,
       team: u.team,
       k: u.k,
-      aoe: K.aoe * 1.15,
+      aoe: u.fass ? FASS.cataR : K.aoe * 1.15,
       tx,
       tz,
       bp: true,
+      fass: u.fass ? 1 : 0,
     });
+    u.fass = 0;
     u.at = -4;
     u.shot = [Math.round(tx * 10), Math.round(tz * 10)];
     u.run = 0;
@@ -1273,6 +1287,11 @@ function possSpecial(G, u, byId) {
       .forEach(c => G.proj.push({ t: c.d / K.pspeed, dmg: 30, tgt: c.e.id, team: u.team, k: u.k, bp: true }));
     if (!pkL(G, u.team, 'volley') && baseGap(BASES[1 - u.team], u.x, u.z) < K.range + 1)
       G.proj.push({ t: 0.6, dmg: 70, tgt: -2, team: u.team, k: u.k });
+  } else if (u.k === 12) {
+    fassLight(G, u); // the fuse: in FASS.fuse seconds the barrel goes off
+  } else if (u.k === 13) {
+    const ok = layTrap(G, u, u.x + Math.sin(u.yaw) * 1.3, u.z + Math.cos(u.yaw) * 1.3) || layTrap(G, u, u.x, u.z);
+    if (!ok) u.spcd = 0.3;
   } else {
     u.ramNow = 0;
     startRam(G, u, byId); // riders dash at once (no wind-up), also when landing from an air dash
@@ -1408,6 +1427,31 @@ function possStep(G, u, byId) {
       });
     }
   }
+  if (u.k === 13 && !u.trapC) u.spcd = Math.max(u.spcd, u.trapRe > 0 ? u.trapRe : 3); // no trap in the hand: the special waits
+  if (u.trapT > 0) {
+    // caught in a trap: no step away; every attack press wriggles a little loose, the Feuerfass may still light his fuse
+    if (In && In.id === u.id) {
+      if (Number.isFinite(In.n)) T.inN = In.n;
+      if (u.la === undefined) u.la = In.a;
+      if (In.a !== u.la) {
+        u.la = In.a;
+        u.trapT = Math.max(0.01, u.trapT - 0.3);
+      }
+      if (u.ls === undefined) u.ls = In.s;
+      if (In.s !== u.ls) {
+        u.ls = In.s;
+        if (u.k === 12) fassLight(G, u);
+      }
+      u.lj = In.j;
+      u.lg = In.g;
+      u.lhx = In.h || 0;
+      if (Number.isFinite(In.y)) u.yaw = In.y;
+    }
+    u.run = 0;
+    u.ord = { x: u.x, z: u.z, mv: false };
+    u.tgt = -1;
+    return;
+  }
   if (u.dance > 0) {
     u.dance -= DT;
     if (In && In.id === u.id) {
@@ -1519,7 +1563,16 @@ function possStep(G, u, byId) {
       u.la = In.a;
       u.ls = In.s;
     }
-    if (
+    if (u.hen && ((u.fh || 0) > 0.4 || In.fh > 0.4) && Number.isFinite(In.x) && Number.isFinite(In.z)) {
+      // a flying chicken: over water, rocks and trees – only its speed is checked
+      const d = Math.hypot(In.x - u.x, In.z - u.z);
+      if (d > 0.02) {
+        const mv = Math.min(d, EGO_MAX_V * DT);
+        u.x = clampX(u.x + ((In.x - u.x) / d) * mv);
+        u.z = clampZ(u.z + ((In.z - u.z) / d) * mv);
+      }
+      u.run = 0;
+    } else if (
       Number.isFinite(In.x) &&
       Number.isFinite(In.z) &&
       (!u.padAck || In.pad === u.padAck) &&
@@ -1563,6 +1616,7 @@ function possStep(G, u, byId) {
       } else u.run = 0;
     }
     if (Number.isFinite(In.y)) u.yaw = In.y;
+    if (u.hen) henFlyStep(G, u, In, byId);
     if (Array.isArray(In.at) && In.at.length === 3 && In.at.every(Number.isFinite)) {
       const ax = In.at[0] - u.x,
         ay = In.at[1] - (u.y + 1.9),
@@ -1652,6 +1706,45 @@ function possStep(G, u, byId) {
   }
   u.ord = { x: u.x, z: u.z, mv: false };
   u.tgt = -1;
+}
+// the steered chicken's height (HFLY): taken from the client within the rise/sink speeds; a dive that lands pecks all around
+function henFlyStep(G, u, In, byId) {
+  const fl = walkable(u.x, u.z) ? 0 : HFLY.floor,
+    h0 = u.fh || 0,
+    want = Number.isFinite(In.fh) ? In.fh : 0;
+  u.fh = clamp(want, Math.max(fl, h0 - HFLY.dive * DT * 1.4 - 0.05), Math.min(HFLY.max, h0 + HFLY.up * DT * 1.6 + 0.05));
+  u.y = u.fy = unitY(u.x, u.z);
+  if (u.fh > 1) u.flyT = G.t;
+  if (u.ldv === undefined) u.ldv = In.dv || 0;
+  if ((In.dv || 0) !== u.ldv) {
+    u.ldv = In.dv || 0;
+    if (G.t - (u.flyT ?? -9) < 2.5) u.diveQ = G.t + 1.2;
+  }
+  if (u.diveQ && u.fh < 0.6) {
+    const ok = G.t <= u.diveQ;
+    u.diveQ = 0;
+    if (ok) henDive(G, u, byId);
+  }
+}
+function henDive(G, u, byId) {
+  const dm = KINDS[u.k].dmg * HEN.dmg * HFLY.diveDmg * CFG.possDmg.melee;
+  for (const e of G.units) {
+    if (e.team === u.team || e.hp <= 0 || e.grab || e.bur || e.pj || aloft(e)) continue;
+    if (Math.hypot(e.x - u.x, e.z - u.z) > HFLY.diveR + KINDS[e.k].r) continue;
+    hit(G, e.id, dm, u.team, byId, -1, true);
+    if (KINDS[e.k].role !== 'siege' && !KINDS[e.k].worm && e.hp > 0) knockFly(e, u.x, u.z, 2.4);
+  }
+  for (const b of G.bears.slice()) if (Math.hypot(b.x - u.x, b.z - u.z) < HFLY.diveR + 1) hitBear(G, b, dm, u.team, u.k, true, false, u.id);
+  if (baseInReach(u, HFLY.diveR)) hit(G, -2, dm * HEN.base, u.team, byId, -1);
+  xEvent(G, u.x, u.z, HFLY.diveR, XE.dive, u.team);
+}
+// one-shot impacts every screen shows once (explosions, the chicken's dive, snapping traps): [seq, x*10, z*10, r*10, kind, team, n]
+// (n: how many enemies a blast caught, or 1 when a trap caught a steered warrior)
+const XE = { blast: 0, dud: 1, cata: 2, dive: 3, snap: 4, fizz: 5, load: 6 };
+function xEvent(G, x, z, r, kind, team, n = 0) {
+  G.xeS = ((G.xeS || 0) + 1) % 10000;
+  (G.xe || (G.xe = [])).push([G.xeS, Math.round(x * 10), Math.round(z * 10), Math.round(r * 10), kind, team, n]);
+  if (G.xe.length > 10) G.xe.shift();
 }
 function hitBear(G, b, dmg, team, attK, bp, head, src) {
   if (!bearHere(b)) return;

@@ -60,6 +60,8 @@ const AVATARS = [
   { id: 'berserkerCrown', k: 0, bg: ['#ffe89a', '#a8771a'], deco: 'crown', u: { lv: 25 } },
   { id: 'opaCrown', k: 2, bg: ['#ffe89a', '#a8771a'], deco: 'crown', u: { ach: 'winExtreme' } },
   { id: 'goatCrown', k: 4, bg: ['#ffe89a', '#7a4f12'], deco: 'crown', u: { lv: 30 } },
+  { id: 'fassFire', k: 12, bg: ['#ffc07a', '#8a3a12'], deco: 'fire', u: { ach: 'boom5' } },
+  { id: 'falle', k: 13, bg: ['#d6e4b4', '#4a5a2a'], u: { ach: 'trap3' } },
 ];
 /* Army skins: colour swaps for the models of one faction (old colour -> new colour; no chains) plus their own extra pieces (skinExtras in
    25-worm-model.js). Klassisch is free; three per faction come with the Ruhmespfad (Wikinger at levels 10/20/28, Rentner at 13/23/30 – only there, never
@@ -342,6 +344,10 @@ const ACH = [
   { id: 'combo', ic: 'burst', g: 30, n: TR('Kombo'), d: TR('Drei Kills in Folge mit deinem Ego-Krieger') },
   { id: 'quake5', ic: 'quake', g: 30, n: TR('Erdbebenmacher'), d: TR('Wirf mit einem Erdbeben 5 Gegner um') },
   { id: 'save', ic: 'flag', g: 30, n: TR('In letzter Sekunde'), d: TR('Halte eine Fahne, die schon fast verloren war') },
+  { id: 'boom5', ic: 'barrel', g: 40, n: TR('Großes Feuerwerk'), d: TR('Erwische mit einer einzigen Explosion 5 Gegner') },
+  { id: 'trapEgo', ic: 'trap', g: 30, n: TR('Schnappschuss'), d: TR('Fang einen gesteuerten Gegner in deiner Bärenfalle') },
+  { id: 'trap3', ic: 'trap', g: 30, n: TR('Fallensteller'), d: TR('Fang in einer Partie 3 Gegner in deinen Bärenfallen') },
+  { id: 'flyHigh', ic: 'wing', g: 20, n: TR('Höhenflug'), d: TR('Flieg als Huhn ganz nach oben') },
 ];
 const ACH_BY = Object.fromEntries(ACH.map(a => [a.id, a]));
 const AV_BY = Object.fromEntries(AVATARS.map(a => [a.id, a]));
@@ -680,6 +686,9 @@ function profEvent(ty, a, b) {
     else if (a.ty === 'save') id = 'save';
   } else if (ty === 'dance' && a >= 5) id = 'disco';
   else if (ty === 'combo') id = 'combo';
+  else if (ty === 'boom' && a >= 5) id = 'boom5';
+  else if (ty === 'trap') id = a ? 'trapEgo' : b >= 3 ? 'trap3' : null;
+  else if (ty === 'fly') id = 'flyHigh';
   if (id && profGrantAch(id)) {
     profSave();
     const A = ACH_BY[id];

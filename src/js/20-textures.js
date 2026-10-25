@@ -35,7 +35,8 @@ const FACE_CANVAS = [];
 function drawFace(k) {
   const c = cnv(512, 256),
     x = c.getContext('2d');
-  x.fillStyle = ['#efbf98', '#f5cfb0', '#efc4a6', '#f2cbb4', '#f0c39c', '#ecc1a3'][k];
+  x.fillStyle =
+    { 0: '#efbf98', 1: '#f5cfb0', 2: '#efc4a6', 3: '#f2cbb4', 4: '#f0c39c', 5: '#ecc1a3', 12: '#e9b38c', 13: '#efc4a6' }[k] || '#efc4a6';
   x.fillRect(0, 0, 512, 256);
   if (k === 0) {
     x.fillStyle = '#c8562a';
@@ -179,6 +180,88 @@ function drawFace(k) {
     x.lineTo(160, 190);
     x.quadraticCurveTo(128, 205, 96, 190);
     x.fill();
+  } else if (k === 12) {
+    // Feuerfass: soot on the cheeks, singed bushy brows, wild wide eyes, a gap-toothed grin, a black beard
+    x.fillStyle = '#2b2420';
+    x.fillRect(238, 0, 274, 256);
+    x.fillRect(0, 0, 20, 256);
+    ell(x, 80, 142, 22, 13, 'rgba(40,36,34,.55)');
+    ell(x, 182, 128, 16, 10, 'rgba(40,36,34,.5)');
+    ell(x, 70, 150, 13, 9, 'rgba(230,110,90,.35)');
+    ell(x, 186, 150, 13, 9, 'rgba(230,110,90,.35)');
+    eye(x, 100, 112, 17, 18, 3);
+    eye(x, 156, 112, 15, 16, -1);
+    brow(x, 78, 86, 120, 92, 13, '#231d1a');
+    brow(x, 178, 84, 138, 92, 13, '#231d1a');
+    x.fillStyle = '#e8763a';
+    [
+      [84, 84],
+      [100, 82],
+      [170, 82],
+    ].forEach(([a, b]) => {
+      x.beginPath();
+      x.arc(a, b, 3, 0, TAU);
+      x.fill();
+    }); // glowing singed hairs
+    ell(x, 128, 140, 13, 15, '#d59a76');
+    x.fillStyle = '#2b2420';
+    x.beginPath();
+    x.moveTo(46, 136);
+    x.quadraticCurveTo(54, 236, 128, 254);
+    x.quadraticCurveTo(202, 236, 210, 136);
+    x.quadraticCurveTo(170, 154, 128, 152);
+    x.quadraticCurveTo(86, 154, 46, 136);
+    x.fill();
+    ell(x, 128, 176, 30, 15, '#3a1010');
+    x.fillStyle = '#fff6e0';
+    x.fillRect(102, 164, 20, 9);
+    x.fillRect(132, 164, 22, 9);
+    x.fillStyle = '#f2c14e';
+    x.fillRect(122, 164, 8, 8); // a gold tooth in the gap
+  } else if (k === 13) {
+    // Fallenleger: grey hair over the ears, little round glasses, a sly squint, a big grey walrus moustache, a red nose
+    ell(x, 250, 128, 42, 56, '#dcd8d0');
+    ell(x, 6, 128, 42, 56, '#dcd8d0');
+    x.fillStyle = '#dcd8d0';
+    x.fillRect(250, 92, 262, 76);
+    x.strokeStyle = 'rgba(150,95,70,.45)';
+    x.lineWidth = 3;
+    for (let i = 0; i < 2; i++) {
+      x.beginPath();
+      x.moveTo(94, 70 + i * 9);
+      x.quadraticCurveTo(128, 62 + i * 9, 162, 70 + i * 9);
+      x.stroke();
+    }
+    eye(x, 102, 116, 12, 8, 4);
+    eye(x, 154, 116, 12, 8, 4);
+    brow(x, 84, 98, 120, 104, 9, '#f2f0ea');
+    brow(x, 172, 98, 136, 102, 9, '#f2f0ea');
+    x.strokeStyle = '#6a5a2a';
+    x.lineWidth = 5;
+    [102, 154].forEach(cx => {
+      x.beginPath();
+      x.arc(cx, 116, 21, 0, TAU);
+      x.stroke();
+    });
+    x.beginPath();
+    x.moveTo(123, 114);
+    x.quadraticCurveTo(128, 108, 133, 114);
+    x.stroke();
+    ell(x, 128, 140, 15, 16, '#e0857a');
+    x.fillStyle = '#ecebe6';
+    x.beginPath();
+    x.moveTo(84, 172);
+    x.quadraticCurveTo(100, 146, 128, 156);
+    x.quadraticCurveTo(156, 146, 172, 172);
+    x.quadraticCurveTo(150, 166, 128, 172);
+    x.quadraticCurveTo(106, 166, 84, 172);
+    x.fill();
+    x.strokeStyle = '#7a2b2b';
+    x.lineWidth = 4;
+    x.beginPath();
+    x.moveTo(114, 186);
+    x.quadraticCurveTo(130, 194, 146, 182);
+    x.stroke();
   } else if (KINDS[k] && KINDS[k].worm) {
     x.fillStyle = '#c9a164';
     x.fillRect(0, 0, 512, 256);
@@ -312,6 +395,48 @@ function portrait(k) {
     x.fill();
     x.fillStyle = '#c0392b';
     x.fillRect(58, -2, 12, 30);
+  }
+  if (k === 12) {
+    x.fillStyle = '#9aa3ad';
+    x.beginPath();
+    x.arc(64, 44, 49, Math.PI, 0);
+    x.fill();
+    x.fillStyle = '#f3ead2';
+    x.beginPath();
+    x.moveTo(16, 40);
+    x.lineTo(2, 4);
+    x.lineTo(28, 30);
+    x.fill();
+    x.fillStyle = '#c99a3a';
+    [46, 82].forEach(cx => {
+      x.beginPath();
+      x.arc(cx, 34, 11, 0, TAU);
+      x.fill();
+    });
+    x.fillStyle = '#3a2a14';
+    [46, 82].forEach(cx => {
+      x.beginPath();
+      x.arc(cx, 34, 7, 0, TAU);
+      x.fill();
+    });
+  }
+  if (k === 13) {
+    x.fillStyle = '#7a6e5f';
+    x.beginPath();
+    x.ellipse(64, 34, 62, 12, 0, 0, TAU);
+    x.fill();
+    x.beginPath();
+    x.ellipse(64, 24, 34, 22, 0, Math.PI, 0);
+    x.fill();
+    x.fillRect(30, 18, 68, 12);
+    x.fillStyle = '#5d544b';
+    x.fillRect(30, 26, 68, 5);
+    x.fillStyle = '#3d3a34';
+    x.beginPath();
+    x.moveTo(30, 22);
+    x.lineTo(18, -2);
+    x.lineTo(36, 16);
+    x.fill();
   }
   if (KINDS[k].bear) {
     [

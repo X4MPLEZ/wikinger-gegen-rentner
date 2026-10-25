@@ -595,6 +595,74 @@ const BOW_LIMB = (() => {
     6
   );
 })();
+// the Feuerfass's barrel: a bulging lathe in ten flat staves (the facets are the staves)
+function fassBarrelGeo() {
+  const g = lathe(
+    [
+      [0, -0.3],
+      [0.215, -0.3],
+      [0.25, -0.2],
+      [0.274, -0.08],
+      [0.278, 0],
+      [0.274, 0.08],
+      [0.25, 0.2],
+      [0.215, 0.3],
+      [0, 0.3],
+    ],
+    10
+  ).toNonIndexed();
+  g.computeVertexNormals();
+  return g;
+}
+// a flame (painted on the barrel): one big tongue and two small ones
+const FLAME_GEO = (() => {
+  const s = new THREE.Shape();
+  s.moveTo(-0.07, -0.06);
+  s.quadraticCurveTo(-0.09, 0.02, -0.05, 0.05);
+  s.quadraticCurveTo(-0.04, 0.0, -0.025, 0.02);
+  s.quadraticCurveTo(-0.03, 0.08, 0.0, 0.12);
+  s.quadraticCurveTo(0.015, 0.05, 0.035, 0.035);
+  s.quadraticCurveTo(0.04, 0.07, 0.06, 0.08);
+  s.quadraticCurveTo(0.09, 0.0, 0.07, -0.06);
+  s.quadraticCurveTo(0.0, -0.09, -0.07, -0.06);
+  return new THREE.ShapeGeometry(s, 6);
+})();
+/* The Fallenleger's bear trap: two half-ring jaws with teeth on one hinge axis (x), a spring at each end, the trigger pan in the middle
+   and a chain with a stake. Open, the jaws lie flat (a full ring on the ground); shut, both stand up and the teeth interlock.
+   mats: { steel, dark, rust } (the laid trap draws with its own, see-through materials for the enemy). Returns the group with
+   userData.jaws = [front jaw, back jaw] (rotation.x 0 = open, -/+ PI/2 = shut). */
+function trapModel(closed, mats, bare) {
+  const M = mats || { steel: lam(0x8e969e), dark: lam(0x4f565e), rust: lam(0x8a5a3a) },
+    R = 0.3,
+    g = new THREE.Group(),
+    jaws = [1, -1].map(side => {
+      const j = new THREE.Group();
+      mesh(new THREE.TorusGeometry(R, 0.024, 4, 14, Math.PI).rotateX((side * Math.PI) / 2), M.steel, 0, 0, 0, j);
+      for (let i = 0; i < 6; i++) {
+        const a = 0.25 + (i + (side > 0 ? 0 : 0.5)) * ((Math.PI - 0.5) / 6);
+        mesh(new THREE.ConeGeometry(0.026, 0.085, 4), M.steel, Math.cos(a) * R, 0.04, side * Math.sin(a) * R, j);
+      }
+      j.rotation.x = closed ? -side * (Math.PI / 2) : 0;
+      g.add(j);
+      return j;
+    });
+  mesh(new THREE.BoxGeometry(R * 2.25, 0.04, 0.07), M.dark, 0, -0.01, 0, g); // the base bar with the hinges
+  [-1, 1].forEach(s => {
+    const sp = mesh(new THREE.TorusGeometry(0.06, 0.018, 4, 10), M.rust, s * (R + 0.08), 0.0, 0, g);
+    sp.rotation.y = Math.PI / 2;
+    mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.16, 5).rotateZ(Math.PI / 2), M.dark, s * (R + 0.14), -0.01, 0, g);
+  });
+  mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.018, 12), M.dark, 0, 0.0, 0, g); // the trigger pan
+  if (!bare) {
+    for (let i = 0; i < 4; i++) {
+      const l = mesh(new THREE.TorusGeometry(0.03, 0.009, 3, 8), M.dark, R + 0.25 + i * 0.05, -0.01, 0.03 * (i % 2), g);
+      l.rotation.set(Math.PI / 2, (i % 2) * 1.2, 0);
+    } // chain ...
+    mesh(new THREE.CylinderGeometry(0.018, 0.006, 0.2, 5), M.dark, R + 0.47, 0.03, 0.02, g).rotation.z = 0.3; // ... and the stake
+  }
+  g.userData.jaws = jaws;
+  return g;
+}
 // a unit model in its team's skin (UNIT_SKIN, set per match by setSkins in 65-profile.js): the skin swaps colours while it is built
 function buildUnit(k) {
   const sk = UNIT_SKIN[k];
@@ -629,6 +697,8 @@ function buildUnitRaw0(k) {
     3: { body: 0xc47aa9, leg: 0xd9b8a0, arm: 0xc47aa9, skin: 0xf2cbb4, boot: 0x5a3048 },
     4: { body: 0x396f9e, leg: 0x5a4330, arm: 0xf0c39c, skin: 0xf0c39c, boot: 0x4a3424 },
     5: { body: 0x83517d, leg: 0x55565e, arm: 0x83517d, belt: 0x4e3250, skin: 0xecc1a3 },
+    12: { body: 0x326a9e, leg: 0x5a4330, arm: 0xe9b38c, skin: 0xe9b38c, boot: 0x4a3424, belt: 0x3a2a1c }, // Feuerfass: bare arms, tunic
+    13: { body: 0x83517d, leg: 0x5f5a52, arm: 0x83517d, belt: 0x4e3250, skin: 0xefc4a6, boot: 0x4a3020 }, // Fallenleger: hunting jacket
   }[k];
   // the skin's swaps already here, so shades derived from these colours (sleeves, dark trims) follow the skin
   const P = LAM_MAP ? Object.fromEntries(Object.entries(P0).map(([n, c]) => [n, LAM_MAP.has(c) ? LAM_MAP.get(c) : c])) : P0;
@@ -978,9 +1048,95 @@ function buildUnitRaw0(k) {
     const vis = mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.035, 16, 1, false, -Math.PI / 2, Math.PI), lam(0x1d1d24), 0, 0.12, 0.5, H);
     vis.rotation.x = 0.12;
     vis.scale.set(1.1, 1, 0.9);
+  } else if (k === 12) {
+    // Feuerfass: a dented steel cap with one horn (the other blown off long ago), brass blast goggles pushed up on the forehead ...
+    mesh(new THREE.SphereGeometry(0.61, 20, 9, 0, TAU, 0, Math.PI * 0.43), steel, 0, 0.06, -0.02, H);
+    mesh(new THREE.TorusGeometry(0.6, 0.055, 5, 22).rotateX(Math.PI / 2), steelD, 0, 0.21, -0.02, H);
+    mesh(new THREE.SphereGeometry(0.12, 8, 6), steelD, 0.3, 0.52, 0.18, H).scale.set(1, 0.35, 1); // the dent
+    mesh(
+      taperTube(
+        curvePts([-0.42, 0.33, 0], [-0.98, 0.45, 0.06], [-0.9, 1.0, 0.18], 9),
+        [0.13, 0.12, 0.105, 0.09, 0.075, 0.058, 0.04, 0.022, 0.004],
+        9
+      ),
+      bone,
+      0,
+      0,
+      0,
+      H
+    );
+    const stub = mesh(new THREE.CylinderGeometry(0.07, 0.12, 0.2, 8), bone, 0.5, 0.42, 0.02, H);
+    stub.rotation.z = -1.05;
+    mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.02, 8), lam(0x2a2220), 0.585, 0.47, 0.02, H).rotation.z = -1.05; // charred break
+    mesh(new THREE.TorusGeometry(0.62, 0.035, 4, 24, Math.PI * 0.9).rotateX(Math.PI / 2).rotateY(Math.PI * 0.55), leather, 0, 0.28, 0, H); // goggle strap
+    [-1, 1].forEach(s => {
+      const g2 = mesh(new THREE.TorusGeometry(0.13, 0.04, 6, 16), lam(0xc99a3a), s * 0.2, 0.3, 0.53, H);
+      g2.rotation.set(-0.45, s * 0.32, 0);
+      const ln = mesh(new THREE.CircleGeometry(0.11, 14), lam(0x3a2a14), s * 0.2, 0.3, 0.525, H);
+      ln.rotation.set(-0.45, s * 0.32, 0);
+    });
+    // ... and the barrel, held against the belly with both arms: oak staves, iron hoops, a red band with a white flame, the fuse on top
+    const bar = new THREE.Group();
+    bar.position.set(0, 0.86, 0.42);
+    torso.add(bar);
+    U.barrel = bar;
+    U.drops.push(bar);
+    mesh(fassBarrelGeo(), lam(0x9a5f2c), 0, 0, 0, bar);
+    [-0.2, 0.2].forEach(y => mesh(new THREE.TorusGeometry(0.262, 0.022, 5, 22).rotateX(Math.PI / 2), lam(0x4a4f57), 0, y, 0, bar));
+    mesh(new THREE.CylinderGeometry(0.285, 0.285, 0.13, 22, 1, true), lam(0xc0392b), 0, 0, 0, bar); // the red band
+    mesh(FLAME_GEO, lam(0xffd34d), 0, -0.05, 0.288, bar); // a yellow flame painted on the band
+    mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 18), lam(0x7a4a22), 0, 0.3, 0, bar); // lid
+    const fz = mesh(
+      taperTube(curvePts([0.06, 0.3, 0.02], [0.1, 0.44, 0.08], [0.02, 0.52, 0.16], 7), [0.022, 0.021, 0.02, 0.019, 0.018, 0.017, 0.016], 6),
+      lam(0xd8c08a),
+      0,
+      0,
+      0,
+      bar
+    ); // the fuse
+    fz.userData.fuse = true;
+    const tip = new THREE.Object3D();
+    tip.position.set(0.02, 0.53, 0.16);
+    bar.add(tip);
+    U.fuseTip = tip;
+  } else if (k === 13) {
+    // Fallenleger: a felt hunting hat with a cord and a feather brush, round glasses on the face texture, and his bear trap
+    const hatC = lam(0x7a6e5f),
+      band = lam(0x5d544b);
+    const brim = mesh(new THREE.CylinderGeometry(0.84, 0.84, 0.05, 22), hatC, 0, 0.36, -0.02, H);
+    brim.scale.set(1, 1, 0.9);
+    brim.rotation.x = -0.08; // turned up a little at the back
+    mesh(new THREE.CylinderGeometry(0.44, 0.56, 0.42, 18), hatC, 0, 0.58, -0.02, H); // crown ...
+    mesh(new THREE.SphereGeometry(0.44, 16, 6, 0, TAU, 0, Math.PI / 2), hatC, 0, 0.78, -0.02, H).scale.set(1, 0.32, 0.92); // ... rounded top
+    mesh(new THREE.BoxGeometry(0.46, 0.05, 0.08), band, 0, 0.9, -0.02, H); // the pinch
+    mesh(new THREE.TorusGeometry(0.535, 0.04, 5, 22).rotateX(Math.PI / 2), band, 0, 0.44, -0.02, H); // cord
+    const brush = new THREE.Group();
+    brush.position.set(-0.42, 0.52, -0.2);
+    brush.rotation.set(-0.3, 0, 0.35);
+    H.add(brush);
+    for (let i = 0; i < 7; i++) {
+      const b2 = mesh(new THREE.ConeGeometry(0.03, 0.42, 4).translate(0, 0.21, 0), lam(i % 2 ? 0x3d3a34 : 0x6a6458), 0, 0, 0, brush);
+      b2.rotation.set(((i % 3) - 1) * 0.12, 0, (i - 3) * 0.07);
+    }
+    mesh(new THREE.SphereGeometry(0.06, 8, 6), lam(0x8a7d5a), 0, 0, 0, brush);
+    // the trap in his right hand: steel jaws shut, hanging from a short chain; laid, it lies on the ground (75-fass-falle-view.js)
+    const trap = new THREE.Group();
+    trap.position.set(0, -0.27, 0.02);
+    foreR.add(trap);
+    U.trap = trap;
+    U.drops.push(trap);
+    const tg = trapModel(true, null, true);
+    tg.scale.setScalar(0.62);
+    tg.rotation.set(0, Math.PI / 2, 0); // hangs from the top of its shut jaws, alongside the leg
+    tg.position.set(0, -0.09 - 0.3 * 0.62, 0);
+    trap.add(tg);
+    for (let i = 0; i < 2; i++) {
+      const l = mesh(new THREE.TorusGeometry(0.028, 0.009, 3, 8), lam(0x4f565e), 0, -0.025 - i * 0.035, 0, trap);
+      l.rotation.y = i * 1.4;
+    } // two chain links from the hand
   }
   if (SKIN_NOW) skinExtras(U, k, SKIN_NOW);
-  if (k === 0 || k === 2 || k === 4 || k === 5) {
+  if (k === 0 || k === 2 || k === 4 || k === 5 || k === 12 || k === 13) {
     const hat = new THREE.Group();
     H.children.slice(hatFrom).forEach(c => hat.add(c));
     H.add(hat);
@@ -1013,7 +1169,7 @@ function skinExtras(U, k, id) {
   const { torso, neck, H, armL, armR, foreL, foreR, legL, legR, shinL, shinR } = U;
   if (!torso || !H) return;
   const m = (geo, c, x, y, z, par) => mesh(geo, lam(c), x, y, z, par),
-    vik = k === 0 || k === 1 || k === 4,
+    vik = k === 0 || k === 1 || k === 4 || k === 12,
     ring = (n, r, y, par, geo, cols, sc = 1, z0 = 0) => {
       for (let i = 0; i < n; i++) {
         const a = (i / n) * TAU;
@@ -1160,5 +1316,6 @@ function skinExtras(U, k, id) {
     m(new THREE.TorusGeometry(0.019, 0.006, 4, 10).rotateX(Math.PI / 2), 0xd2302a, 0, 0.115, 0, pin);
     m(new THREE.TorusGeometry(0.212, 0.012, 4, 20).rotateX(Math.PI / 2), 0xf6f6f6, 0, 1.18, 0, torso);
     if (k === 2) m(new THREE.OctahedronGeometry(0.09), 0xf6f6f6, 0, 0.42, 0.5, H);
+    if (k === 13) m(new THREE.OctahedronGeometry(0.09), 0xf6f6f6, 0, 0.62, 0.42, H);
   }
 }

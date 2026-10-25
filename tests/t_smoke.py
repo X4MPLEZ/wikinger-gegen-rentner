@@ -20,8 +20,10 @@ with sync_playwright() as p:
         r = pg.evaluate("""() => { const W = __wvr, G = W.G; const mine = G.units.filter(u => u.team === 0);
             if (mine[0]) { W.V.selected.clear(); W.V.selected.add(mine[0].id); W.enterEgo(); }
             return { mine: mine.length, foes: G.units.filter(u => u.team === 1).length, chaos: !!G.chaos, fog: !!G.fog }; }""")
-        pg.wait_for_timeout(1500)
-        r['ego'] = pg.evaluate('!!(__wvr.V.poss && __wvr.V.poss.confirmed)')
+        for i in range(12):  # the host confirms the takeover with the next snapshots (slow software GL: give it a few seconds)
+            pg.wait_for_timeout(500)
+            r['ego'] = pg.evaluate('!!(__wvr.V.poss && __wvr.V.poss.confirmed)')
+            if r['ego']: break
         r['advancing'] = pg.evaluate('__wvr.V.latest.t') > t0
         R[mode] = r
         pg.evaluate("__wvr.exitEgo && __wvr.exitEgo(false)")

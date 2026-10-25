@@ -1329,9 +1329,9 @@ body.egoOn #killFeed {
   right: 8px;
   bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 6px;
-  max-width: 640px;
+  max-width: 790px;
   margin: 0 auto;
 }
 .spawn {
@@ -2003,6 +2003,90 @@ body.zoomed #game * {
 body.heroOn .ego-btns,
 body.heroOn #egoCmds {
   opacity: 0.3;
+}
+/* "Ins Katapult": like the hero button, a size smaller (the steered Feuerfass next to an own catapult) */
+#egoLoad {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 196px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #2a1c04;
+  background: linear-gradient(180deg, #ffe0b0, #f09a4c 55%, #d4641f);
+  border: 3px solid var(--ink2, #1b1410);
+  box-shadow: 3px 3px 0 var(--ink2, #1b1410);
+  animation: heroPulse 0.9s ease-in-out infinite;
+  white-space: nowrap;
+  z-index: 3;
+  cursor: pointer;
+}
+#egoLoad .sic svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+#ego #egoLoad kbd.kb {
+  position: static;
+  transform: none;
+  margin-left: 2px;
+  font-size: 0.7rem;
+  padding: 2px 5px;
+  background: rgba(42, 28, 4, 0.85);
+  color: #fff;
+  opacity: 1;
+}
+@media (max-height: 460px) {
+  #egoLoad {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+}
+@media (max-width: 560px) and (min-height: 461px) {
+  #egoLoad {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 252px);
+  }
+}
+/* a blast close by: the screen flashes white-hot and fades through orange */
+#boomFlash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 6;
+  background: radial-gradient(circle at 50% 55%, rgba(255, 252, 230, 0.95), rgba(255, 170, 60, 0.55) 45%, rgba(255, 90, 20, 0) 80%);
+}
+#boomFlash.on {
+  animation: boomFlash 0.42s ease-out forwards;
+}
+@keyframes boomFlash {
+  0% {
+    opacity: var(--a, 1);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* the steered warrior burns: the screen edge glows */
+body.burnOn #ego::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 90px 30px rgba(255, 110, 20, 0.55);
+  animation: burnGlow 0.35s ease-in-out infinite alternate;
+  z-index: 2;
+}
+@keyframes burnGlow {
+  to {
+    box-shadow: inset 0 0 120px 44px rgba(255, 150, 40, 0.7);
+  }
 }
 body.heroOn .ego-btns button,
 body.heroOn #egoCmds button {

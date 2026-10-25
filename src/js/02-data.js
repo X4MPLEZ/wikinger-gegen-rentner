@@ -218,6 +218,49 @@ const KINDS = [
     sp: TR('Verschlingen'),
     trait: TR('Gräbt sich unter die Gegner, packt bis zu drei mit seinen Greifern und verschlingt sie'),
   },
+  {
+    key: 'fass',
+    fac: 'viking',
+    role: 'melee',
+    spec: 'bomb', // 16-sim-fass-falle.js
+    name: TR('Feuerfass'),
+    hp: 105,
+    dmg: 9,
+    cd: 1.1,
+    range: 1.5,
+    aggro: 10,
+    speed: 4.7,
+    cost: 60, // tuned in computer-vs-computer runs (tools/balance.py): 95 hp / 70 gold / blast 78 left the Wikinger a few points behind
+    build: 1.6,
+    r: 0.55,
+    sp: TR('Lunte zünden'),
+    tag: TR('sprengt Gruppen'),
+    ego: { hp: 1, cd: 1, dmg: 1 },
+    trait: TR(
+      'Zündet mitten im Gegnerhaufen sein Pulverfass: alle fliegen und brennen, eigene Leute nur ein bisschen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
+    ),
+  },
+  {
+    key: 'falle',
+    fac: 'rentner',
+    role: 'melee',
+    spec: 'trap',
+    name: TR('Fallenleger'),
+    hp: 120,
+    dmg: 13,
+    cd: 1.0,
+    range: 1.5,
+    aggro: 9,
+    speed: 4.3,
+    cost: 65,
+    build: 1.5,
+    r: 0.5,
+    sp: TR('Bärenfalle'),
+    tag: TR('stellt Fallen'),
+    trait: TR(
+      'Legt eine Bärenfalle, die der Gegner kaum sieht: Wer hineintritt, sitzt fest. Schlägt mit der Falle zu, danach mit den Fäusten'
+    ),
+  },
 ];
 const NO_EGO = { hp: 1, cd: 1, dmg: 1 };
 const ROLE_NAME = { melee: TR('Nahkampf'), ranged: TR('Fernkampf'), cav: TR('Reiter'), siege: TR('Katapult') };
@@ -230,7 +273,7 @@ const FAC = {
     base: TR('Langhaus'),
     css: '#4f86c4',
     col: 0x3b6ea5,
-    kinds: [0, 1, 4, 6],
+    kinds: [0, 1, 4, 6, 12],
     other: 'rentner',
     icon: 'coin',
   },
@@ -240,7 +283,7 @@ const FAC = {
     base: TR('Haus Abendrot'),
     css: '#c07aa8',
     col: 0xa0628f,
-    kinds: [2, 3, 5, 7],
+    kinds: [2, 3, 5, 7, 13],
     other: 'viking',
     icon: 'bottle',
   },
@@ -300,7 +343,7 @@ const CFG = {
    The 3rd is the finisher: much more damage, it knocks the enemies back. Blows 1 and 2 come faster, the finisher has a longer recovery.
    The client counts the combo and sends its step (input packet cb); the host checks it (possAttack). */
 // specials that recharge faster than CFG.spCd: the Krückstock-Opa's Stockwirbel a little faster than the Berserker's rage
-const SP_CD = { 0: 6.5, 2: 5.5 };
+const SP_CD = { 0: 6.5, 2: 5.5, 12: 1, 13: 2 };
 // the recharge time of kind k's special (siege, bears and sandworms have their own)
 function spCdOf(k) {
   const K = KINDS[k];
@@ -419,6 +462,12 @@ const fogSightOf = (role, poss) => (poss ? FOG_SIGHT.torch : role === 'cav' ? FO
 // Hühnerarmee: the chickens are warriors of the faction's melee kind with u.hen set: few hit points, weak pecks (hardly any against the
 // base), fast feet; they do not count for the army size and give no kill gold. Taken over, a chicken pecks (no special, no counters)
 const HEN = { n: 40, hp: 28, dmg: 0.4, base: 0.12, speed: 1.3 };
+/* A steered chicken flies: holding the special key it rises slowly (up m/s) up to max m above the ground, let go it sinks (down m/s);
+   attack in the air = a dive (dive m/s) that pecks everyone around on landing (diveDmg × a peck). It cannot land on water, rocks or
+   trees (floor). Above `air` metres no sword, hoof, bear or worm reaches it – arrows, false teeth and the base tower still do. The
+   client predicts the height and sends it (input packet fh); the host only accepts what these speeds allow. */
+const HFLY = { up: 2.4, down: 1.6, dive: 16, max: 17, floor: 2.4, air: 1.6, spd: 1.3, diveDmg: 3.5, diveR: 2.2 };
+const aloft = u => (u.fh || 0) > HFLY.air;
 const PERK_IDS = Object.keys(PERKS),
   PERK_EVERY = 30,
   PERK_MAX = 7,
@@ -487,6 +536,16 @@ const QUOTES = {
     die: [TR('Das Holz war morsch…')],
     hit: [TR('RUMMS!'), TR('KRAWUMM!')],
   },
+  12: {
+    spawn: [TR('Wer hat Feuer?'), TR('Vorsicht, explosiv!'), TR('Odin, halt mein Met!'), TR('Rauchen verboten!')],
+    die: [TR('Das ging nach hinten los…'), TR('Mein schönes Fass…')],
+    hit: [TR('RUMMS!'), TR('BONG!')],
+  },
+  13: {
+    spawn: [TR('Ich hab da was vorbereitet…'), TR('Vorsicht, wo ihr hintretet!'), TR('Schnapp!'), TR('Früher hab ich Wölfe gefangen!')],
+    die: [TR('In die eigene Falle…'), TR('Meine Hüfte…')],
+    hit: [TR('SCHNAPP!'), TR('KLONG!'), TR('PATSCH!')],
+  },
   7: {
     spawn: [TR('Wer bestellt Torte?'), TR('Frisch gebacken und geschleudert!')],
     die: [TR('Die Sahne ist sauer…')],
@@ -509,4 +568,6 @@ const SP_WORD = {
   9: TR('BÄRENKLAUEN!'),
   10: TR('VERSCHLINGEN!'),
   11: TR('VERSCHLINGEN!'),
+  12: TR('TSSSSS!'),
+  13: TR('SCHNAPP!'),
 };

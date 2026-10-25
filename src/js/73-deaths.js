@@ -78,6 +78,7 @@ function startDeath(u, cause) {
   u.rag = null;
   u.side = Math.random() < 0.5 ? -1 : 1;
   u.dieFx = {};
+  if (u.fuseRing) fuseRingDrop(u);
   if (u.arm) {
     u.dv = 'gone';
     breakCatapult(u);
@@ -100,6 +101,17 @@ function startDeath(u, cause) {
     u.g.visible = false;
     puff(x, y + 0.7, z, 0xffffff, 9, 0.9);
     if (Math.random() < 0.4) SFX.play('chicken', { x, z, vol: 0.5 });
+    return;
+  }
+  if (cause === 5 || cause === 6) {
+    // blown up: charred black (white eyes blinking), flung high, smoking (5: the Feuerfass himself, 6: caught in a blast)
+    u.dv = 'blown';
+    charBody(u);
+    if (u.barrel) u.barrel.visible = false; // the barrel is the bang
+    if (!u.deadAir) u.deadAir = { vx: (Math.random() - 0.5) * 3, vy: 9, vz: (Math.random() - 0.5) * 3 };
+    if (u.hat) dropPart(u.hat, (Math.random() - 0.5) * 6, 11 + Math.random() * 4, (Math.random() - 0.5) * 6, 22);
+    if (u.trap && u.trap.visible) dropPart(u.trap, (Math.random() - 0.5) * 5, 7, (Math.random() - 0.5) * 5, 18);
+    setTimeout(() => SFX.play(fac === 'rentner' ? 'dieR' : 'dieV', { x, z, k: u.k, vol: 0.8 }), 120);
     return;
   }
   if (cause === 3) u.dv = 'fall';
@@ -356,6 +368,38 @@ function deathTick(u, dt) {
     L.rotation.x = -2.8;
     R.rotation.x = -2.5;
     return sink(F.landT + 0.8, F.landT + 1.6);
+  }
+  if (dv === 'blown') {
+    if (u.deadAir) {
+      const a = u.deadAir;
+      a.vy -= AIR_GRAVITY * dt;
+      u.g.position.x += a.vx * dt;
+      u.g.position.z += a.vz * dt;
+      u.g.position.y += a.vy * dt;
+      r.rotation.x -= dt * 9;
+      r.rotation.z += dt * 4 * u.side;
+      L.rotation.x = -2.8 + Math.sin(t * 25) * 0.4;
+      R.rotation.x = -2.6 + Math.cos(t * 23) * 0.4;
+      if (Math.random() < dt * 24) puff(u.g.position.x, u.g.position.y + 0.8, u.g.position.z, 0x3a3634, 1, 0.55);
+      const gy = unitY(u.g.position.x, u.g.position.z);
+      if (u.g.position.y <= gy && a.vy < 0) {
+        u.g.position.y = gy;
+        u.deadAir = null;
+        F.landT = t;
+        emitFX('land', u.g.position.x, gy + 0.15, u.g.position.z, { n: 8, size: 0.9, col: 0x6a625a });
+        puff(u.g.position.x, gy + 0.4, u.g.position.z, 0x2a2826, 6, 0.8);
+        SFX.play('crash', { x: u.g.position.x, z: u.g.position.z, vol: 0.55 });
+        if (Math.random() < 0.6)
+          word(pick([TR('Hust…'), TR('Autsch…'), TR('Puh…')]), u.g.position.x, gy + 2, u.g.position.z, { color: '#ffffff', scale: 0.7 });
+      }
+      return t > 6;
+    }
+    r.rotation.x = -Math.PI / 2;
+    r.rotation.z = u.side * 0.18;
+    L.rotation.x = -2.9;
+    R.rotation.x = -2.7;
+    if (Math.random() < dt * 4) puff(u.g.position.x, u.g.position.y + 0.4, u.g.position.z, 0x4a4644, 1, 0.45); // still smoking
+    return sink((F.landT || t) + 1.1, (F.landT || t) + 2.0);
   }
   if (dv === 'squash') {
     const p = Math.min(1, t / 0.1),

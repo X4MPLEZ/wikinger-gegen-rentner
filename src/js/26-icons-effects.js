@@ -43,6 +43,38 @@ function roleGlyph(o, role, cx, cy) {
     o.lineTo(8, -3);
     o.closePath();
     o.fill();
+  } else if (role === 'bomb') {
+    // a round bomb with a burning fuse
+    o.beginPath();
+    o.arc(-1, 3, 8, 0, TAU);
+    o.fill();
+    o.lineWidth = 2.6;
+    o.beginPath();
+    o.moveTo(4, -3);
+    o.quadraticCurveTo(8, -9, 11, -8);
+    o.stroke();
+    o.fillStyle = '#d23a2e';
+    o.beginPath();
+    o.arc(11.5, -9, 2.6, 0, TAU);
+    o.fill();
+  } else if (role === 'trap') {
+    // open jaws with teeth
+    o.lineWidth = 3;
+    o.beginPath();
+    o.moveTo(-11, 6);
+    o.lineTo(11, 6);
+    o.stroke();
+    o.beginPath();
+    o.arc(0, 6, 9, Math.PI, 0);
+    o.stroke();
+    o.lineWidth = 2;
+    for (let i = 1; i < 5; i++) {
+      const a = Math.PI + (i / 5) * Math.PI;
+      o.beginPath();
+      o.moveTo(Math.cos(a) * 9, 6 + Math.sin(a) * 9);
+      o.lineTo(Math.cos(a) * 5, 6 + Math.sin(a) * 5);
+      o.stroke();
+    }
   } else if (role === 'siege') {
     o.beginPath();
     o.arc(4, 4, 6.5, 0, TAU);
@@ -195,7 +227,7 @@ function unitIcon(k) {
     o.strokeStyle = 'rgba(13,21,38,.85)';
     o.lineWidth = 3;
     o.stroke();
-    roleGlyph(o, KINDS[k].role, 104, 104);
+    roleGlyph(o, KINDS[k].spec || KINDS[k].role, 104, 104);
     return (UNIT_ICON[ik] = out.toDataURL());
   } catch (e) {
     return PORTRAIT[k];

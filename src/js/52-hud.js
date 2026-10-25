@@ -158,7 +158,8 @@ function setupHud() {
     b.querySelector('img').src = unitIcon(k);
     b.querySelector('.nm').textContent = K.name.replace('schützin', '­schützin');
     b.querySelector('.cost').innerHTML = ICON[F.icon] + K.cost;
-    b.querySelector('.beats').textContent = K.role === 'siege' ? TR('Fläche · bricht Eis') : TR('stark gg. {0}', ROLE_NAME[BEATS[K.role]]);
+    b.querySelector('.beats').textContent =
+      K.tag || (K.role === 'siege' ? TR('Fläche · bricht Eis') : TR('stark gg. {0}', ROLE_NAME[BEATS[K.role]]));
     b.title = K.name + ': ' + (K.trait || (K.role === 'siege' ? TR('langsam, mächtiger Flächenschaden, zerstört Basen und Eis') : ''));
     b.querySelector('.main').setAttribute('aria-label', TR('{0} ausbilden, {1} {2}', K.name, K.cost, F.res));
     b.querySelector('.auto').setAttribute('aria-label', TR('{0} automatisch ausbilden', K.name));
@@ -267,14 +268,14 @@ function updateHud() {
   $$('.spawn').forEach(b => {
     const k = +b.dataset.k,
       K = KINDS[k],
-      inQ = [...s.q[me]].filter(c => +c === k).length,
+      inQ = [...s.q[me]].filter(c => parseInt(c, 36) === k).length,
       q = b.querySelector('.q');
     hid(q, !inQ);
     txt(q, inQ);
     b.classList.toggle('poor', s.g[me] < K.cost || pop >= CFG.pop || s.q[me].length >= CFG.queueMax);
-    sty(b.querySelector('.prog'), 'width', (s.q[me].length && +s.q[me][0] === k ? s.qp[me] : 0) + '%');
-    attr(b.querySelector('.auto'), 'aria-pressed', String(au.includes(String(k))));
-    b.classList.toggle('autoOn', au.includes(String(k)));
+    sty(b.querySelector('.prog'), 'width', (s.q[me].length && parseInt(s.q[me][0], 36) === k ? s.qp[me] : 0) + '%');
+    attr(b.querySelector('.auto'), 'aria-pressed', String(au.includes(k.toString(36))));
+    b.classList.toggle('autoOn', au.includes(k.toString(36)));
   });
   for (const id of V.selected) if (!V.units.has(id)) V.selected.delete(id);
   {
@@ -371,7 +372,7 @@ function spawnSlot(i) {
     if (
       KINDS[k].role === 'siege' &&
       s.u.filter(e => teamOfKind(e[1], s.fa) === me && KINDS[e[1]].role === 'siege').length +
-        [...s.q[me]].filter(q => KINDS[+q].role === 'siege').length >=
+        [...s.q[me]].filter(q => KINDS[parseInt(q, 36)].role === 'siege').length >=
         CFG.siegeMax
     ) {
       SFX.play('error');

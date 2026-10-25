@@ -152,7 +152,15 @@ function aiRecruit(G, team, A, L, mine, foes) {
       }
       if (L.micro === 0 && Math.random() < 0.5) role = pick(['melee', 'ranged', 'cav']);
     }
-    A.plan = ks.find(k => KINDS[k].role === role);
+    A.plan = ks.find(k => KINDS[k].role === role && !KINDS[k].spec);
+    {
+      // now and then one of the special warriors (Feuerfass / Fallenleger), a few at most
+      const spk = ks.find(k => KINDS[k].spec);
+      if (spk !== undefined && total >= 4) {
+        const nSp = mine.filter(u => u.k === spk).length + T.q.filter(k => k === spk).length;
+        if (nSp < (L.micro >= 2 ? 3 : 2) && Math.random() < (L.micro >= 2 ? 0.16 : 0.1)) A.plan = spk;
+      }
+    }
     const nSiege = mine.filter(u => KINDS[u.k].role === 'siege').length + T.q.filter(k => KINDS[k].role === 'siege').length;
     if (
       G.t > (L.micro >= 2 ? 70 : 100) &&
@@ -453,6 +461,7 @@ function aiPossess(G, team, A, L, mine, foes) {
           !u.grab &&
           !(u.down > 0) &&
           !u.hen &&
+          !KINDS[u.k].spec && // (the Feuerfass and the Fallenleger do their tricks on their own)
           u.hp >= KINDS[u.k].hp * 0.8
       ),
       ep = foes.find(e => e.poss),

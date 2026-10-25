@@ -9,7 +9,7 @@
    Links: the hero unit has u.hero = { b: worm id, unit, s: script id, t, n hits, m inner hits, sw swallowed, dmg }; the worm has heroBy.
    Client side: 72-hero-view.js (poses, camera, button), snapshot field `he`. */
 const HERO = {
-  kinds: [0, 1, 2, 3, 4, 5],
+  kinds: [0, 1, 2, 3, 4, 5, 12, 13],
   r: 5.4,
   rC: 4.8,
   // (the classic climb, kept as the reference timeline)
@@ -136,7 +136,7 @@ const HERO_S = [
     end: 6.1,
   },
 ];
-const HERO_SET = { 0: [0, 1], 1: [3, 4], 2: [0, 2], 3: [3, 4], 4: [5, 6], 5: [5, 6] };
+const HERO_SET = { 0: [0, 1], 1: [3, 4], 2: [0, 2], 3: [3, 4], 4: [5, 6], 5: [5, 6], 12: [0, 1], 13: [0, 1] };
 const heroScript = u => HERO_S[(u && u.hero && u.hero.s) || 0];
 function heroWormPose(st, t, o, S = HERO_S[0]) {
   // the worm meanwhile: thrashes while he climbs (or rides it), bows its head while he strikes (each blow jerks it up), flings him up and
@@ -421,6 +421,13 @@ function heroEnd(G, u, w, escaped) {
         } else hitBear(G, w, 99999, team, -1);
         if (team === u.team) highlight(G, 'heroWin', u.team, Math.round(H.dmg), x, z);
       } else heroFree(w);
+    }
+    if (u.k === 12 && w && w.hp > 0) {
+      // a Feuerfass hero: his barrel goes off in the belly
+      if (H.unit) {
+        if (w.team !== u.team) hit(G, w.id, FASS.belly, u.team, G.unitIndex || new Map(), -1);
+      } else hitBear(G, w, FASS.belly, u.team, -1);
+      xEvent(G, x, z, 2, XE.dud, u.team);
     }
     return;
   }

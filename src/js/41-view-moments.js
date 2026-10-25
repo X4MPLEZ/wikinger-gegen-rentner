@@ -281,8 +281,10 @@ function startRagdoll(u, fx2, fz2) {
   u.g.rotation.y = u.rag.dir + Math.PI;
   puff(x, u.g.position.y + 0.8, z, 0xd8c48f, 5, 0.8);
   SFX.play('whoosh', { x, z });
-  if (Math.random() < 0.5)
+  if (Math.random() < 0.5 && now() - (V.ragWordT || 0) > 350) {
+    V.ragWordT = now(); // a blast throws a whole crowd: one shout at a time
     word(pick([TR('UIIIH!'), TR('HUIII!'), TR('AUA!'), TR('FLIEG!')]), x, u.g.position.y + 3, z, { color: '#ffffff', scale: 0.9 });
+  }
 }
 function startTumble(u) {
   if (!u || u.rag) return;

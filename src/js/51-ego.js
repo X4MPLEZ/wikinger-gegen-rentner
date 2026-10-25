@@ -31,6 +31,7 @@ function enterEgo() {
     id,
     k: u.k,
     hen: !!u.hen,
+    fh: u.flyH || 0, // a chicken's flight height (HFLY)
     x: u.g.position.x,
     z: u.g.position.z,
     yaw: u.g.rotation.y,
@@ -67,9 +68,22 @@ function enterEgo() {
       lockPointer();
     } catch (_) {}
   }
-  $('#egoName').textContent = K.name;
-  $('#spName').textContent = K.sp || TR('Salve');
-  $('#spIco').innerHTML = SP_ICON[u.k] || ICON.star;
+  $('#egoName').textContent = u.hen ? TR('Huhn') : K.name;
+  $('#spName').textContent = u.hen ? TR('Fliegen') : K.sp || TR('Salve');
+  $('#spIco').innerHTML = u.hen ? si('wing') : SP_ICON[u.k] || ICON.star;
+  EG.spK = EG.spP = false;
+  if (u.hen)
+    setTimeout(
+      () =>
+        V.poss &&
+        egoHint(
+          COARSE
+            ? TR('Huhn: Spezial gedrückt halten = aufsteigen, loslassen = sinken · Angriff in der Luft = Sturzflug')
+            : TR('Huhn: {0} halten = aufsteigen, loslassen = sinken · Angriff in der Luft = Sturzflug', kl('special')),
+          5200
+        ),
+      900
+    );
   $('#egoResIco').innerHTML = ICON[FAC[V.facs[V.myTeam]].icon];
   EG.gtxt = '';
   $('#egoFace').src = FACE.mine ? FACE.mine.url : PORTRAIT[K.role === 'siege' ? FAC[V.facs[V.myTeam]].kinds[0] : u.k];
@@ -182,9 +196,12 @@ function exitEgo(send, keepLock) {
   if (EG.sgRing) EG.sgRing.visible = false;
   document.body.classList.remove('egoOn');
   document.body.classList.remove('heroOn');
+  document.body.classList.remove('burnOn');
   {
     const hb = $('#egoHero');
     if (hb) hb.hidden = true;
+    const lb = $('#egoLoad');
+    if (lb) lb.hidden = true;
   }
   EG.fire = false;
   EG.fireK = false;
@@ -567,6 +584,8 @@ const SP_ICON = {
   7: si('cake'),
   8: si('paw'),
   9: si('paw'),
+  12: si('barrel'),
+  13: si('trap'),
 };
 const DMOVES = [
   ['spin', TR('DREHUNG!')],
@@ -618,6 +637,27 @@ function egoAttack() {
   }
   const P = V.poss;
   if (!P || P.down || P.dance || P.heroOn || (V.latest && V.latest.pz > 0)) return;
+  if (P.trap) {
+    // caught in a trap: every press wriggles a little loose (a steady rhythm is enough – no mashing needed)
+    if (now() - (P.wrT || 0) < 160) return;
+    P.wrT = now();
+    P.a = (P.a + 1) % 1000;
+    EG.kick = Math.max(EG.kick, 0.12);
+    SFX.play('trapSet', { vol: 0.5 });
+    const mu = V.units.get(P.id);
+    if (mu) mu.hitV = (mu.hitV || 0) + 2.5;
+    return;
+  }
+  if (P.hen && P.fh > 1) {
+    // a chicken in the air: the attack is a dive that pecks everyone around on landing
+    if (!P.dive) {
+      P.dive = 1;
+      SFX.play('whoosh', { vol: 1.1 });
+      EG.kick = Math.max(EG.kick, 0.3);
+      egoHint(TR('STURZFLUG!'), 900);
+    }
+    return;
+  }
   const K = KINDS[P.k],
     melee = (K.role === 'melee' || K.role === 'cav') && !K.bear && !K.worm;
   if (P.cdT > 0) {
@@ -1137,6 +1177,21 @@ function egoSpecial() {
     return;
   }
   if (P.spT > 0) return;
+  if (P.k === 13) {
+    // the Fallenleger has one trap: while it lies out there (or a new one is not ready yet) there is nothing to lay
+    const mu = V.units.get(P.id);
+    if (mu && !mu.trapC) {
+      egoHint(TR('Deine Falle liegt schon – eine neue gibt es erst, wenn sie zugeschnappt ist.'), 1800);
+      SFX.play('error');
+      return;
+    }
+    SFX.play('trapSet', { vol: 0.9 });
+  }
+  if (P.k === 12) {
+    if (P.fuse) return;
+    egoHint(TR('Die Lunte brennt – rein in die Gegner!'), 1300);
+    EG.kick = Math.max(EG.kick, 0.2);
+  }
   if (KINDS[P.k].role === 'siege') {
     const { pt } = egoAim(P);
     P.gp = [+pt.x.toFixed(1), +pt.z.toFixed(1)];
@@ -1176,6 +1231,36 @@ function egoSpecial() {
     stompFx(P.x, unitY(P.x, P.z), P.z, true);
   }
 }
+// the steered chicken's height: rises while the special is held, sinks when let go, a dive drops fast and pecks on landing (HFLY)
+function henFly(P, dt) {
+  const hold = (EG.spK || EG.spP) && !P.dive && !P.down && !P.dance,
+    floor = walkable(P.x, P.z) ? 0 : HFLY.floor,
+    h0 = P.fh || 0;
+  let h = h0 + (P.dive ? -HFLY.dive : hold ? HFLY.up : -HFLY.down) * dt;
+  h = clamp(h, floor, HFLY.max);
+  if (P.dive && h <= floor + 0.01) {
+    if (floor > 0)
+      P.dive = 0; // over water: no peck, it just stops above the waves
+    else {
+      P.dive = 0;
+      P.dv = ((P.dv || 0) + 1) % 1000; // the host pecks all around (henDive)
+      const y = unitY(P.x, P.z);
+      shake(0.5);
+      EG.kick = Math.max(EG.kick, 0.45);
+      emitFX('dust', P.x, y + 0.1, P.z, { n: 18, size: 1.3 });
+      SFX.play('stomp', { vol: 1 });
+      SFX.play('chicken', { vol: 1 });
+    }
+  }
+  if (hold && h0 < 0.05 && h > 0) {
+    SFX.play('chicken', { vol: 0.8 });
+    emitFX('dust', P.x, unitY(P.x, P.z) + 0.1, P.z, { n: 6, size: 0.6 });
+  }
+  if (h > 0.3 && Math.random() < dt * (hold ? 7 : 2.5)) SFX.play('flap', { vol: hold ? 0.55 : 0.3 });
+  if (h >= HFLY.max - 0.01 && h0 < HFLY.max - 0.01) profEvent('fly');
+  P.fh = h;
+  P.fly = h > 0.3 ? (hold ? 2 : 1) : 0; // for the wings: flapping hard or gliding
+}
 function stompFx(x, y, z, mine) {
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * TAU;
@@ -1190,8 +1275,10 @@ $('#egoAtk').addEventListener('pointerdown', e => {
 });
 $('#egoSp').addEventListener('pointerdown', e => {
   e.preventDefault();
+  EG.spP = true; // held down: a chicken keeps rising
   egoSpecial();
 });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(n => $('#egoSp').addEventListener(n, () => (EG.spP = false)));
 $('#egoExit').addEventListener('click', () => {
   if (tutBlock('exit')) return;
   if (V.poss && V.poss.dance) {
@@ -1447,7 +1534,7 @@ function egoUpdate(dt) {
   }
   P.tumT = Math.max(0, (P.tumT || 0) - dt);
   const pzd = V.latest && V.latest.pz > 0,
-    frozen = pzd || P.down || P.dance || P.tumT > 0.25 || P.falling || P.held || P.heroOn;
+    frozen = pzd || P.down || P.dance || P.tumT > 0.25 || P.falling || P.held || P.heroOn || P.trap;
   if (frozen) {
     jx = 0;
     jy = 0;
@@ -1473,7 +1560,9 @@ function egoUpdate(dt) {
       (slowMu && slowMu.slowed ? 0.7 : 1) *
       (P.rageT > 0 ? 1.4 : 1) *
       [1, 2][tpk(V.myTeam, 'turbo')] *
-      (K.role === 'cav' ? [1, 1.5][tpk(V.myTeam, 'cavspd')] : 1);
+      (K.role === 'cav' ? [1, 1.5][tpk(V.myTeam, 'cavspd')] : 1) *
+      (P.hen ? HEN.speed * (P.fh > 0.4 ? HFLY.spd : 1) : 1);
+  const flyOn = P.hen && P.fh > 0.4; // a flying chicken goes over water, rocks and trees
   const dashing = P.dashT > 0;
   if (dashing) {
     P.dashT -= dt;
@@ -1491,7 +1580,7 @@ function egoUpdate(dt) {
     fz = frozen || P.pj || P.air ? 0 : (P.waterDrag = lerp(P.waterDrag ?? swim, swim, 1 - Math.exp(-dt * 9)));
   let wvx = vx * speed * fz,
     wvz = vz * speed * fz;
-  if (!P.pj && !P.air && !frozen) {
+  if (!P.pj && !P.air && !frozen && !flyOn) {
     iceVelocity(P, wvx, wvz, dt);
     wvx = P.ivx;
     wvz = P.ivz;
@@ -1503,7 +1592,10 @@ function egoUpdate(dt) {
   }
   const nx = P.x + wvx * dt,
     nz = P.z + wvz * dt;
-  if (P.tun && !frozen) {
+  if (flyOn) {
+    P.x = nx;
+    P.z = nz;
+  } else if (P.tun && !frozen) {
     if (canBurrow(nx, nz)) {
       P.x = nx;
       P.z = nz;
@@ -1538,7 +1630,7 @@ function egoUpdate(dt) {
     }
   }
   P.slope = !walkable(P.x, P.z) && edgeSlide(P.x, P.z);
-  if (!walkable(P.x, P.z) && !P.pj && !P.air && !P.falling && !P.slope) {
+  if (!walkable(P.x, P.z) && !P.pj && !P.air && !P.falling && !P.slope && !flyOn) {
     const q = nearestWalkable(MAP, P.x, P.z);
     P.x = q.x;
     P.z = q.z;
@@ -1600,7 +1692,8 @@ function egoUpdate(dt) {
     if (P.pj) {
       P.vy = 0;
     } else if (!P.air) {
-      P.fy = g;
+      if (P.hen) henFly(P, dt);
+      P.fy = g + (P.fh || 0);
       P.vy = 0;
     }
     if (P.wasJump && !((P.jumpT || 0) > 0) && P.jy0 !== undefined && P.jy0 - g > 3.6) {
@@ -1626,6 +1719,10 @@ function egoUpdate(dt) {
     flying: !!P.air,
   };
   if (P.cb) input.cb = P.cb; // the combo step of the last blow (CMB)
+  if (P.hen) {
+    input.fh = +P.fh.toFixed(2);
+    input.dv = P.dv || 0;
+  }
   if (P.air) input.av = [P.air.vx, P.air.vz, P.air.vy, P.air.kind === 'dash' ? 1 : 0, +P.fy.toFixed(3), +P.air.sy.toFixed(3)];
   if (P.ad) input.ad = P.ad;
   if (P.at) input.at = P.at;
@@ -1753,11 +1850,14 @@ function egoUpdate(dt) {
       egoHint(TR('Zu spät – der Wurm ist schon weg!'), 1400);
     }
   }
+  egoLoadUi(P); // "Ins Katapult" (75-fass-falle-view.js)
+  if (!!P.burning !== document.body.classList.contains('burnOn')) document.body.classList.toggle('burnOn', !!P.burning);
+  if (P.fassCam && fassCamTick(P, dt)) return; // the camera rides along with the own Feuerfass
   if (P.heroOn && heroCam(P, dt)) return;
   const cav = KINDS[P.k].role === 'cav' || !!KINDS[P.k].bear,
     sg = KINDS[P.k].role === 'siege',
     wmE = !!KINDS[P.k].worm,
-    back = (sg ? 10.5 : wmE ? 10.5 : cav ? 7.2 : 6.3) + (P.held && !wmE ? 5 : 0),
+    back = (sg ? 10.5 : wmE ? 10.5 : cav ? 7.2 : 6.3) + (P.held && !wmE ? 5 : 0) + (P.hen ? Math.min(5, (P.fh || 0) * 0.35) : 0),
     side = 0,
     gy =
       (P.fy ?? unitY(P.x, P.z)) +

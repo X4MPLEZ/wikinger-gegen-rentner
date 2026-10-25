@@ -72,6 +72,8 @@ const STANCE = {
   3: pose({ aL: -0.08, eL: -1.35, zL: -0.18, aR: 0.06, eR: -0.32, zR: 0.12, ln: 0.12, kL: 0.16, kR: 0.16, nx: -0.1 }), // Oma: handbag on the forearm
   4: pose({ aL: -0.95, eL: -0.5, zL: 0.05, aR: -0.5, eR: -1.05, zR: 0.15, ln: 0.08 }), // goat rider: holds a horn, axe up
   5: pose({ aL: -1.2, eL: -0.25, zL: 0.1, aR: -1.2, eR: -0.25, zR: -0.1, ln: 0.16 }), // scooter: both hands on the tiller
+  12: pose({ aL: -0.62, eL: -0.82, zL: -0.13, aR: -0.62, eR: -0.82, zR: 0.13, yL: 0.25, yR: -0.25, ln: 0.12, kL: 0.2, kR: 0.2, nx: -0.05 }), // Feuerfass: hugs the barrel
+  13: pose({ aR: -0.08, eR: -0.3, zR: 0.14, aL: 0.18, eL: -0.75, zL: -0.06, ln: 0.12, kL: 0.15, kR: 0.15, nx: -0.08 }), // Fallenleger: trap at his side
 };
 // gait per walking character: stride, knee lift, arm swing [left, right], bounce, waddle ...
 const GAIT = {
@@ -79,6 +81,8 @@ const GAIT = {
   1: { stride: 0.58, knee: 0.9, arm: [0.28, 0.44], elbow: 0.3, bob: 0.014, sway: 0.008, roll: 0.018, twist: 0.07, rate: 2.45, lean: 0.07 },
   2: { stride: 0.36, knee: 0.58, arm: [0, 0.26], elbow: 0.2, bob: 0.008, sway: 0.01, roll: 0.022, twist: 0.05, rate: 2.9, lean: 0.05 },
   3: { stride: 0.34, knee: 0.52, arm: [0.06, 0.3], elbow: 0.3, bob: 0.01, sway: 0.012, roll: 0.03, twist: 0.04, rate: 3.3, lean: 0.05 },
+  12: { stride: 0.44, knee: 0.72, arm: [0, 0], elbow: 0, bob: 0.024, sway: 0.03, roll: 0.055, twist: 0.04, rate: 2.55, lean: 0.12 }, // a heavy waddle
+  13: { stride: 0.4, knee: 0.62, arm: [0.24, 0.1], elbow: 0.22, bob: 0.01, sway: 0.012, roll: 0.025, twist: 0.05, rate: 2.8, lean: 0.06 },
 };
 /* Melee moves per kind: the combat-ready pose and a list of moves. Each move is [wind-up, follow-through] plus what it is:
    n = an ordinary blow (also in ego combos), a = only the computer uses it (butts, rams, shield bash), f = a finisher (the 3rd blow of a
@@ -117,6 +121,39 @@ const CPOSE = (() => {
     nx: -0.25,
   });
   const r4 = pose({ aL: -0.95, eL: -0.5, aR: -0.95, eR: -1.05, zR: 0.2, ln: 0.12, mh: 0.1 });
+  // Feuerfass: arms round the barrel, low and wide – every blow is the whole body with the barrel in front
+  const r12 = pose({
+    aL: -0.68,
+    eL: -0.85,
+    zL: -0.13,
+    aR: -0.68,
+    eR: -0.85,
+    zR: 0.13,
+    yL: 0.25,
+    yR: -0.25,
+    ln: 0.2,
+    kL: 0.32,
+    kR: 0.32,
+    thL: -0.2,
+    thR: 0.15,
+    nx: -0.08,
+  });
+  // Fallenleger: the trap raised in the right hand, the left fist up like an old boxer
+  const r13 = pose({
+    aR: -0.95,
+    eR: -1.25,
+    zR: 0.22,
+    aL: -0.75,
+    eL: -1.55,
+    zL: -0.15,
+    ln: 0.18,
+    tw: 0.15,
+    kL: 0.3,
+    kR: 0.3,
+    thL: -0.2,
+    thR: 0.15,
+    nx: -0.1,
+  });
   const r5 = pose({ aL: -1.2, eL: -0.25, zL: 0.1, aR: -1.2, eR: -0.25, zR: -0.1, ln: 0.18 });
   const mv = (r, w, s, o) => Object.assign({ v: [pose(w, r), pose(s, r)], n: 'n', W: 0.07, sl: { m: 'h', d: -1 } }, o);
   const set = (ready, moves) => ({ ready, v: moves.map(m => m.v), m: moves });
@@ -283,6 +320,72 @@ const CPOSE = (() => {
         { n: 'f', W: 0.15, sl: { m: 'v', s: 1.2 } }
       ), // wheelie and a hammer fist
     ]),
+    12: set(r12, [
+      mv(
+        r12,
+        { ln: -0.24, aL: -0.42, aR: -0.42, eL: -1.25, eR: -1.25, thL: 0.12, kL: 0.2, kR: 0.28, nx: -0.15, hop: 0.02 },
+        { ln: 0.58, aL: -1.4, aR: -1.4, eL: -0.35, eR: -0.35, thL: -0.62, thR: 0.32, kL: 0.58, kR: 0.45, hop: -0.05, nx: 0.15 },
+        { sl: { m: 'h', d: 1, s: 0.8, low: 1 } }
+      ), // barrel shove
+      mv(
+        r12,
+        { tw: 0.95, ln: 0.04, rl: 0.1, aL: -0.72, aR: -0.5, kR: 0.38, thR: 0.25 },
+        { tw: -0.95, ln: 0.32, rl: -0.1, aL: -0.95, aR: -0.95, thL: -0.42, kL: 0.52 },
+        { sl: { m: 'h', d: -1 } }
+      ), // the barrel swung from the right
+      mv(
+        r12,
+        { tw: -0.95, ln: 0.04, rl: -0.1, aL: -0.5, aR: -0.72, kL: 0.38, thL: 0.25 },
+        { tw: 0.95, ln: 0.32, rl: 0.1, aL: -0.95, aR: -0.95, thR: -0.42, kR: 0.52 },
+        { sl: { m: 'h', d: 1 } }
+      ), // and from the left
+      mv(r12, { nx: -0.5, ln: -0.12, hop: 0.03 }, { nx: 0.55, ln: 0.52, thL: -0.42, kL: 0.48 }, { n: 'a', sl: { m: 'h', d: 1, s: 0.7 } }), // headbutt over the barrel
+      mv(
+        r12,
+        { tw: 1.1, zL: -0.95, zR: 0.95, aL: -1.25, aR: -1.25, eL: -0.35, eR: -0.35, ln: 0.12, kL: 0.4, kR: 0.4 },
+        { tw: -0.2, zL: -1.05, zR: 1.05, aL: -1.3, aR: -1.3, eL: -0.3, eR: -0.3, ln: 0.18, kL: 0.35, kR: 0.35 },
+        { n: 'f', spin: 1, W: 0.12, sl: { m: 'r' } }
+      ), // the barrel round and round
+      mv(
+        r12,
+        { aL: -1.0, aR: -1.0, ln: -0.32, kL: 0.78, kR: 0.78, thL: -0.6, thR: -0.5 },
+        { aL: -1.45, aR: -1.45, ln: 0.78, hop: -0.16, kL: 0.88, kR: 0.88, thL: -0.5, thR: 0.3 },
+        { n: 'f', jump: 0.72, W: 0.17, sl: { m: 'v', s: 1.3 } }
+      ), // belly flop onto the barrel
+    ]),
+    13: set(r13, [
+      mv(
+        r13,
+        { aR: -2.85, eR: -1.0, ln: -0.1, tw: 0.25, nx: -0.3, hop: 0.03 },
+        { aR: -0.6, eR: -0.1, ln: 0.5, tw: -0.1, kL: 0.5, kR: 0.5, hop: -0.06, thL: -0.35 },
+        { sl: { m: 'v' } }
+      ), // the trap (or the fist) slammed down
+      mv(
+        r13,
+        { aR: -1.2, zR: 1.1, eR: -1.6, yR: 0.3, tw: 0.7 },
+        { aR: -1.45, zR: -0.4, eR: -0.4, yR: -0.3, tw: -0.7, ln: 0.3, thL: -0.3, kL: 0.4 },
+        { sl: { m: 'h', d: -1 } }
+      ), // right hook
+      mv(
+        r13,
+        { aL: -1.3, zL: -1.0, eL: -1.6, tw: -0.6 },
+        { aL: -1.5, zL: 0.4, eL: -0.4, tw: 0.65, ln: 0.3, thR: -0.3, kR: 0.4 },
+        { sl: { m: 'h', d: 1, s: 0.85 } }
+      ), // left hook
+      mv(r13, { aR: 0.2, eR: -1.6, ln: 0.35, kL: 0.5, kR: 0.5 }, { aR: -2.4, eR: -0.9, ln: -0.1, hop: 0.06 }, { n: 'a', sl: { m: 'u' } }), // uppercut
+      mv(
+        r13,
+        { aR: -1.55, zR: 1.5, eR: -0.1, tw: 1.0, aL: -0.8, zL: -1.1, kL: 0.4, kR: 0.4 },
+        { aR: -1.55, zR: 1.5, eR: -0.05, tw: -0.2, aL: -0.6, zL: -1.2, kL: 0.35, kR: 0.35 },
+        { n: 'f', spin: 1, W: 0.12, sl: { m: 'r' } }
+      ), // the trap swung all round on its chain
+      mv(
+        r13,
+        { aR: -2.9, aL: -2.7, eR: -1.2, eL: -1.2, ln: -0.2, kL: 0.6, kR: 0.6 },
+        { aR: -0.8, aL: -0.9, eR: -0.1, eL: -0.2, ln: 0.55, hop: -0.08, kL: 0.8, kR: 0.8 },
+        { n: 'f', jump: 0.55, W: 0.16, sl: { m: 'v', s: 1.2 } }
+      ), // the old trapper's leap
+    ]),
   };
 })();
 // move picking: ordinary moves, finishers, and the next move the arm already waits for
@@ -388,6 +491,22 @@ function rangedPose(u, C, at, pre, cd) {
    and stays there while the fight goes on: the warrior waits, weapon raised, for the next blow. A finisher spins the whole body
    round or leaps into the blow. The steered warrior winds up for the move's W (the slash and the hit come right then, 51-ego.js). */
 const _cock = new Float32Array(NP);
+/* A damped spring (hit recoil, head wobble, catapult recoil), stepped in pieces of at most 12 ms. In one big step – a slow phone in a
+   crowd, or a unit far away that is animated at 15 Hz (up to 0.1 s per update) – the spring overshoots further every frame: the bodies
+   flailed back and forth while the feet stood still. The swing is also capped, however many blows land at once. */
+function springStep(o, kx, kv, target, k, c, dt, cap) {
+  const n = Math.min(12, Math.ceil(dt / 0.012) || 1),
+    h = dt / n;
+  let x = o[kx] || 0,
+    v = o[kv] || 0;
+  if (!Number.isFinite(x) || !Number.isFinite(v)) x = v = 0;
+  for (let i = 0; i < n; i++) {
+    v += (-(x - target) * k - v * c) * h;
+    x += v * h;
+  }
+  o[kx] = clamp(x, target - cap, target + cap);
+  o[kv] = clamp(v, -30, 30);
+}
 function meleeSwing(u, cp, C, at, pre) {
   const i = (u.av || 0) % cp.v.length,
     v = cp.v[i],
@@ -433,6 +552,8 @@ const FIDGETS = {
   3: ['glasses', 'wave', 'look', 'bag', 'teeth'],
   4: ['pat', 'look', 'cheer', 'stretch'],
   5: ['honk', 'look', 'wave', 'stretch'],
+  12: ['barrelPat', 'sniff', 'look', 'scratch', 'cheer'],
+  13: ['trapCheck', 'look', 'back', 'scratch', 'glasses'],
 };
 function fidgetPose(u, P, dt, look) {
   const f = u.fid;
@@ -561,6 +682,35 @@ function fidgetPose(u, P, dt, look) {
       P[LN] += 0.25 * e;
       look = -0.4 * e;
       break;
+    case 'barrelPat': {
+      // Feuerfass: pats his barrel lovingly
+      const b = Math.max(0, Math.sin(f.t * 8));
+      P[A_R] = L(P[A_R], -0.8 - 0.25 * b, e);
+      P[E_R] = L(P[E_R], -1.1, e);
+      P[NX] += 0.2 * e;
+      look = -0.15 * e;
+      if (b > 0.97 && !f.bang && e > 0.4) {
+        f.bang = 1;
+        SFX.play('bonk', { x: u.g.position.x, z: u.g.position.z, vol: 0.18 });
+      } else if (b < 0.2) f.bang = 0;
+      break;
+    }
+    case 'sniff':
+      // ... and sniffs the fuse
+      P[NX] += 0.4 * e;
+      P[LN] += 0.12 * e;
+      look = Math.sin(f.t * 9) * 0.08 * e;
+      break;
+    case 'trapCheck':
+      // Fallenleger: lifts the trap and checks the jaws
+      P[A_R] = L(P[A_R], -1.25, e);
+      P[E_R] = L(P[E_R], -1.3, e);
+      P[Z_R] = L(P[Z_R], -0.2, e);
+      P[A_L] = L(P[A_L], -1.0, e);
+      P[E_L] = L(P[E_L], -1.4 + Math.sin(f.t * 14) * 0.12, e);
+      P[NX] += 0.3 * e;
+      look = 0.15 * e;
+      break;
     case 'honk':
       P[A_R] = L(P[A_R], -1.0, e);
       P[E_R] = L(P[E_R], -0.4, e);
@@ -639,8 +789,8 @@ function humanRig(u, dt, moving, attacking) {
     P[K_R] += (Kb * Math.max(0, Math.cos(t + Math.PI + 0.35)) + 0.06) * mb;
     P[A_L] += G0.arm[0] * aw * s * mb;
     P[A_R] -= G0.arm[1] * aw * s * mb;
-    P[E_L] -= (G0.elbow + 0.9 * run + 0.25 * Math.max(0, -s)) * mb * (k === 3 || k === 2 ? 0.2 : 1);
-    P[E_R] -= (G0.elbow + 0.9 * run + 0.25 * Math.max(0, s)) * mb;
+    P[E_L] -= (G0.elbow + 0.9 * run + 0.25 * Math.max(0, -s)) * mb * (k === 3 || k === 2 ? 0.2 : k === 12 ? 0 : 1);
+    P[E_R] -= (G0.elbow + 0.9 * run + 0.25 * Math.max(0, s)) * mb * (k === 12 ? 0 : 1); // (the Feuerfass keeps both arms round the barrel)
     P[LN] += (G0.lean + 0.12 * run) * mb;
     P[TW] -= G0.twist * s * mb;
     P[RL] += G0.roll * c * mb * calm;
@@ -698,8 +848,7 @@ function humanRig(u, dt, moving, attacking) {
     }
   }
   // reactions: hit recoil spring (kicked by every hit), cheering after the target went down
-  u.hitV += (-u.hitA * 140 - u.hitV * 21) * dt;
-  u.hitA += u.hitV * dt;
+  springStep(u, 'hitA', 'hitV', 0, 140, 21, dt, 1.4);
   if (u.flinch > 0) u.flinch -= dt;
   {
     const hA = u.hitA;
@@ -770,6 +919,49 @@ function humanRig(u, dt, moving, attacking) {
       P[LN] = lerp(P[LN], 0, spinQ);
     }
   }
+  // the newest states (16-sim-fass-falle.js): caught in a trap (tugs at the stuck foot), burning (flails), a lit fuse (trembles)
+  if (u.trapped) {
+    const w = Math.sin(ph * 13),
+      w2 = Math.sin(ph * 7.3);
+    if (!seated) {
+      P[T_L] = -0.12;
+      P[K_L] = 0.22;
+      P[T_R] = -0.55 + w2 * 0.35;
+      P[K_R] = 0.9 + w2 * 0.3;
+    }
+    P[LN] = 0.32 + w * 0.08;
+    P[RL] = w2 * 0.12;
+    if (u.cw < 0.5 && k !== 12) {
+      P[A_L] = -1.7 + w * 0.6;
+      P[A_R] = -1.5 - w * 0.6;
+      P[E_L] = -0.6;
+      P[E_R] = -0.6;
+    }
+    look = w * 0.4;
+  } else if (u.burning && u.cw < 0.4 && !seated && k !== 12) {
+    const w = Math.sin(ph * 17);
+    P[A_L] = -2.7 + w * 0.5;
+    P[A_R] = -2.7 - w * 0.5;
+    P[E_L] = -0.4;
+    P[E_R] = -0.4;
+    P[Z_L] = -0.3;
+    P[Z_R] = 0.3;
+    look = Math.sin(ph * 9) * 0.6;
+  }
+  if (u.fuseOn) rx += Math.sin(ph * 47) * 0.012;
+  if (u.layT > 0) {
+    // the Fallenleger bends down and sets his trap on the ground
+    u.layT -= dt;
+    const q = Math.sin(clamp(1 - u.layT / 0.55, 0, 1) * Math.PI);
+    P[LN] = lerp(P[LN], 0.75, q);
+    P[K_L] = lerp(P[K_L], 0.9, q);
+    P[K_R] = lerp(P[K_R], 0.9, q);
+    P[T_L] = lerp(P[T_L], -0.55, q);
+    P[T_R] = lerp(P[T_R], -0.35, q);
+    P[A_R] = lerp(P[A_R], -0.9, q);
+    P[E_R] = lerp(P[E_R], -0.2, q);
+    P[NX] = lerp(P[NX], 0.3, q);
+  }
   // apply the pose
   u.armL.rotation.set(P[A_L], P[Y_L], P[Z_L]);
   u.armR.rotation.set(P[A_R], P[Y_R], P[Z_R]);
@@ -801,8 +993,7 @@ function humanRig(u, dt, moving, attacking) {
     u.rig.rotation.y = ((0.6 - u.spin) / 0.6) * TAU * 2;
   } else u.rig.rotation.y = u.cw > 0.3 ? u.swYaw || 0 : 0; // the whirlwind finisher turns the whole body
   const target = moving ? Math.sin(t * 0.5) * 0.02 * calm : 0;
-  u.wobV += (-(u.wob - target) * 90 - u.wobV * 14) * dt;
-  u.wob += u.wobV * dt;
+  springStep(u, 'wob', 'wobV', target, 90, 14, dt, 0.8);
   u.neck.rotation.z = u.wob - P[RL] * 0.5;
   u.neck.rotation.x = Math.abs(u.wob) * 0.3 + P[NX] - P[LN] * 0.55;
   u.neck.rotation.y = look - P[TW] * 0.6;
@@ -811,6 +1002,17 @@ function humanRig(u, dt, moving, attacking) {
     u.bag.rotation.x =
       -(P[A_L] + Math.min(0, P[E_L]) + P[LN]) * 0.95 + 0.3 * Math.sin(t + 1) * mb + u.hitA * 0.8 + Math.sin(ph * 1.7) * 0.04;
     u.bag.rotation.z = -P[Z_L] + 0.15 * c * mb;
+  }
+  if (u.barrel) {
+    // the Feuerfass's barrel goes where his hands push it
+    const fw = clamp(-(P[A_L] + P[A_R]) / 2 - 0.62, -0.3, 1.0);
+    u.barrel.position.set(0, 0.86 + fw * 0.12, 0.42 + fw * 0.32);
+    u.barrel.rotation.x = -fw * 0.25;
+  }
+  if (u.trap) {
+    // the Fallenleger's trap: hangs from his hand on its chain, swings with the blow; gone once it is laid
+    u.trap.visible = u.trapC !== false;
+    u.trap.rotation.x = -(P[A_R] + Math.min(0, P[E_R]) + P[LN]) * (u.cw > 0.5 ? 0.25 : 0.9) + Math.sin(ph * 2.1) * 0.05 * mb;
   }
   if (k === 2 && u.weapon) {
     // Opa leans on the cane while walking and standing, swings it in a fight
@@ -906,8 +1108,7 @@ function catapultRig(u, dt, moving) {
   } else arm = -0.3 + Math.sin(u.ph * 1.1) * 0.012;
   u.armA = arm;
   u.arm.rotation.x = arm;
-  u.rkV += (-u.rk * 150 - u.rkV * 8) * dt;
-  u.rk += u.rkV * dt;
+  springStep(u, 'rk', 'rkV', 0, 150, 8, dt, 0.6);
   u.rig.rotation.x = u.rk + Math.sin(u.walk * 1.7 + 0.8) * 0.006 * mb;
   u.rig.rotation.z = Math.sin(u.walk * 1.7) * 0.01 * mb;
   u.rig.position.y = Math.abs(Math.sin(u.walk * 1.7)) * 0.012 * mb;
