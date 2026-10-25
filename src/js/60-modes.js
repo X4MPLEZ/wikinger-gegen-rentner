@@ -197,7 +197,8 @@ function beginMatch(mode, facs, myTeam, seed) {
   V.warnedPoss = false;
   V.cdLast = null;
   V.siegeTip = false;
-  if (!V.tut && !hintState.done.has('spawn')) setTimeout(() => toast(HINTS[0].text(), 4500), 1200);
+  guideStart(); // first steps for a new player (53-guide.js)
+  if (!V.tut && !GUIDE.on && !hintState.done.has('spawn')) setTimeout(() => toast(HINTS[0].text(), 4500), 1200);
   setTimeout(warmShaders, 60);
   if (mode !== 'ai') setTimeout(() => V.playing && vsCard(V.oppPf), 200);
   // a back swipe (Android) or the browser's back button opens the menu instead of leaving the match (see popstate in 62-screens.js)
@@ -373,6 +374,7 @@ function playAi(keepNet = false) {
   startSim(true);
 }
 function endGame(s) {
+  guideStop();
   V.playing = false;
   stopSim();
   if (V.poss) exitEgo(false);

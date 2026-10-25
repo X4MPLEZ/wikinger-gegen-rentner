@@ -21,7 +21,9 @@ page_html = (
     '<!doctype html><html><head><meta charset=utf8>'
     '<meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover">'
     # the tests read German texts: pin the language (a test may override it with ?lang=xx)
-    '<script>window.WVR_LANG="de"</script></head><body>' + html + '</body></html>'
+    # the tests have played before: no tutorial offer and no first-steps card (tests/t_guide.py removes both again)
+    '<script>window.WVR_LANG="de";try{localStorage.setItem("wvr-first","1");localStorage.setItem("wvr-guide","1")}catch(e){}</script>'
+    '</head><body>' + html + '</body></html>'
 )
 
 

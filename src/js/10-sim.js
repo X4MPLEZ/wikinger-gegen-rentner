@@ -709,7 +709,7 @@ function counterHit(G, e, attK, team, bp) {
   const ar = KINDS[attK].role,
     dr = KINDS[e.k].role;
   if (BEATS[ar] !== dr) return;
-  const fresh = G.t - (e.konT || -9) > 2.2;
+  const fresh = G.t - (e.konT || -9) > 4; // (a counter floors the same warrior at most every 4 s: fewer bodies flying about)
   if (!fresh) return;
   e.konT = G.t;
   if (ar === 'cav' && !(e.down > 0)) {
@@ -719,7 +719,7 @@ function counterHit(G, e, attK, team, bp) {
       d = Math.hypot(dx, dz) || 1;
     if (!knockFly(e, 0, 0, 2.4 * (e.poss ? 0.5 : 1), dx / d, dz / d, 0, bp ? 'ego' : 'ai')) return;
   } // overrun: the archer is bowled over
-  else if (ar === 'melee' && !(e.down > 0) && !e.poss) {
+  else if (ar === 'melee' && !(e.down > 0) && !e.poss && (bp || Math.random() < 0.6)) {
     e.down = Math.max(e.down || 0, 1.0);
     e.kb = null;
     e.dance = 0;
@@ -754,6 +754,7 @@ function traitHit(G, u, tgt, charged) {
     if (!KINDS[e.k].bear && KINDS[e.k].role !== 'siege' && knockFly(e, u.x, u.z, d, undefined, undefined, 0, u.poss ? 'ego' : 'ai'))
       e.kbTeam = u.team;
   };
+  if (u.k === 12 && !u.hen) torchBurn(G, tgt, u.team); // the Feuerfass's torch sets whoever it hits on fire
   const ram = KINDS[u.k].role === 'cav' && charged && G.chaos && pkL(G, u.team, 'ram');
   if ((u.k === 4 && charged) || ram) kb(tgt, ram ? 4.5 : u.poss ? 3 : 2.2); // Abrissbirne: every rider's charge throws
   if (ram) hit(G, tgt.id, KINDS[u.k].dmg, u.team, new Map([[tgt.id, tgt]]), u.k); // … and hits harder
@@ -1132,11 +1133,12 @@ function possAttack(G, u, byId) {
       else if (
         fin &&
         h.e.hp > 0 &&
+        !(h.e.down > 0) &&
         KINDS[h.e.k].role !== 'siege' &&
-        knockFly(h.e, u.x, u.z, 2.6, undefined, undefined, 2.4, 'ego') &&
+        knockFly(h.e, u.x, u.z, 2.2, undefined, undefined, 1.8, 'ego') &&
         h.e.air
       )
-        h.e.air.by = u.id; // the finisher sends them flying (never back into the striker)
+        h.e.air.by = u.id; // the finisher sends them flying (never back into the striker; one who is down already stays down)
     });
     if (hits.length) u.at = hits[0].e.id;
     else if (baseInReach(u, K.range + 1)) {

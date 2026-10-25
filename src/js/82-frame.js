@@ -292,6 +292,7 @@ function frame() {
     hudT = 0.12;
     updateHud();
     hintTick();
+    guideTick();
     tutTick();
   }
   if (pf) pm('hud');

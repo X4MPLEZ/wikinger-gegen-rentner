@@ -54,6 +54,16 @@ with sync_playwright() as p:
         const f2 = mk(G2, 13, 1, m2.x, m2.z, false); f2.cd = 9; const e2 = mk(G2, 1, 0, m2.x, m2.z - 9);
         let t2 = -1; for (let i = 0; i < 200 && t2 < 0; i++) { W.step(G2); if ((G2.traps || []).length) t2 = i; }
         out.trap.autoLaid = t2 >= 0; }
+      // 4b) the torch: a Feuerfass fighting one enemy sets him on fire; a trap catches two at once
+      { const G = W.newGame(['viking', 'rentner'], 3, false, { squad: false }); G.cd = 0; W.G = G; const m = meadow(G);
+        const f = mk(G, 12, 0, m.x, m.z, false); f.cd = 0; f.re = 0; const foe = mk(G, 2, 1, m.x + 1.2, m.z);
+        let burnt = 0; for (let i = 0; i < 60 && !burnt; i++) { W.step(G); if (foe.burn > 0 && !f.fuse) burnt = i + 1; }
+        const G2 = W.newGame(['viking', 'rentner'], 3, false, { squad: false }); G2.cd = 0; W.G = G2; const m2 = meadow(G2);
+        const fl = mk(G2, 13, 1, m2.x, m2.z + 6); W.layTrap(G2, fl, m2.x, m2.z);
+        const a = mk(G2, 0, 0, m2.x - 0.6, m2.z - 9, false), b2 = mk(G2, 0, 0, m2.x + 0.6, m2.z - 9, false);
+        a.ord = { x: m2.x - 0.6, z: m2.z + 3, mv: true }; b2.ord = { x: m2.x + 0.6, z: m2.z + 3, mv: true };
+        let both = 0; for (let i = 0; i < 160 && !both; i++) { W.step(G2); if (a.trapT > 0 && b2.trapT > 0) both = 1; }
+        out.torch = { burnt, both, trapVs: (G2.traps[0] || {}).vs }; }
       // 5) the flying chicken
       { const G = W.newGame(['viking', 'rentner'], 3, false, { squad: false }); G.cd = 0; W.G = G; const m = meadow(G);
         const h = mk(G, 0, 0, m.x, m.z); h.hen = 1; h.hp = W.HEN.hp; h.mhp = W.HEN.hp;
@@ -72,12 +82,13 @@ with sync_playwright() as p:
         out.hen = { oneTick: +oneTick.toFixed(2), top: +top.toFixed(1), aloft: W.aloft({ fh: top }), hpUp: Math.round(hpUp), hpMax: W.HEN.hp, foeAtkWhileUp: foeHits, diveLoss: Math.round(fhp - fe.hp), xeDive: (G.xe || []).some(e => e[4] === W.XE.dive), hf: s.hf }; }
       return out; }""")
     print(json.dumps(r, indent=1)); print('ERRS', errs[:3]); b.close()
-bl, du, ld, sh, tr, hn = r['blast'], r['dud'], r['load'], r['shot'], r['trap'], r['hen']
+bl, du, ld, sh, tr, hn, to = r['blast'], r['dud'], r['load'], r['shot'], r['trap'], r['hen'], r['torch']
 ok = (bl['lit'] and bl['fuseFlag'] and bl['burnFlag'] and bl['xeKind'] == 0 and bl['fassDead'] and min(bl['foeLoss']) >= 25 and bl['foeKnocked'] + sum(1 for x in bl['foeLoss'] if x >= 175) >= 2
       and bl['foeBurnt'] >= 2 and 0 < bl['ownLoss'] < 40
       and 1 in du['xe'] and du['foeLoss'] > 10
       and ld['gone'] and ld['fass'] == 1 and ld['pos'] and ld['catPoss'] and ld['gn'] and ld['flag']
       and sh['proj'] and sh['xeKind'] == 2 and sh['xeNear'] and sh['tgtLoss'] >= 60 and not sh['fassAfter']
       and tr['laid'] and tr['carryAfter'] == 0 and tr['caught'] and tr['bitten'] >= 25 and tr['heldMove'] < 0.2 and tr['holdTicks'] >= 55 and tr['released'] and tr['snapTr'] and tr['newTrap'] and tr['autoLaid']
+      and to['burnt'] and to['both']
       and hn['oneTick'] < 0.3 and hn['top'] >= 15 and hn['aloft'] and hn['foeAtkWhileUp'] == 0 and hn['diveLoss'] >= 15 and hn['xeDive'] and not errs)
 print('FASS', 'OK' if ok else 'FAIL')

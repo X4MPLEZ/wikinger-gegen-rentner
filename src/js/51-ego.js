@@ -26,6 +26,7 @@ function enterEgo() {
     u = V.units.get(id);
   if (!u || u.team !== V.myTeam) return;
   sendCmd({ t: 'poss', id });
+  GUIDE.flags.ego = true;
   const K = KINDS[u.k];
   V.poss = {
     id,
@@ -691,8 +692,8 @@ function egoAttack() {
     P.at = [+pt.x.toFixed(2), +pt.y.toFixed(2), +pt.z.toFixed(2)];
     const m = freeArrowMesh(P.k);
     fx.shots.push({ m, p: from.clone().addScaledVector(dir, 0.5), d: dir.clone(), k: P.k, t: 0, life: (K.range * 2.5) / CFG.arrowSpeed });
-    EG.kick = Math.max(EG.kick, 0.16);
-    EG.punch = Math.max(EG.punch || 0, 0.35); // the release punches the view a little
+    EG.kick = Math.max(EG.kick, 0.2);
+    EG.punch = Math.max(EG.punch || 0, 0.7); // the release punches the view in
     SFX.play(P.k === 1 ? 'bow' : 'teeth', { vol: 1.1 });
     const mu = V.units.get(P.id);
     if (mu) mu.atkT = 0; // release at once: then the draw (or the wind-up) of the next shot plays through the reload
@@ -1858,7 +1859,7 @@ function egoUpdate(dt) {
     sg = KINDS[P.k].role === 'siege',
     wmE = !!KINDS[P.k].worm,
     back = (sg ? 10.5 : wmE ? 10.5 : cav ? 7.2 : 6.3) + (P.held && !wmE ? 5 : 0) + (P.hen ? Math.min(5, (P.fh || 0) * 0.35) : 0),
-    side = 0,
+    side = KINDS[P.k].role === 'ranged' && !P.hen ? -2.6 : 0, // archer and Oma: over the left shoulder, a little lower, so you see the bow drawn and the arm wound up
     gy =
       (P.fy ?? unitY(P.x, P.z)) +
       (wmE ? 1.4 : 0) +
@@ -1874,7 +1875,7 @@ function egoUpdate(dt) {
     sp2 = Math.sin(P.pitch);
   // Camera: rotation follows yaw/pitch IMMEDIATELY (no lag, no sponge); only the pivot POSITION is smoothed,
   // frame-rate independently, to hide terrain steps and network corrections.
-  const pv = EG.pivT.set(P.x + rx * side, gy + (sg ? 5.2 : cav ? 4.3 : 3.7), P.z + rz * side);
+  const pv = EG.pivT.set(P.x + rx * side, gy + (sg ? 5.2 : cav ? 4.3 : side ? 3.0 : 3.7), P.z + rz * side);
   if (!EG.camInit) {
     EG.piv.copy(pv);
     EG.lift = 0;
@@ -1942,8 +1943,14 @@ function egoUpdate(dt) {
   camera.position.copy(EG.cam);
   camera.lookAt(EG.lk);
   {
+    // shooting: the view widens a little while the bow is drawn (the Oma winds up) and tightens again when it is ready; the
+    // release punches in for a moment (EG.punch) – you feel the shot
+    const mu = V.units.get(P.id),
+      ranged = KINDS[P.k].role === 'ranged' && !P.hen,
+      drawn = ranged && mu ? mu.drawn || 0 : 0;
+    EG.draw = lerp(EG.draw || 0, ranged ? 1 - drawn : 0, Math.min(1, dt * 9));
     const f0 = camera.aspect < 1 ? 78 : 62,
-      want = f0 + (P.dashT > 0 ? 9 : 0) - (EG.punch || 0) * 4; // a combo finisher punches in for a moment
+      want = f0 + (P.dashT > 0 ? 9 : 0) - (EG.punch || 0) * 4 + EG.draw * 4; // a combo finisher punches in for a moment
     EG.punch = Math.max(0, (EG.punch || 0) - dt * 5);
     if (Math.abs(camera.fov - want) > 0.05) {
       camera.fov = lerp(camera.fov, want, Math.min(1, dt * (P.dashT > 0 || EG.punch > 0 ? 14 : 5)));

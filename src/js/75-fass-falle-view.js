@@ -458,17 +458,18 @@ function trapTick(dt) {
         z = e[3] / 10;
       g.position.set(x, groundY(x, z) + 0.03, z);
       g.rotation.y = (id * 2.4) % TAU;
-      g.scale.setScalar(1.45);
+      g.scale.setScalar(2.2);
       scene.add(g);
       if (own) {
+        // the own trap is easy to spot: a ring in the team colour as wide as the trap bites (TRAP.r), pulsing while armed
         const rm = new THREE.MeshBasicMaterial({
           color: lin(V.facs[V.myTeam] === 'viking' ? 0x5aa8ff : 0xff7ab8),
           transparent: true,
-          opacity: 0.55,
+          opacity: 0.7,
           depthWrite: false,
         });
         const ring = new THREE.Mesh(ringGeo, rm);
-        ring.scale.setScalar(0.62);
+        ring.scale.setScalar(TRAP.r / 2.2);
         ring.position.y = 0.02;
         g.add(ring);
       }
@@ -502,7 +503,7 @@ function trapTick(dt) {
     v.g.visible = v.own || v.foeVis || !FOG.on || fogSeen(v.x, v.z);
     if (v.own && st === 1) {
       const ring = v.g.children[v.g.children.length - 1];
-      if (ring && ring.material) ring.material.opacity = 0.35 + 0.2 * Math.sin(clock * 3 + id);
+      if (ring && ring.material) ring.material.opacity = 0.55 + 0.3 * Math.sin(clock * 3 + id);
     }
   }
   for (const [id, v] of BOOM.traps)

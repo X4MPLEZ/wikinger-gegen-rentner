@@ -216,6 +216,8 @@ window.__wvr = {
   setMap,
   buildUnit,
   groundY,
+  GUIDE,
+  FLAGS,
   animateRig,
   enterEgo,
   exitEgo,
@@ -229,6 +231,8 @@ window.__wvr = {
   tutGo,
   startTutorial,
   toScreen,
+  pickUnit,
+  groundAt,
   ff: n => {
     for (let i = 0; i < n; i++) {
       step(G);

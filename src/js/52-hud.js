@@ -93,7 +93,7 @@ const HINTS = [
     text: () =>
       COARSE
         ? TR('Profi-Trick: Finger lange halten und eine Schlinge um Krieger ziehen.')
-        : TR('Profi-Trick: Mit gedrückter linker Maustaste eine Schlinge um Krieger ziehen.'),
+        : TR('Profi-Trick: Mit gedrückter linker Maustaste einen Rahmen um Krieger ziehen. Klick ins Leere wählt ab.'),
   },
   { id: 'home', text: () => TR('Heimvorteil: Im gestrichelten Kreis um deine Basis nehmen deine Krieger 25 % weniger Schaden.') },
 ];
@@ -110,7 +110,7 @@ function hintDone(id) {
   }
 }
 function hintTick() {
-  if (V.tut || !V.playing || V.poss || $('#toast').classList.contains('show')) return;
+  if (V.tut || GUIDE.on || !V.playing || V.poss || $('#toast').classList.contains('show')) return;
   const h = HINTS.find(h2 => !hintState.done.has(h2.id));
   if (!h) return;
   if (h.id === 'select' && !ownUnits().length) return;
@@ -311,8 +311,8 @@ function updateHud() {
               ? TR('<b>Tippe</b> auf Ziel oder Gegner · <b>Übernehmen</b>: selbst steuern')
               : TR('<b>Rechtsklick</b> auf Ziel oder Gegner · <b>Übernehmen</b>: selbst steuern')
             : COARSE
-              ? TR('<b>{0} gewählt</b> · Tippe auf Boden, Gegner oder Basis · „Abwählen“ für Einzelauswahl', n)
-              : TR('<b>{0} gewählt</b> · Rechtsklick auf Boden, Gegner oder Basis', n);
+              ? TR('<b>{0} gewählt</b> · Tippe auf Boden, Gegner oder Basis · Tipp auf einen Krieger wählt nur ihn', n)
+              : TR('<b>{0} gewählt</b> · Rechtsklick auf Boden, Gegner oder Basis · Klick ins Leere wählt ab', n);
     const el = $('#ctxHint');
     if (el._h !== h) {
       el._h = h;
@@ -382,6 +382,7 @@ function spawnSlot(i) {
   }
   sendCmd({ t: 'spawn', k });
   hintDone('spawn');
+  GUIDE.flags.spawn = true;
   if (COARSE && !(V.kindSeen || (V.kindSeen = {}))[k]) {
     V.kindSeen[k] = 1;
     toast(TR('{0} · {1} · lange drücken = AUTO', KINDS[k].name, b.querySelector('.beats').textContent), 2200);

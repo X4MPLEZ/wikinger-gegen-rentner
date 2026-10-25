@@ -237,7 +237,7 @@ const KINDS = [
     tag: TR('sprengt Gruppen'),
     ego: { hp: 1, cd: 1, dmg: 1 },
     trait: TR(
-      'Zündet mitten im Gegnerhaufen sein Pulverfass: alle fliegen und brennen, eigene Leute nur ein bisschen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
+      'Fass auf der Schulter, Fackel in der Hand: Wen er schlägt, der brennt. Zündet mitten im Gegnerhaufen sein Pulverfass: alle fliegen und brennen, eigene Leute nur ein bisschen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
     ),
   },
   {
@@ -258,7 +258,7 @@ const KINDS = [
     sp: TR('Bärenfalle'),
     tag: TR('stellt Fallen'),
     trait: TR(
-      'Legt eine Bärenfalle, die der Gegner kaum sieht: Wer hineintritt, sitzt fest. Schlägt mit der Falle zu, danach mit den Fäusten'
+      'Legt eine Bärenfalle, die der Gegner kaum sieht: Wer hineintritt, sitzt fest und wird zerbissen – auch mehrere auf einmal. Schlägt mit der Falle zu, danach mit den Fäusten'
     ),
   },
 ];

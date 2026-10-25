@@ -96,6 +96,12 @@ function drawLasso(pts) {
   lassoCtx.stroke();
   lassoCtx.setLineDash([]);
 }
+const rectPts = (x0, y0, x1, y1) => [
+  [x0, y0],
+  [x1, y0],
+  [x1, y1],
+  [x0, y1],
+];
 function inPoly(x, y, pts) {
   let c = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -132,11 +138,8 @@ function pickBase(sx, sy) {
 function tapAt(sx, sy, additive, mouseL) {
   if (!V.playing) return;
   const u = pickUnit(sx, sy, false);
-  if (u && u.team === V.myTeam && COARSE && V.selected.size && !V.selected.has(u.id) && !additive && !V.rallyMode) {
-    commandAt(u.g.position);
-    return;
-  } // touch: tapping a comrade with a selection = go there (deselect with the X first to pick single units)
   if (u && u.team === V.myTeam) {
+    // a tap on an own warrior selects him (also with a selection: no "Abwählen" first; a tap on the ground sends the selection)
     const t = now();
     if (t - lastTap.t < 320 && lastTap.id === u.id) {
       for (const o of ownUnits()) {
@@ -221,6 +224,7 @@ function commandAt(g, forceMove, target) {
     if (accepted === false) return;
     marker(x, z, mv ? 0x86cdf5 : 0xf0bf4c);
     hintDone('order');
+    GUIDE.flags.order = true;
     SFX.play('order');
     if (mv) TUT.flags.moveOrder = true;
   } else if (now() - (V.noSelT || 0) > 4000) {
@@ -228,11 +232,11 @@ function commandAt(g, forceMove, target) {
     toast(TR('Erst Krieger auswählen. Die Sammelfahne versetzt du mit dem Fahnen-Knopf.'), 2400);
   }
 }
-function finishLasso(pts) {
-  const sel = [];
+function finishLasso(pts, additive) {
+  const sel = additive ? [...V.selected] : [];
   for (const u of ownUnits()) {
     const p = toScreen(u.g.position.x, u.g.position.y + 0.8, u.g.position.z);
-    if (inPoly(p.x, p.y, pts)) sel.push(u.id);
+    if (p.vis !== false && inPoly(p.x, p.y, pts)) sel.push(u.id);
   }
   V.selected = new Set(sel);
   if (sel.length) {
@@ -335,12 +339,16 @@ canvas.addEventListener('pointermove', e => {
       if (gest.lp) clearTimeout(gest.lp);
     }
     if (gest.moved && gest.grab) panTo(gest.grab, e.clientX, e.clientY);
-  } else if (gest.type === 'lasso' || gest.type === 'mleft') {
-    if (gest.type === 'mleft' && far) gest.moved = true;
+  } else if (gest.type === 'mleft') {
+    // the mouse drags a rectangle (as in every PC strategy game)
+    if (far) gest.moved = true;
+    gest.pts = rectPts(gest.sx, gest.sy, e.clientX, e.clientY);
+    if (gest.moved) drawLasso(gest.pts);
+  } else if (gest.type === 'lasso') {
     const l = gest.pts[gest.pts.length - 1];
     if (Math.hypot(l[0] - e.clientX, l[1] - e.clientY) > 5) {
       gest.pts.push([e.clientX, e.clientY]);
-      if (gest.type === 'lasso' || gest.moved) drawLasso(gest.pts);
+      drawLasso(gest.pts);
     }
   } else if (gest.type === 'pinch' && pointers.size >= 2) {
     const [a, b] = [...pointers.values()];
@@ -373,7 +381,7 @@ function endPointer(e) {
     if (gest.pts.length > 4) finishLasso(gest.pts);
     else tapAt(gest.sx, gest.sy, false);
   } else if (gest.type === 'mleft' && !cancelled) {
-    if (gest.moved && gest.pts.length > 3) finishLasso(gest.pts);
+    if (gest.moved && gest.pts.length > 3) finishLasso(gest.pts, gest.shift);
     else tapAt(gest.sx, gest.sy, gest.shift, true);
   } else if (gest.type === 'mpan' && !gest.moved && gest.right && !cancelled) {
     const enemy = pickUnit(gest.sx, gest.sy, false),
@@ -494,8 +502,8 @@ const BIND_DEF = {
   back: ['KeyS', 'ArrowDown'],
   left: ['KeyA', 'ArrowLeft'],
   right: ['KeyD', 'ArrowRight'],
-  attack: ['Mouse0', 'Space'],
-  special: ['Mouse2', 'KeyE'],
+  attack: ['Mouse0', 'KeyE'],
+  special: ['Space', 'Mouse2'],
   jump: ['ShiftLeft', 'KeyC'],
   nade: ['KeyG', ''],
   hero: ['KeyR', ''],
@@ -503,11 +511,11 @@ const BIND_DEF = {
   cmdHere: ['KeyF', ''],
   cmdAtk: ['KeyV', ''],
   swap: ['Tab', 'KeyB'],
-  take: ['Space', 'KeyF'],
+  take: ['KeyF', 'Enter'],
   order: ['Mouse2', ''],
   rally: ['Mouse1', 'KeyT'],
   selAll: ['KeyQ', ''],
-  desel: ['Escape', ''],
+  desel: ['KeyC', 'Escape'],
   mode: ['KeyR', ''],
   home: ['KeyH', ''],
   pause: ['KeyP', ''],
@@ -518,8 +526,16 @@ const BIND_DEF = {
   s5: ['Digit5', ''],
   selMelee: ['KeyZ', ''],
   selRanged: ['KeyX', ''],
-  selCav: ['KeyC', ''],
+  selCav: ['KeyV', ''],
   mute: ['KeyM', ''],
+};
+// defaults of earlier versions: a stored binding that still equals the old default moves to the new one (own choices stay)
+const BIND_OLD = {
+  attack: ['Mouse0', 'Space'],
+  special: ['Mouse2', 'KeyE'],
+  take: ['Space', 'KeyF'],
+  desel: ['Escape', ''],
+  selCav: ['KeyC', ''],
 };
 const BIND_GROUPS = [
   [
@@ -569,6 +585,8 @@ try {
   const b = JSON.parse(store.get('wvr-bind') || 'null');
   if (b) {
     for (const k in BIND) if (Array.isArray(b[k])) BIND[k] = [b[k][0] || '', b[k][1] || ''];
+    for (const k in BIND_OLD)
+      if (Array.isArray(b[k]) && BIND[k][0] === BIND_OLD[k][0] && BIND[k][1] === BIND_OLD[k][1]) BIND[k] = BIND_DEF[k].slice();
     if (
       !b.hero &&
       ['fwd', 'back', 'left', 'right', 'attack', 'special', 'jump', 'nade', 'exit', 'cmdHere', 'cmdAtk', 'swap'].some(k =>

@@ -614,6 +614,12 @@ function fassBarrelGeo() {
   g.computeVertexNormals();
   return g;
 }
+// the torch flame: glowing (not lit by the scene), shared by every Feuerfass
+const TORCH_MAT = {
+  out: new THREE.MeshLambertMaterial({ color: lin(0xff7a1a), emissive: lin(0xff4d00), emissiveIntensity: 0.9 }),
+  inn: new THREE.MeshLambertMaterial({ color: lin(0xffe36b), emissive: lin(0xffc040), emissiveIntensity: 1 }),
+};
+TORCH_MAT.out.userData.shared = TORCH_MAT.inn.userData.shared = true;
 // a flame (painted on the barrel): one big tongue and two small ones
 const FLAME_GEO = (() => {
   const s = new THREE.Shape();
@@ -1075,9 +1081,11 @@ function buildUnitRaw0(k) {
       const ln = mesh(new THREE.CircleGeometry(0.11, 14), lam(0x3a2a14), s * 0.2, 0.3, 0.525, H);
       ln.rotation.set(-0.45, s * 0.32, 0);
     });
-    // ... and the barrel, held against the belly with both arms: oak staves, iron hoops, a red band with a white flame, the fuse on top
+    // ... the barrel on his left shoulder (held with the left hand): oak staves, iron hoops, a red band with a painted flame, the fuse
+    // at the front end; and a burning torch in the right hand – whoever he hits with it catches fire (16-sim-fass-falle.js)
     const bar = new THREE.Group();
-    bar.position.set(0, 0.86, 0.42);
+    bar.position.set(-0.5, 1.5, -0.04);
+    bar.rotation.x = Math.PI / 2 - 0.3; // lies along the shoulder, the lid (and the fuse) to the front, tipped up a little
     torso.add(bar);
     U.barrel = bar;
     U.drops.push(bar);
@@ -1099,6 +1107,20 @@ function buildUnitRaw0(k) {
     tip.position.set(0.02, 0.53, 0.16);
     bar.add(tip);
     U.fuseTip = tip;
+    const torch = new THREE.Group();
+    torch.position.set(0, -0.245, 0.05);
+    foreR.add(torch);
+    U.drops.push(torch);
+    U.weapon = torch;
+    mesh(new THREE.CylinderGeometry(0.028, 0.034, 0.62, 7).rotateX(Math.PI / 2), lam(0x5a3a1e), 0, 0, 0.16, torch); // the stick
+    mesh(new THREE.CylinderGeometry(0.055, 0.05, 0.14, 8).rotateX(Math.PI / 2), lam(0x8a6a3a), 0, 0, 0.44, torch); // the wrapped head
+    [0.4, 0.48].forEach(z => mesh(new THREE.TorusGeometry(0.055, 0.012, 4, 10).rotateX(Math.PI / 2), lam(0x3a2a1a), 0, 0, z, torch));
+    const fl = new THREE.Group();
+    fl.position.set(0, 0.02, 0.5);
+    torch.add(fl);
+    U.torchFlame = fl;
+    mesh(new THREE.ConeGeometry(0.075, 0.26, 7).translate(0, 0.1, 0).rotateX(Math.PI / 2), TORCH_MAT.out, 0, 0, 0, fl);
+    mesh(new THREE.ConeGeometry(0.045, 0.17, 6).translate(0, 0.07, 0).rotateX(Math.PI / 2), TORCH_MAT.inn, 0, 0.02, 0.0, fl);
   } else if (k === 13) {
     // Fallenleger: a felt hunting hat with a cord and a feather brush, round glasses on the face texture, and his bear trap
     const hatC = lam(0x7a6e5f),

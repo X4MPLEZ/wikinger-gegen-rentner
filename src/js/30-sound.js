@@ -1089,9 +1089,13 @@ const SFX = (() => {
       noise(b, 'highpass', 6000, 0, t, 0.7, 0.05);
     },
     alarm(b, t) {
-      for (let i = 0; i < 4; i++) {
-        tone(b, 'square', i % 2 ? 660 : 880, i % 2 ? 660 : 880, t + i * 0.18, 0.15, 0.07, { lp: 2600 });
+      // "the base is under attack": a low two-tone klaxon, twice – a warning, not a squeak
+      for (let i = 0; i < 2; i++) {
+        tone(b, 'sawtooth', 330, 330, t + i * 0.72, 0.32, 0.075, { lp: 1100, a: 0.02 });
+        tone(b, 'sawtooth', 262, 262, t + i * 0.72 + 0.34, 0.32, 0.075, { lp: 1000, a: 0.02 });
+        tone(b, 'sine', 165, 165, t + i * 0.72, 0.66, 0.05);
       }
+      thump(b, 70, t, 0.3, 0.3);
     },
     perk(b, t) {
       [660, 880, 1320, 1760, 2640].forEach((f, i) => tone(b, 'sine', f, f, t + i * 0.06, 0.4, 0.08, { a: 0.01 }));
@@ -1994,7 +1998,7 @@ const SFX = (() => {
     goat: 900,
     horn: 900,
     spawn: 60,
-    base: 350,
+    base: 600,
     slipper: 50,
     select: 40,
     tick: 25,

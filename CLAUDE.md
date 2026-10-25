@@ -90,6 +90,7 @@ Every file starts with a short header comment saying what is in it.
 | 50-input | commander camera, mouse/touch, key bindings, small map | `camS`, `tapAt`, `commandAt`, `BIND`, `toScreen`, `drawMini` |
 | 51-ego | ego mode: prediction, input packet, attacks, aiming, ego camera | `enterEgo`, `exitEgo`, `egoUpdate`, `egoAttack`, `egoSpecial` |
 | 52-hud | HUD numbers, spawn buttons, chips, kill feed position, tips | `updateHud`, `toast`, `HINTS`, `killFeedTop` |
+| 53-guide | first steps: the checklist card of a new player's first matches (pulsing buttons, an arrow over the flag), the one-time tutorial offer | `GUIDE`, `guideStart`, `guideTick`, `guideOffer` |
 | 60-modes | match setup, sim loop, commands, end screen | `playAi`, `beginMatch`, `startSim`, `sendCmd`, `endGame`, `G`, `NET` |
 | 61-net | online: transports, lobby, host/guest sync, rematch | `openMulti`, `hostOnline`, `joinOnline`, `hostReadGuest`, `hostBroadcast`, `NET_VER` |
 | 62-screens | menus, pause, settings, quit, bug report (FormSubmit) | `showScreen`, `toMenu`, `quitMatch`, `menuScene`, `bugOpen` |
@@ -180,11 +181,21 @@ Every file starts with a short header comment saying what is in it.
   `popOf`, no kill gold, no kill feed; taken over it pecks and flies (`HFLY` in 02-data: hold the special to rise, let go to sink, attack in
   the air dives; the client sends the height as `fh`/`dv` in the input packet, the host caps the climb; others see it via snapshot `hf`; up
   in the air no melee reaches it, `aloft(u)`); snapshot flag bit 32768 (drawn as a chicken with a team scarf, one merged mesh).
-- **Feuerfass / Fallenleger** (16-sim-fass-falle, 75-fass-falle-view): new unit states `u.fuse`, `u.burn`, `u.trapT`, `u.trapC`, `u.fass`
+- **Feuerfass / Fallenleger** (16-sim-fass-falle, 75-fass-falle-view): the Feuerfass carries the barrel on his left shoulder and a torch
+  in the right hand (`u.barrel`, `u.torchFlame`); every blow of his sets the victim on fire (`torchBurn`, from `traitHit`). A trap
+  catches everyone in `TRAP.r` (up to `TRAP.max`, `t.vs`), bites once and grinds on (`TRAP.dps`). New unit states `u.fuse`, `u.burn`, `u.trapT`, `u.trapC`, `u.fass`
   (a catapult loaded with a barrel) are snapshot flag bits 131072, 65536, 262144, 1048576, 524288. One-shot impacts (blast, dud, catapult
   barrel, chicken dive, trap snap, fizzle, loading) go through `xEvent()` (10-sim) into `G.xe` → snapshot `xe`, numbered like `ge`/`kf`;
   traps are snapshot `tr`, warriors gone without dying (a barrel climbing into the catapult) `gn`. Command `{t: 'load', id}` puts the
   steered Feuerfass into an own catapult next to it. An enemy trap is drawn barely visible (and never in the fog), an own one clear.
+- **PC controls** (50-input): like a PC strategy game – left click selects, a click into the void deselects, left drag draws a rectangle
+  (`rectPts`; touch keeps the lasso), right click orders, `C`/Esc deselect, `Space` is the ego special, `F` takes over. `BIND_DEF` are
+  the defaults; `BIND_OLD` migrates stored bindings that still equal an older default. A tap on an own warrior always selects him.
+- **First steps** (53-guide): `guideStart()` in `beginMatch` shows the card until every step was done once or it was closed
+  (`store 'wvr-guide'`); `guideOffer()` on the first "Los geht's" offers the tutorial once (`'wvr-first'`). The tests' harness sets both
+  keys, so no test sees them (tests/t_guide.py removes them). While the card is up the one-line HINTS wait.
+- **Edges** (14-sim-step): a walking or charging unit never steps into a fall zone or over a drop of more than 1.2 m – it slides along
+  the edge (bridge rail, cliff rim). Only knocks (`kbStep`, `knockFly`) send anyone down.
 - **Springs in the poses** (`springStep`, 80-animation) are integrated in small substeps: a big frame step must not blow them up (that
   made bodies jump about in crowds while the feet stayed put).
 - **Ruhmespfad** (66-profile-ui): every reward is a card on one horizontal road over a progress bar; touch scrolls natively, the mouse
@@ -228,7 +239,9 @@ Every file starts with a short header comment saying what is in it.
 - `tests/t_bear.py`: a polar bear shot from afar charges the shooter (`b.foe`, `BEAR_GRUDGE` in 10-sim).
 - `tests/t_bug.py`: the bug report form posts text, device info and the screenshot to FormSubmit (the request is caught in the test); the
   game's picture is copied right after a frame is drawn (`BUG.grab` → `bugGrab()` in 82-frame), a picked picture is re-encoded small.
-- `tests/t_fass.py`: Feuerfass blast/dud/catapult shot, the bear trap (holds, bites, lets go, new trap, the computer lays it), the flying chicken.
+- `tests/t_fass.py`: Feuerfass blast/dud/catapult shot, the torch, the bear trap (holds, bites, lets go, new trap, several at once, the
+  computer lays it), the flying chicken.
+- `tests/t_guide.py`: the tutorial offer and the first-steps card step by step; mouse rectangle selection, click into the void, C, F, Space.
 - `tests/mp/mp_net.py` plays two pages against each other over local PeerJS/MQTT servers (quit, line drop, rejoin);
   `tests/mp/mp_recon.py` checks the ego movement online (no pull-backs on a clear walk or after a lag burst, knock-downs, a speed cheat).
 

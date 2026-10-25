@@ -741,7 +741,7 @@ function step(G) {
               u.k
             );
             if (!u.hen) traitHit(G, u, tgt, charge > 1);
-            if (tgt && rage) {
+            if (tgt && rage && Math.random() < 0.5) {
               const t3 = byId.get(u.at);
               if (
                 t3 &&
@@ -791,12 +791,20 @@ function step(G) {
       u.vz = u.ivz;
       let nx = u.x + u.vx * DT * sw,
         nz = u.z + u.vz * DT * sw;
-      if (MAP.cliff && !(u.kb && u.kb.left > 0) && !(u.dashUntil > G.t) && fallZone(nx, nz) && !fallZone(u.x, u.z)) {
-        const r = railing(u.x, u.z, nx, nz);
-        nx = r.x;
-        nz = r.z;
-      } // walking units stop at the edge (bridge rail / cliff rim)
-      if (Math.abs(u.vx) + Math.abs(u.vz) > 0.001 && (fallZone(nx, nz) || (unitY(u.x, u.z) - unitY(nx, nz) > 1.2 && edgeSlide(nx, nz)))) {
+      // Walking (and charging) units stop at an edge – a bridge rail, a cliff rim, a steep drop – and slide along it instead of
+      // stepping over: only a knock, a blow or a fling sends anyone down (kbStep, knockFly). A crowd on a narrow bridge pushes
+      // nobody off any more.
+      const y0 = unitY(u.x, u.z),
+        edge = (x, z) => fallZone(x, z) || (y0 - unitY(x, z) > 1.2 && edgeSlide(x, z));
+      if (!(u.kb && u.kb.left > 0) && !fallZone(u.x, u.z) && edge(nx, nz)) {
+        if (!edge(nx, u.z)) nz = u.z;
+        else if (!edge(u.x, nz)) nx = u.x;
+        else {
+          nx = u.x;
+          nz = u.z;
+        }
+      }
+      if (Math.abs(u.vx) + Math.abs(u.vz) > 0.001 && (fallZone(nx, nz) || (y0 - unitY(nx, nz) > 1.2 && edgeSlide(nx, nz)))) {
         advanceGround(u, nx, nz, u.vx * sw, u.vz * sw, DT);
         if (u.air || u.hp <= 0) continue;
       } else {

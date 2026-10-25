@@ -72,7 +72,7 @@ const STANCE = {
   3: pose({ aL: -0.08, eL: -1.35, zL: -0.18, aR: 0.06, eR: -0.32, zR: 0.12, ln: 0.12, kL: 0.16, kR: 0.16, nx: -0.1 }), // Oma: handbag on the forearm
   4: pose({ aL: -0.95, eL: -0.5, zL: 0.05, aR: -0.5, eR: -1.05, zR: 0.15, ln: 0.08 }), // goat rider: holds a horn, axe up
   5: pose({ aL: -1.2, eL: -0.25, zL: 0.1, aR: -1.2, eR: -0.25, zR: -0.1, ln: 0.16 }), // scooter: both hands on the tiller
-  12: pose({ aL: -0.62, eL: -0.82, zL: -0.13, aR: -0.62, eR: -0.82, zR: 0.13, yL: 0.25, yR: -0.25, ln: 0.12, kL: 0.2, kR: 0.2, nx: -0.05 }), // Feuerfass: hugs the barrel
+  12: pose({ aL: -2.1, eL: -1.15, zL: -0.5, aR: -0.55, eR: -0.75, zR: 0.22, ln: 0.1, rl: 0.06, kL: 0.2, kR: 0.2, nx: -0.05 }), // Feuerfass: barrel on the left shoulder, torch in the right
   13: pose({ aR: -0.08, eR: -0.3, zR: 0.14, aL: 0.18, eL: -0.75, zL: -0.06, ln: 0.12, kL: 0.15, kR: 0.15, nx: -0.08 }), // Fallenleger: trap at his side
 };
 // gait per walking character: stride, knee lift, arm swing [left, right], bounce, waddle ...
@@ -81,7 +81,7 @@ const GAIT = {
   1: { stride: 0.58, knee: 0.9, arm: [0.28, 0.44], elbow: 0.3, bob: 0.014, sway: 0.008, roll: 0.018, twist: 0.07, rate: 2.45, lean: 0.07 },
   2: { stride: 0.36, knee: 0.58, arm: [0, 0.26], elbow: 0.2, bob: 0.008, sway: 0.01, roll: 0.022, twist: 0.05, rate: 2.9, lean: 0.05 },
   3: { stride: 0.34, knee: 0.52, arm: [0.06, 0.3], elbow: 0.3, bob: 0.01, sway: 0.012, roll: 0.03, twist: 0.04, rate: 3.3, lean: 0.05 },
-  12: { stride: 0.44, knee: 0.72, arm: [0, 0], elbow: 0, bob: 0.024, sway: 0.03, roll: 0.055, twist: 0.04, rate: 2.55, lean: 0.12 }, // a heavy waddle
+  12: { stride: 0.44, knee: 0.72, arm: [0, 0.22], elbow: 0.15, bob: 0.024, sway: 0.03, roll: 0.055, twist: 0.04, rate: 2.55, lean: 0.12 }, // a heavy waddle
   13: { stride: 0.4, knee: 0.62, arm: [0.24, 0.1], elbow: 0.22, bob: 0.01, sway: 0.012, roll: 0.025, twist: 0.05, rate: 2.8, lean: 0.06 },
 };
 /* Melee moves per kind: the combat-ready pose and a list of moves. Each move is [wind-up, follow-through] plus what it is:
@@ -121,24 +121,23 @@ const CPOSE = (() => {
     nx: -0.25,
   });
   const r4 = pose({ aL: -0.95, eL: -0.5, aR: -0.95, eR: -1.05, zR: 0.2, ln: 0.12, mh: 0.1 });
-  // Feuerfass: arms round the barrel, low and wide – every blow is the whole body with the barrel in front
+  // Feuerfass: the barrel on the left shoulder (that arm stays up), the torch in the right – every blow is a torch swing
   const r12 = pose({
-    aL: -0.68,
-    eL: -0.85,
-    zL: -0.13,
-    aR: -0.68,
-    eR: -0.85,
-    zR: 0.13,
-    yL: 0.25,
-    yR: -0.25,
-    ln: 0.2,
-    kL: 0.32,
-    kR: 0.32,
+    aL: -2.1,
+    eL: -1.15,
+    zL: -0.5,
+    aR: -0.95,
+    eR: -0.7,
+    zR: 0.32,
+    ln: 0.1,
+    tw: 0.12,
+    rl: 0.06,
+    kL: 0.3,
+    kR: 0.3,
     thL: -0.2,
     thR: 0.15,
     nx: -0.08,
   });
-  // Fallenleger: the trap raised in the right hand, the left fist up like an old boxer
   const r13 = pose({
     aR: -0.95,
     eR: -1.25,
@@ -323,35 +322,35 @@ const CPOSE = (() => {
     12: set(r12, [
       mv(
         r12,
-        { ln: -0.24, aL: -0.42, aR: -0.42, eL: -1.25, eR: -1.25, thL: 0.12, kL: 0.2, kR: 0.28, nx: -0.15, hop: 0.02 },
-        { ln: 0.58, aL: -1.4, aR: -1.4, eL: -0.35, eR: -0.35, thL: -0.62, thR: 0.32, kL: 0.58, kR: 0.45, hop: -0.05, nx: 0.15 },
-        { sl: { m: 'h', d: 1, s: 0.8, low: 1 } }
-      ), // barrel shove
-      mv(
-        r12,
-        { tw: 0.95, ln: 0.04, rl: 0.1, aL: -0.72, aR: -0.5, kR: 0.38, thR: 0.25 },
-        { tw: -0.95, ln: 0.32, rl: -0.1, aL: -0.95, aR: -0.95, thL: -0.42, kL: 0.52 },
+        { tw: 0.9, aR: -1.25, eR: -0.95, zR: 0.95, ln: 0.02, rl: 0.12, kR: 0.38, thR: 0.25 },
+        { tw: -0.8, aR: -1.3, eR: -0.2, zR: -0.3, ln: 0.34, rl: -0.08, thL: -0.42, kL: 0.52 },
         { sl: { m: 'h', d: -1 } }
-      ), // the barrel swung from the right
+      ), // the torch swept from the right
       mv(
         r12,
-        { tw: -0.95, ln: 0.04, rl: -0.1, aL: -0.5, aR: -0.72, kL: 0.38, thL: 0.25 },
-        { tw: 0.95, ln: 0.32, rl: 0.1, aL: -0.95, aR: -0.95, thR: -0.42, kR: 0.52 },
-        { sl: { m: 'h', d: 1 } }
-      ), // and from the left
-      mv(r12, { nx: -0.5, ln: -0.12, hop: 0.03 }, { nx: 0.55, ln: 0.52, thL: -0.42, kL: 0.48 }, { n: 'a', sl: { m: 'h', d: 1, s: 0.7 } }), // headbutt over the barrel
+        { aR: -2.9, eR: -1.3, ln: -0.2, nx: -0.15, hop: 0.02 },
+        { aR: -0.5, eR: -0.1, ln: 0.52, thL: -0.4, kL: 0.5, hop: -0.05, nx: 0.12 },
+        { sl: { m: 'v', s: 1.05 } }
+      ), // the torch brought down
       mv(
         r12,
-        { tw: 1.1, zL: -0.95, zR: 0.95, aL: -1.25, aR: -1.25, eL: -0.35, eR: -0.35, ln: 0.12, kL: 0.4, kR: 0.4 },
-        { tw: -0.2, zL: -1.05, zR: 1.05, aL: -1.3, aR: -1.3, eL: -0.3, eR: -0.3, ln: 0.18, kL: 0.35, kR: 0.35 },
+        { aR: -0.25, eR: -1.4, ln: -0.1, tw: 0.5, kR: 0.4, thR: 0.2 },
+        { aR: -1.7, eR: -0.1, ln: 0.36, tw: -0.35, thL: -0.35, kL: 0.5 },
+        { sl: { m: 'u', s: 0.9 } }
+      ), // a rising jab with the torch
+      mv(r12, { nx: -0.5, ln: -0.12, hop: 0.03 }, { nx: 0.55, ln: 0.52, thL: -0.42, kL: 0.48 }, { n: 'a', sl: { m: 'h', d: 1, s: 0.7 } }), // headbutt
+      mv(
+        r12,
+        { tw: 1.1, zR: 1.1, aR: -1.3, eR: -0.25, ln: 0.12, kL: 0.4, kR: 0.4 },
+        { tw: -0.2, zR: 1.2, aR: -1.35, eR: -0.15, ln: 0.18, kL: 0.35, kR: 0.35 },
         { n: 'f', spin: 1, W: 0.12, sl: { m: 'r' } }
-      ), // the barrel round and round
+      ), // the torch round and round
       mv(
         r12,
-        { aL: -1.0, aR: -1.0, ln: -0.32, kL: 0.78, kR: 0.78, thL: -0.6, thR: -0.5 },
-        { aL: -1.45, aR: -1.45, ln: 0.78, hop: -0.16, kL: 0.88, kR: 0.88, thL: -0.5, thR: 0.3 },
+        { aR: -2.6, eR: -1.2, ln: -0.32, kL: 0.78, kR: 0.78, thL: -0.6, thR: -0.5 },
+        { aR: -0.4, eR: -0.05, ln: 0.78, hop: -0.16, kL: 0.88, kR: 0.88, thL: -0.5, thR: 0.3 },
         { n: 'f', jump: 0.72, W: 0.17, sl: { m: 'v', s: 1.3 } }
-      ), // belly flop onto the barrel
+      ), // a leap and the torch slammed down
     ]),
     13: set(r13, [
       mv(
@@ -468,12 +467,23 @@ function rangedPose(u, C, at, pre, cd) {
       lerpPose(C, A.QUIV, A.NOCK, q);
       ba = 0.65 + 0.35 * q;
     } else lerpPose(C, A.NOCK, A.AIM, pre);
-    if (at > cd * 1.8) {
+    if (at > cd * 1.8 && !u.isPoss) {
       const q = Math.min(1, (at - cd * 1.8) / 0.5);
       lerpPose(C, C, A.LOW, q);
       ba *= 1 - q;
     }
+    // the steered archer keeps the bow drawn until the next shot – and the draw hand trembles the longer she holds it
+    if (u.isPoss && pre > 0.95) {
+      const hold = Math.min(1, (at - cd * 0.92) / 2.5),
+        tr = (0.25 + 0.75 * hold) * 0.022;
+      C[A_R] += tr * Math.sin(u.ph * 31);
+      C[E_R] += tr * 0.8 * Math.sin(u.ph * 27 + 1.1);
+      C[A_L] += tr * 0.6 * Math.sin(u.ph * 23 + 2);
+      C[TW] += tr * 0.4 * Math.sin(u.ph * 19);
+      C[NX] += tr * 0.3 * Math.sin(u.ph * 29 + 0.5);
+    }
     u.bowA = ba;
+    u.drawn = u.isPoss ? pre : 0;
     return true;
   }
   if (u.k === 3) {
@@ -482,6 +492,15 @@ function rangedPose(u, C, at, pre, cd) {
     else if (at < 0.42) lerpPose(C, O.F, O.R, sstep(0.12, 0.42, at));
     else if (at < 0.78) lerpPose(C, O.R, O.M, Math.sin(clamp((at - 0.42) / 0.36, 0, 1) * Math.PI));
     else lerpPose(C, O.R, O.W, pre);
+    // the steered Oma stays wound up, the raised arm wobbling a little, ready to throw
+    if (u.isPoss && pre > 0.95) {
+      const hold = Math.min(1, (at - cd * 0.92) / 2.5),
+        tr = (0.3 + 0.7 * hold) * 0.03;
+      C[A_R] += tr * Math.sin(u.ph * 17);
+      C[E_R] += tr * 0.9 * Math.sin(u.ph * 13 + 1);
+      C[TW] += tr * 0.5 * Math.sin(u.ph * 11);
+    }
+    u.drawn = u.isPoss ? pre : 0;
     return true;
   }
   return false;
@@ -789,8 +808,8 @@ function humanRig(u, dt, moving, attacking) {
     P[K_R] += (Kb * Math.max(0, Math.cos(t + Math.PI + 0.35)) + 0.06) * mb;
     P[A_L] += G0.arm[0] * aw * s * mb;
     P[A_R] -= G0.arm[1] * aw * s * mb;
-    P[E_L] -= (G0.elbow + 0.9 * run + 0.25 * Math.max(0, -s)) * mb * (k === 3 || k === 2 ? 0.2 : k === 12 ? 0 : 1);
-    P[E_R] -= (G0.elbow + 0.9 * run + 0.25 * Math.max(0, s)) * mb * (k === 12 ? 0 : 1); // (the Feuerfass keeps both arms round the barrel)
+    P[E_L] -= (G0.elbow + 0.9 * run + 0.25 * Math.max(0, -s)) * mb * (k === 3 || k === 2 ? 0.2 : k === 12 ? 0 : 1); // (the Feuerfass's left hand stays on the barrel)
+    P[E_R] -= (G0.elbow + 0.9 * run + 0.25 * Math.max(0, s)) * mb;
     P[LN] += (G0.lean + 0.12 * run) * mb;
     P[TW] -= G0.twist * s * mb;
     P[RL] += G0.roll * c * mb * calm;
@@ -821,12 +840,12 @@ function humanRig(u, dt, moving, attacking) {
   // next arrow and the Oma winds up while reloading, so you see when the next shot is ready.
   const pre =
     u.isPoss && K.role === 'ranged'
-      ? sstep(cd * 0.5, cd * 0.92, at) * (at < cd * 3 ? 1 : Math.max(0, 1 - (at - cd * 3) / 0.4))
+      ? sstep(cd * 0.5, cd * 0.92, at) // (drawn and held until the next shot: the player sees when it is ready)
       : attacking && !u.isPoss
         ? sstep(cd * 0.55, cd * 0.95, at) * (at < cd * 1.8 ? 1 : Math.max(0, 1 - (at - cd * 1.8) / 0.4))
         : 0;
   u.preCur = pre;
-  const fighting = attacking || at < cd * 1.6;
+  const fighting = attacking || at < cd * 1.6 || (u.isPoss && K.role === 'ranged' && !u.hen); // (a steered archer or Oma stays at the ready)
   u.cw = lerp(u.cw, fighting ? 1 : 0, 1 - Math.exp(-dt * (fighting ? 10 : 3)));
   if (u.cw > 0.002) {
     const C = _pc;
@@ -1004,10 +1023,15 @@ function humanRig(u, dt, moving, attacking) {
     u.bag.rotation.z = -P[Z_L] + 0.15 * c * mb;
   }
   if (u.barrel) {
-    // the Feuerfass's barrel goes where his hands push it
-    const fw = clamp(-(P[A_L] + P[A_R]) / 2 - 0.62, -0.3, 1.0);
-    u.barrel.position.set(0, 0.86 + fw * 0.12, 0.42 + fw * 0.32);
-    u.barrel.rotation.x = -fw * 0.25;
+    // the Feuerfass's barrel rides on his left shoulder and rocks a little with every step and hit
+    u.barrel.rotation.z = 0.12 * Math.sin(ph * 2.1) * mb + u.hitA * 0.4;
+    u.barrel.rotation.x = Math.PI / 2 - 0.3 + 0.08 * Math.sin(ph * 1.3) * mb;
+  }
+  if (u.torchFlame) {
+    // the torch flame flickers (no randomness: the low-detail model has the same parts in the same order)
+    const f = 0.85 + 0.2 * Math.sin(ph * 23) + 0.12 * Math.sin(ph * 37 + 1.3);
+    u.torchFlame.scale.set(f, f, 0.8 + 0.35 * Math.sin(ph * 29 + 0.7));
+    u.torchFlame.rotation.z = 0.25 * Math.sin(ph * 19);
   }
   if (u.trap) {
     // the Fallenleger's trap: hangs from his hand on its chain, swings with the blow; gone once it is laid

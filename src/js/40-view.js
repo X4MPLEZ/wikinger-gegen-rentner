@@ -288,7 +288,7 @@ function processSnap(s) {
       if (dz2 && !V.poss.dance)
         egoHint(
           matchMedia('(pointer:fine)').matches
-            ? TR('Kein Entkommen! Leertaste oder Klick für Tanzmoves!')
+            ? TR('Kein Entkommen! {0} oder Klick für Tanzmoves!', kl('attack'))
             : TR('Kein Entkommen! Tippe den Tanz-Knopf für Tanzmoves!'),
           2600
         );
@@ -512,9 +512,14 @@ function processSnap(s) {
       }
     for (let i = 0; i < 2; i++)
       if (s.b[i] < ps.b[i] && baseViews[i]) {
-        baseViews[i].shake = 0.25;
-        SFX.play('base', { x: BASES[i].x, z: BASES[i].z });
-        if (i === V.myTeam && V.playing) baseAlarm();
+        // a real hit (a blow, a boulder, a cake) shakes the wall and sounds; the slow crumbling of the final phase takes the hp
+        // one point at a time and stays silent (a creak four times a second was the "squeak" players complained about)
+        const hard = ps.b[i] - s.b[i] >= 2;
+        baseViews[i].shake = hard ? 0.25 : 0.08;
+        if (hard) {
+          SFX.play('base', { x: BASES[i].x, z: BASES[i].z });
+          if (i === V.myTeam && V.playing) baseAlarm();
+        }
       }
     if (s.ru && ps.ru) for (let i = 0; i < 2; i++) if (s.ru[i] !== ps.ru[i]) rushFx(i, s.rp[i][0] / 10, s.rp[i][1] / 10);
     if (s.hq)

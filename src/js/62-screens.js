@@ -180,6 +180,7 @@ function toMenu() {
   if (V.poss) exitEgo(false);
   V.playing = false;
   V.mode = 'menu';
+  guideStop();
   $('#hud').hidden = true;
   $('#ego').hidden = true;
   $('#netwarn').hidden = true;
@@ -307,7 +308,7 @@ $$('.fac').forEach(b =>
     }
   })
 );
-$('#btnAi').addEventListener('click', () => playAi());
+$('#btnAi').addEventListener('click', () => guideOffer(playAi) || playAi());
 $('#btnTut').addEventListener('click', () => startTutorial(false));
 $('#btnTutPro').addEventListener('click', () => startTutorial(true));
 $('#tutSkip').addEventListener('click', () => {
