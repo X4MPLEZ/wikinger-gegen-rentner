@@ -1010,6 +1010,19 @@ function slashFx(P, K, av, step, col, delay = 0, follow = null) {
     }
   }
 }
+// the Stockwirbel: a whirlwind swoosh for every turn (the cane's own slash, like the whirl that ends his combo) and a whoosh each time
+function whirlSlashes(src, team, dur, follow) {
+  const av = Math.max(
+      0,
+      CPOSE[2].m.findIndex(m => m.sl && m.sl.m === 'r')
+    ),
+    n = Math.max(1, Math.round((WHIRL.turns * dur) / WHIRL.t)),
+    col = team === V.myTeam ? 0xffd34d : 0xff4a3d;
+  for (let i = 0; i < n; i++) {
+    slashFx(src, KINDS[2], av, 3, col, (i * dur) / n, follow);
+    setTimeout(() => SFX.play('whoosh', { x: src.x, z: src.z, vol: 0.75 }), ((i * dur) / n) * 1000);
+  }
+}
 const swingGeo = new THREE.RingGeometry(0.7, 2.3, 28, 1, -1.25, 2.5).rotateX(-Math.PI / 2);
 function swingFx(P, K, col, quiet) {
   const g = new THREE.Group(),
@@ -1288,6 +1301,7 @@ function egoSpecial() {
   P.spT = spCdOf(P.k) * [1, 0.34][tpk(V.myTeam, 'charge')];
   if (P.k === 0) P.rageT = 4;
   if (P.k === 2) P.whirlT = tpk(V.myTeam, 'spin') ? 2.4 : WHIRL.t; // the Stockwirbel: he spins and runs much faster meanwhile
+  if (P.k === 2) whirlSlashes(P, V.myTeam, P.whirlT);
   if (P.k === 4 || P.k === 5) {
     // riders dash at once (the host starts the ram from the same spot, P.dp)
     P.dashT = 0.42;
@@ -1687,6 +1701,8 @@ function egoUpdate(dt) {
     P.ivx = wvx;
     P.ivz = wvz;
   }
+  // (slipped down a slope off the paths: one may climb it back up, but never higher than the ground he last stood on)
+  if (walkable(P.x, P.z) || !(P.lwY > -1e9)) P.lwY = groundY(P.x, P.z);
   const nx = P.x + wvx * dt,
     nz = P.z + wvz * dt;
   if (flyOn) {
@@ -1706,7 +1722,7 @@ function egoUpdate(dt) {
     if (landed && !(P.hp <= 0) && P.landV > 5) emitFX('land', P.x, P.fy + 0.1, P.z, { size: 0.7 });
   } else if (walkable(nx, nz) && !fallZone(nx, nz)) {
     advanceGround(P, nx, nz, wvx, wvz, dt, dashing, true);
-  } else if (fallZone(nx, nz) || (edgeSlide(nx, nz) && (dashing || groundY(nx, nz) <= groundY(P.x, P.z) + 0.03))) {
+  } else if (fallZone(nx, nz) || (edgeSlide(nx, nz) && (dashing || groundY(nx, nz) <= Math.max(groundY(P.x, P.z) + 0.03, P.lwY + 0.3)))) {
     advanceGround(P, nx, nz, wvx, wvz, dt, dashing, true);
   } else if (walkable(nx, P.z) && Math.abs(nx - P.x) > 1e-4) P.x = nx;
   else if (walkable(P.x, nz) && Math.abs(nz - P.z) > 1e-4) P.z = nz;

@@ -756,6 +756,7 @@ const edgeSlide = (x, z) =>
   !(MAP.blockers || []).some(b => (x - b.x) ** 2 + (z - b.z) ** 2 < b.r * b.r) &&
   !MAP.bases.some(b => baseGap(b, x, z) < 0.9);
 const AIR_GRAVITY = 30;
+const LEDGE = 1.6; // a steered warrior pulls himself up a ledge this high (climbFrac)
 function startAir(u, vx, vz, vy = 0, kind = 'fall') {
   if (u.air || u.pj || u.hp <= 0) return;
   const y = Number.isFinite(u.fy) ? u.fy : Number.isFinite(u.y) ? u.y : unitY(u.x, u.z);
@@ -840,9 +841,14 @@ function airStep(u, dt) {
 }
 // How far along a straight walk (0..1) the climb rule lets a walker get, checked in 10 cm steps. The answer does not depend on
 // frame or tick length, so the ego's own screen and the host agree on which slopes it can climb.
-function climbFrac(x0, z0, x1, z1) {
+// how far along a step one may walk before the ground rises too steeply (more than 0.5 m in 0.1 m). ledge > 0: a low ledge up to that
+// height is climbed all the same when there is a level top right behind it (someone who slipped over a rim pulls himself back up)
+function climbFrac(x0, z0, x1, z1, ledge = 0) {
   const n = Math.min(80, Math.max(1, Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 0.1))),
-    holes = MAP.holes && MAP.holes.length;
+    holes = MAP.holes && MAP.holes.length,
+    dl = Math.hypot(x1 - x0, z1 - z0) || 1,
+    ux = (x1 - x0) / dl,
+    uz = (z1 - z0) / dl;
   let px = x0,
     pz = z0,
     py = unitY(x0, z0);
@@ -851,7 +857,13 @@ function climbFrac(x0, z0, x1, z1) {
       qx = x0 + (x1 - x0) * t,
       qz = z0 + (z1 - z0) * t,
       qy = unitY(qx, qz);
-    if (qy - py > 0.5 && !(holes && qy - py < 1.6 && holeAt(px, pz))) return (i - 1) / n; // the rim of an ice hole can always be climbed
+    if (qy - py > 0.5 && !(holes && qy - py < 1.6 && holeAt(px, pz))) {
+      // the rim of an ice hole can always be climbed; a low ledge with a level top too
+      let top = qy;
+      for (let d = 0.15; d <= 0.6; d += 0.15) top = Math.max(top, unitY(qx + ux * d, qz + uz * d));
+      const beyond = unitY(qx + ux * 0.95, qz + uz * 0.95);
+      if (!(ledge > 0 && top - py <= ledge && beyond - top < 0.35)) return (i - 1) / n;
+    }
     px = qx;
     pz = qz;
     py = qy;
@@ -861,7 +873,7 @@ function climbFrac(x0, z0, x1, z1) {
 function advanceGround(u, nx, nz, vx, vz, dt, dash = false, fine = false) {
   const fn = fine && !dash;
   if (fn) {
-    const k = climbFrac(u.x, u.z, nx, nz);
+    const k = climbFrac(u.x, u.z, nx, nz, LEDGE);
     if (k < 1) {
       if (k <= 0) {
         u.vx = u.vz = 0;

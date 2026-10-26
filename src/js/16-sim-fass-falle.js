@@ -56,7 +56,7 @@ const TRAP = {
 const FANG = {
   n: 6, // jaws in a row ...
   first: 1.1, // ... the first this far in front of him, the rest this far apart (the computer attacks from KINDS[13].range)
-  sp: 1.0,
+  sp: 1.2, // (the row reaches about 7 m)
   delay: 0.25, // the spade hits the ground and the first jaw bites (the screens: 0.05 s to come up, FANG_T in 75) ...
   gap: 0.08, // ... and the next one after the other
   r: 0.95, // each jaw bites around itself (plus half the victim's size), KINDS[13].dmg per bite (steered x CFG.possDmg.melee)
@@ -518,6 +518,10 @@ function fassDuds(G, byId) {
           // a headshot hit the barrel: the full bang, and it counts for the shooter (his own people get only a little of it)
           u.dudDie = 1; // (flies off charred like a burst barrel; the kill feed names the headshot)
           blast(G, u.x, u.z, u.headBoom - 1, byId, 'blast', u.id);
+        } else if (u.fuse > 0) {
+          // felled with the fuse already lit: the barrel goes off all the same, the full bang (a player lit it, so it counts as his)
+          u.boomDie = 1;
+          blast(G, u.x, u.z, u.team, byId, 'blast', u.id, true);
         } else {
           u.dudDie = 1;
           blast(G, u.x, u.z, u.team, byId, 'dud', u.id);

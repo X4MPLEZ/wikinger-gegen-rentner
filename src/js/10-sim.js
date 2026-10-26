@@ -1637,10 +1637,11 @@ function possStep(G, u, byId) {
       // not follow shows up in the client's reconciliation (51-ego.js) and pulls the client back.
       const d = Math.hypot(In.x - u.x, In.z - u.z);
       if (d > 0.02) {
+        if (walkable(u.x, u.z) || !(u.lwY > -1e9)) u.lwY = groundY(u.x, u.z); // (the ground he last stood on: climbing back up a slope)
         const old = { x: u.x, z: u.z };
         if (
           walkable(In.x, In.z) ||
-          (edgeSlide(In.x, In.z) && (G.t < (u.dashUntil || 0) || groundY(In.x, In.z) <= groundY(u.x, u.z) + 0.03)) ||
+          (edgeSlide(In.x, In.z) && (G.t < (u.dashUntil || 0) || groundY(In.x, In.z) <= Math.max(groundY(u.x, u.z) + 0.03, u.lwY + 0.3))) ||
           fallZone(In.x, In.z)
         ) {
           // in steps of at most half a metre, like the client walks: one big stride over a dune would count as a fall

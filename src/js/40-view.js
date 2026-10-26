@@ -865,6 +865,22 @@ function onSpecial(u, cur) {
   if (u.k === 0) setTimeout(() => SFX.play('heave', { x: p.x, z: p.z, vol: 1 }), 60);
   if (u.k === 2) {
     u.spin = u.isPoss && tpk(u.team, 'spin') ? 2.4 : WHIRL.t; // (three turns; the perk Tornado-Opa whirls longer)
+    if (!(V.poss && V.poss.id === u.id) && !u.fogHid)
+      whirlSlashes(
+        {
+          get x() {
+            return u.g.position.x;
+          },
+          get z() {
+            return u.g.position.z;
+          },
+          fy: u.g.position.y,
+          yaw: u.g.rotation.y,
+          k: 2,
+        },
+        u.team,
+        u.spin
+      ); // (the own steered Opa has drawn his already, egoSpecial)
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * TAU;
       puff(p.x + Math.cos(a) * 2.5, p.y + 0.6, p.z + Math.sin(a) * 2.5, 0xf6f1e7, 1, 0.8);

@@ -12,7 +12,7 @@
    - the flying chicken's dive for the others, a Feuerfass that climbs into a catapult (no death).
    Timing after the research on game feel: sound and flash at once, particles at once, the word a moment later; shake short and
    scaled by distance. */
-const BOOM = { fx: [], scorch: [], smoke: [], traps: new Map(), mats: null, pool: [], ring: [] };
+const BOOM = { fx: [], scorch: [], smoke: [], traps: new Map(), mats: null, pool: [], ring: [], rubble: [] };
 Object.assign(FX_PROFILES, {
   flame: { col: 0xff9a2a, n: 1, life: 0.42, spread: 0.7, lift: 2.6, gravity: -1.5, drag: 1.2, grow: -0.2, stretch: 1.7, alpha: 1 },
   spark: { col: 0xffe07a, n: 1, life: 0.38, spread: 3.2, lift: 3.2, gravity: 9, drag: 0.6, grow: -0.5, stretch: 1.9, alpha: 1 },
@@ -352,6 +352,11 @@ function boomReset() {
   BOOM.fx.length = 0;
   for (const S of BOOM.scorch) boomDrop(S.m, true);
   BOOM.scorch.length = 0;
+  for (const m of BOOM.rubble) {
+    scene.remove(m);
+    m.traverse(o => o.geometry && o.geometry !== CHUNK_GEO && o.geometry.dispose()); // (the holes' own shapes; colours are cached)
+  }
+  BOOM.rubble.length = 0;
   BOOM.smoke.length = 0;
   for (const v of BOOM.traps.values()) trapViewDrop(v);
   BOOM.traps.clear();
@@ -409,7 +414,7 @@ function xeProcess(s) {
       kind = e[4];
     if (kind === XE.blast || kind === XE.dud || kind === XE.cata) {
       blastFx(x, z, r, kind);
-      if (kind !== XE.dud) baseChunks(x, z, r, kind === XE.cata ? 1.3 : 1);
+      baseChunks(x, z, r, kind === XE.cata ? 1.3 : kind === XE.dud ? 0.6 : 1);
       if (e[5] === V.myTeam && e[6] >= 5) profEvent('boom', e[6]);
     } else if (kind === XE.dive) diveFx(x, z, e[5]);
     else if (kind === XE.snap) {
@@ -1187,7 +1192,7 @@ function baseChunks(x, z, r, s) {
   for (let i = 0; i < 2; i++) {
     const B = BASES[i],
       bv = baseViews[i];
-    if (!B || !bv || baseGap(B, x, z) >= r) continue;
+    if (!B || !bv || baseGap(B, x, z) >= r + 0.5) continue;
     if (FOG.on && i !== V.myTeam && !fogSeen(B.x, B.z) && !fogSeen(x, z)) continue;
     // the wall point next to the blast, and which way is out
     const wx = clamp(x, B.x - 6.6, B.x + 6.6),
@@ -1244,6 +1249,47 @@ function baseChunks(x, z, r, s) {
     SFX.play('splinter', { x: wx, z: wz, vol: 1.1 });
     SFX.play('collapse', { x: wx, z: wz, vol: 0.5 });
     bv.shake = Math.max(bv.shake || 0, 0.6);
+    // what stays: a broken hole in the wall (dark inside, a ragged light rim) and a pile of rubble at its foot
+    if (BOOM.rubble.length < 90) {
+      const yaw = Math.atan2(nx, nz),
+        hr = (1 + Math.random() * 0.4) * Math.min(1.25, s),
+        hy = gy + 1.3 + Math.random() * 1.1,
+        rag = (rr, n, seed) => {
+          const sh = new THREE.Shape(),
+            q = rng(seed);
+          for (let k = 0; k <= n; k++) {
+            const a = (k / n) * TAU,
+              d = rr * (0.7 + q() * 0.45);
+            if (k) sh.lineTo(Math.cos(a) * d, Math.sin(a) * d);
+            else sh.moveTo(Math.cos(a) * d, Math.sin(a) * d);
+          }
+          return new THREE.ShapeGeometry(sh);
+        },
+        seed = Math.round(x * 31 + z * 17) & 0xffff;
+      const hole = new THREE.Group();
+      const rim = new THREE.Mesh(rag(hr * 1.25, 11, seed + 1), lam(0xd8cdb8));
+      const inn = new THREE.Mesh(rag(hr, 9, seed), lam(0x231a14));
+      inn.position.z = 0.02;
+      hole.add(rim, inn);
+      hole.position.set(wx + nx * 0.06, hy, wz + nz * 0.06);
+      hole.rotation.y = yaw;
+      scene.add(hole);
+      BOOM.rubble.push(hole);
+      for (let k = 0; k < Math.round(7 * s); k++) {
+        const m = new THREE.Mesh(CHUNK_GEO, lam(bv.chunkCols[(k + 1) % bv.chunkCols.length])),
+          sz = 0.3 + Math.random() * 0.45,
+          side = (Math.random() - 0.5) * 2.4,
+          out = 0.4 + Math.random() * 1.6,
+          px = wx + nx * out - nz * side,
+          pz = wz + nz * out + nx * side;
+        m.scale.set(sz * (0.9 + Math.random() * 0.6), sz * 0.7, sz);
+        m.position.set(px, groundY(px, pz) + sz * 0.3, pz);
+        m.rotation.set((Math.random() - 0.5) * 0.6, Math.random() * 3, (Math.random() - 0.5) * 0.6);
+        m.castShadow = UNIT_SHADOWS;
+        scene.add(m);
+        BOOM.rubble.push(m);
+      }
+    }
     word(TR('KRACH!'), wx, gy + 5.5, wz, { color: '#ffd34d', scale: 1.3, prio: true });
   }
 }

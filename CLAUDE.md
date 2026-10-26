@@ -186,7 +186,8 @@ Every file starts with a short header comment saying what is in it.
 - **Feuerfass / Fallenleger** (16-sim-fass-falle, 75-fass-falle-view): the Feuerfass carries the barrel on his left shoulder and a torch
   in the right hand (`u.barrel`, `u.torchFlame`), a smoking keg as a helmet (`u.hatTip`); every blow of his sets the victim on fire
   (`torchBurn`, from `traitHit`). His barrel goes off only when a player lit it (ego special) – the computer never lights it; a headshot
-  (`hit(..., head)`) kills him at once and blasts for the shooter (`u.headBoom`, `fassDuds`). The Fallenleger's attack (AI and ego) is
+  (`hit(..., head)`) kills him at once and blasts for the shooter (`u.headBoom`, `fassDuds`); felled with the fuse lit, he still goes
+  off in full (only an unlit barrel bursts as a dud). The Fallenleger's attack (AI and ego) is
   `fangLine`: a row of trap jaws (`FANG`, points from `fangPts`, the same on host and screens) bites one after another in `fangStep` – each
   enemy once per row, held a moment (`u.trapT` with `trapId` 0 = snapshot bit 2097152; riders longer); a steered one counters riders
   softly (`fangNow` in `hit`). His special `trapPlace` throws the trap to the aim point (`In.gp`, at most `TRAP.throw` m) and picks up
@@ -206,7 +207,7 @@ Every file starts with a short header comment saying what is in it.
 - **Berserker throw / Stockwirbel** (10-sim): the Berserker's special lifts the warrior in front (`u.lift`, `liftStep`, `LIFT`): held over
   his head (snapshot `lf`, drawn lying across by 82-frame, the Berserker's arms up) while he turns to aim, then hurled. The Opa's
   Stockwirbel (`WHIRL`): three turns in `WHIRL.t`, running speed times `WHIRL.speed` on the client meanwhile (`P.whirlT`), the host
-  knocks again every `WHIRL.pulse` (`u.spinT`).
+  knocks again every `WHIRL.pulse` (`u.spinT`); every turn draws a whirlwind slash (`whirlSlashes`, 51-ego).
 - **Trap catch and fire on screen** (75-fass-falle-view): a sprung trap slams, bounces and hops, then rattles; a caught warrior wears its
   jaws on his ankle with a chain to the trap (`trapLegFx`); burning warriors carry flames (`fireCrown`) besides the sparks. When the own
   steered Feuerfass goes off, the camera rises over the blast for a moment before the map view (`boomCamStart`, `boomCamTick`,
@@ -224,7 +225,9 @@ Every file starts with a short header comment saying what is in it.
   (`store 'wvr-guide'`); `guideOffer()` on the first "Los geht's" offers the tutorial once (`'wvr-first'`). The tests' harness sets both
   keys, so no test sees them (tests/t_guide.py removes them). While the card is up the one-line HINTS wait.
 - **Edges** (14-sim-step): a walking or charging unit never steps into a fall zone or over a drop of more than 1.2 m – it slides along
-  the edge (bridge rail, cliff rim). Only knocks (`kbStep`, `knockFly`) send anyone down.
+  the edge (bridge rail, cliff rim). Only knocks (`kbStep`, `knockFly`) send anyone down. A steered warrior may walk down into an
+  unwalkable slope (`edgeSlide`) and back up again, but never higher than the ground he last stood on (`lwY`, client and host alike);
+  `climbFrac` lets him pull himself up a ledge of up to `LEDGE` m with a level top behind it.
 - **Springs in the poses** (`springStep`, 80-animation) are integrated in small substeps: a big frame step must not blow them up (that
   made bodies jump about in crowds while the feet stayed put).
 - **Ruhmespfad** (66-profile-ui): every reward is a card on one horizontal road over a progress bar; touch scrolls natively, the mouse

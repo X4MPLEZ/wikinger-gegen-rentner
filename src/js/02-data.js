@@ -232,7 +232,7 @@ const KINDS = [
     range: 1.5,
     aggro: 10,
     speed: 5.4,
-    cost: 60, // (balance: tools/balance.py)
+    cost: 65, // as dear as the Fallenleger (balance: tools/balance.py)
     build: 1.6,
     r: 0.55,
     sp: TR('Lunte zünden'),
@@ -251,7 +251,7 @@ const KINDS = [
     hp: 130,
     dmg: 15, // per jaw of his row (FANG in 16-sim-fass-falle.js)
     cd: 1.3,
-    range: 5, // the row of jaws reaches 6 m: he strikes from a few steps away
+    range: 6.3, // the row of jaws reaches about 7 m (FANG): he strikes from a few steps away
     aggro: 10,
     speed: 4.3,
     cost: 65,

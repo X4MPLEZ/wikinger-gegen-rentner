@@ -209,7 +209,7 @@ function wikiText(k) {
           'Knut hat als Kind das Silvesterfeuerwerk des ganzen Dorfes auf einmal gezündet. Statt Ärger gab es eine Beförderung: Jetzt schleppt er ein Pulverfass auf der Schulter und eine Fackel in der Hand, und sein Helm ist ein kleines Fass, das immer ein bisschen qualmt.'
         ),
         h: TR(
-          'Jeder Schlag mit der Fackel setzt das Opfer in Brand: Es rennt schreiend herum und springt ins Wasser, wenn welches in der Nähe ist. Gegen Bogenschützinnen, Gebiss-Omas, Katapulte und Basen ist er besonders stark, Reiter rennen ihn dagegen einfach um. Das Pulverfass zündet er nur, wenn du ihn selbst steuerst (Spezialfähigkeit = Lunte): Kurz danach fliegt alles im Umkreis, auch eine nahe gegnerische Basis bekommt viel ab. Fällt er vorher, platzt das Fass kleiner, und ein Kopfschuss lässt es sofort hochgehen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
+          'Jeder Schlag mit der Fackel setzt das Opfer in Brand: Es rennt schreiend herum und springt ins Wasser, wenn welches in der Nähe ist. Gegen Bogenschützinnen, Gebiss-Omas, Katapulte und Basen ist er besonders stark, Reiter rennen ihn dagegen einfach um. Das Pulverfass zündet er nur, wenn du ihn selbst steuerst (Spezialfähigkeit = Lunte): Kurz danach fliegt alles im Umkreis, auch eine nahe gegnerische Basis bekommt viel ab. Fällt er, bevor die Lunte brennt, platzt das Fass kleiner. Brennt sie schon, geht es trotzdem voll hoch, und ein Kopfschuss lässt es sofort hochgehen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
         ),
         t: [
           TR('Übernimm ihn, lauf mitten in einen Haufen Gegner und zünde die Lunte.'),
