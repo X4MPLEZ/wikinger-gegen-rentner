@@ -13,7 +13,7 @@ const FASS = {
   fuse: 1.1, // seconds from lighting to the bang, for a player and the computer alike
   r: 5.2, // blast radius ...
   dmg: 112, // ... and damage at the centre (35 % at the edge)
-  base: 150, // against an enemy base wall in reach (before the base armour)
+  base: 300, // against an enemy base wall in reach (full force, like a catapult; the screens blast chunks out of it)
   own: 0.22, // own warriors take this share
   knock: 7.5, // how far the blast throws (own warriors about half as far)
   lift: 3.6,
@@ -24,7 +24,7 @@ const FASS = {
   belly: 160, // a swallowed barrel against the worm
   cataR: 5.4, // shot from a catapult
   cataDmg: 130,
-  cataBase: 200,
+  cataBase: 360,
   load: 4.2, // how close to the own catapult to climb in
   torch: 3, // seconds a warrior burns after a blow with the torch (FASS.burnDps per second) ...
   torchPanic: 2.2, // ... and runs about screaming (a blast: the whole time he burns)
@@ -133,7 +133,7 @@ function blast(G, x, z, team, byId, kind, src = -1, bp = false) {
   for (const b of G.bears.slice())
     if (bearHere(b) && Math.hypot(b.x - x, b.z - z) < R + 1.2) hitBear(G, b, D * 0.8, team, -1, bp, false, src);
   const eb = BASES[1 - team];
-  if (baseGap(eb, x, z) < R) hit(G, -2, (cata ? FASS.cataBase : FASS.base) * (dud ? FASS.dud : 1), team, byId, -1);
+  if (baseGap(eb, x, z) < R) hit(G, -2, (cata ? FASS.cataBase : FASS.base) * (dud ? FASS.dud : 1), team, byId, 12); // (full force on walls)
   for (const t of G.traps || []) if (t.st < 2 && Math.hypot(t.x - x, t.z - z) < R) trapShut(G, t);
   xEvent(G, x, z, R, cata ? XE.cata : dud ? XE.dud : XE.blast, team, caught);
 }

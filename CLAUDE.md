@@ -209,7 +209,8 @@ Every file starts with a short header comment saying what is in it.
   knocks again every `WHIRL.pulse` (`u.spinT`).
 - **Trap catch and fire on screen** (75-fass-falle-view): a sprung trap slams, bounces and hops, then rattles; a caught warrior wears its
   jaws on his ankle with a chain to the trap (`trapLegFx`); burning warriors carry flames (`fireCrown`) besides the sparks. When the own
-  steered Feuerfass goes off, the camera rises over the blast for a moment before the map view (`boomCamStart`, `boomCamTick`).
+  steered Feuerfass goes off, the camera rises over the blast for a moment before the map view (`boomCamStart`, `boomCamTick`,
+  `BOOM_CAM`). A blast at a base wall (full force, `FASS.base`) knocks chunks in the base's colours out of it (`baseChunks`).
 - **Weapon slashes** (51-ego `slashFx`): every weapon draws its own slash (`SLASH_STYLE` per kind: axe, cane, torch, electric, claws;
   shader uniform `uStyle`), an enemy's with a red rim; the Fallenleger has none (his jaws are the attack).
 - **Ego camera** (51-ego): a spring arm (`egoArm`, `camBlocked`, `camFloor`) pulls the camera in front of hills, rocks and forests (fast in,

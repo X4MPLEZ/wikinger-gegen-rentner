@@ -13652,76 +13652,77 @@ const teamOfKind = (k, fa) => (KINDS[k].fac === fa[0] ? 0 : 1);
 /* 15-ai.js - COMPUTER OPPONENT: aiThink(G, team) runs every tick: recruiting (aiRecruit), flag and attack plans, kiting, ego takeovers (aiPossess) with
    attacks, specials, cliff dashes and the hero jump (aiHeroWorm). It only issues commands through applyCmd, like a player. Levels: AI_LVL. */
 /* ---------- computer opponent ---------- */
+// (v60: all a little weaker, Mittel clearly: it was still far too strong for most players)
 const AI_LVL = {
   easy: {
     name: TR('Einfach'),
-    think: 2.2,
-    inc: 0.6,
-    counter: 0.1,
+    think: 2.6,
+    inc: 0.52,
+    counter: 0.05,
     micro: 0,
     cavRush: 0,
     retreat: false,
-    wave: 13,
-    poss: 150,
-    ps: { react: 0.7, sp: 0, flee: 0, min: 8, hunt: 0 },
+    wave: 14,
+    poss: 180,
+    ps: { react: 0.8, sp: 0, flee: 0, min: 9, hunt: 0 },
     bonus: 0,
   },
   medium: {
-    // (was nearly as strong as Schwer: same army tactics, two in the queue, early catapults; now the step between Einfach and Schwer)
+    // the step between Einfach and Schwer: no army tactics, one in the queue, rarely takes a warrior over and then never uses specials
     name: TR('Mittel'),
-    think: 1.4,
-    inc: 0.82,
-    counter: 0.3,
+    think: 1.9,
+    inc: 0.68,
+    counter: 0.2,
     micro: 1,
-    cavRush: 1,
+    cavRush: 0,
     retreat: true,
-    wave: 17,
-    poss: 140,
-    ps: { react: 0.55, sp: 1, flee: 0.1, min: 7, hunt: 0.1 },
+    wave: 19,
+    poss: 210,
+    ps: { react: 0.7, sp: 0, flee: 0.05, min: 8, hunt: 0 },
     bonus: 0,
   },
   hard: {
     name: TR('Schwer'),
-    think: 0.5,
-    inc: 1.0,
-    counter: 0.85,
+    think: 0.6,
+    inc: 0.92,
+    counter: 0.75,
     micro: 2,
     cavRush: 2,
     retreat: true,
     wave: 15,
-    poss: 70,
-    ps: { react: 0.18, sp: 2, flee: 0.25, min: 5, hunt: 0.5 },
+    poss: 85,
+    ps: { react: 0.22, sp: 2, flee: 0.22, min: 5, hunt: 0.4 },
     bonus: 0,
   },
   insane: {
     name: TR('Extrem'),
-    think: 0.25,
-    inc: 1.35,
+    think: 0.3,
+    inc: 1.25,
     counter: 1,
     micro: 3,
     cavRush: 3,
     retreat: true,
     wave: 13,
-    poss: 35,
-    ps: { react: 0.11, sp: 3, flee: 0.3, min: 4, hunt: 0.75 },
-    bonus: 100,
+    poss: 42,
+    ps: { react: 0.13, sp: 3, flee: 0.3, min: 4, hunt: 0.7 },
+    bonus: 80,
     cliff: true,
-    rangedEgo: 0.3,
+    rangedEgo: 0.28,
   },
   extreme: {
     name: TR('Killer'),
-    think: 0.15,
-    inc: 1.8,
+    think: 0.18,
+    inc: 1.65,
     counter: 1,
     micro: 4,
     cavRush: 3,
     retreat: true,
     wave: 12,
-    poss: 20,
-    ps: { react: 0.07, sp: 3, flee: 0.32, min: 3, hunt: 0.9 },
-    bonus: 190,
+    poss: 25,
+    ps: { react: 0.08, sp: 3, flee: 0.32, min: 3, hunt: 0.85 },
+    bonus: 160,
     cliff: true,
-    rangedEgo: 0.35,
+    rangedEgo: 0.33,
     items: true,
     packVsArcher: true,
   },
@@ -14574,7 +14575,7 @@ const FASS = {
   fuse: 1.1, // seconds from lighting to the bang, for a player and the computer alike
   r: 5.2, // blast radius ...
   dmg: 112, // ... and damage at the centre (35 % at the edge)
-  base: 150, // against an enemy base wall in reach (before the base armour)
+  base: 300, // against an enemy base wall in reach (full force, like a catapult; the screens blast chunks out of it)
   own: 0.22, // own warriors take this share
   knock: 7.5, // how far the blast throws (own warriors about half as far)
   lift: 3.6,
@@ -14585,7 +14586,7 @@ const FASS = {
   belly: 160, // a swallowed barrel against the worm
   cataR: 5.4, // shot from a catapult
   cataDmg: 130,
-  cataBase: 200,
+  cataBase: 360,
   load: 4.2, // how close to the own catapult to climb in
   torch: 3, // seconds a warrior burns after a blow with the torch (FASS.burnDps per second) ...
   torchPanic: 2.2, // ... and runs about screaming (a blast: the whole time he burns)
@@ -14694,7 +14695,7 @@ function blast(G, x, z, team, byId, kind, src = -1, bp = false) {
   for (const b of G.bears.slice())
     if (bearHere(b) && Math.hypot(b.x - x, b.z - z) < R + 1.2) hitBear(G, b, D * 0.8, team, -1, bp, false, src);
   const eb = BASES[1 - team];
-  if (baseGap(eb, x, z) < R) hit(G, -2, (cata ? FASS.cataBase : FASS.base) * (dud ? FASS.dud : 1), team, byId, -1);
+  if (baseGap(eb, x, z) < R) hit(G, -2, (cata ? FASS.cataBase : FASS.base) * (dud ? FASS.dud : 1), team, byId, 12); // (full force on walls)
   for (const t of G.traps || []) if (t.st < 2 && Math.hypot(t.x - x, t.z - z) < R) trapShut(G, t);
   xEvent(G, x, z, R, cata ? XE.cata : dud ? XE.dud : XE.blast, team, caught);
 }
@@ -41001,6 +41002,7 @@ function xeProcess(s) {
       kind = e[4];
     if (kind === XE.blast || kind === XE.dud || kind === XE.cata) {
       blastFx(x, z, r, kind);
+      if (kind !== XE.dud) baseChunks(x, z, r, kind === XE.cata ? 1.3 : 1);
       if (e[5] === V.myTeam && e[6] >= 5) profEvent('boom', e[6]);
     } else if (kind === XE.dive) diveFx(x, z, e[5]);
     else if (kind === XE.snap) {
@@ -41573,12 +41575,10 @@ function goneQuiet(u, id) {
   disposeUnit(u);
 }
 /* ---------- the Feuerfass in the air ---------- */
-// the template: the barrel with its man inside – the horned cap and goggles peek out of the top, two hands grip the rim
+// the template: the barrel with its man inside – his keg helmet with the smouldering wick and the brass goggles peek out of the top
+// (the same look as the warrior, 25-worm-model.js), a sooty beard, two hands grip the rim
 projGeo.fass = (() => {
   const g = new THREE.Group(),
-    steel = lam(0x9aa3ad),
-    steelD = lam(0x6f7882),
-    bone = lam(0xf3ead2),
     skin = lam(0xe9b38c);
   mesh(fassBarrelGeo(), lam(0x9a5f2c), 0, 0, 0, g);
   [-0.2, 0.2].forEach(y => mesh(new THREE.TorusGeometry(0.262, 0.022, 5, 18).rotateX(Math.PI / 2), lam(0x4a4f57), 0, y, 0, g));
@@ -41589,19 +41589,31 @@ projGeo.fass = (() => {
   hd.scale.setScalar(0.42);
   g.add(hd);
   mesh(new THREE.SphereGeometry(0.58, 14, 10), skin, 0, -0.12, 0, hd);
-  mesh(new THREE.SphereGeometry(0.61, 14, 7, 0, TAU, 0, Math.PI * 0.43), steel, 0, 0.06, 0, hd);
-  mesh(new THREE.TorusGeometry(0.6, 0.055, 5, 18).rotateX(Math.PI / 2), steelD, 0, 0.21, 0, hd);
+  mesh(new THREE.SphereGeometry(0.34, 10, 8), lam(0x2b2420), 0, -0.42, 0.3, hd).scale.set(1.3, 0.75, 0.6); // the sooty beard
+  // the keg helmet: staves, hoops, the red band with its flame, the lid with the wick and its ember
+  const keg = new THREE.Group();
+  keg.position.set(0.02, 0.48, -0.03);
+  keg.rotation.set(-0.06, 0, 0.13);
+  hd.add(keg);
+  mesh(fassBarrelGeo(), lam(0x9a5f2c), 0, 0, 0, keg).scale.set(1.95, 1.05, 1.95);
+  [-0.21, 0.21].forEach(y => mesh(new THREE.TorusGeometry(0.513, 0.032, 5, 20).rotateX(Math.PI / 2), lam(0x4a4f57), 0, y, 0, keg));
+  mesh(new THREE.CylinderGeometry(0.556, 0.556, 0.12, 20, 1, true), lam(0xc0392b), 0, 0.02, 0, keg);
+  mesh(FLAME_GEO, lam(0xffd34d), 0, -0.02, 0.56, keg).scale.setScalar(1.7);
+  mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.03, 16), lam(0x7a4a22), 0, 0.31, 0, keg);
   mesh(
-    taperTube(curvePts([-0.42, 0.33, 0], [-0.98, 0.45, 0.06], [-0.9, 1.0, 0.18], 7), [0.13, 0.115, 0.095, 0.075, 0.05, 0.026, 0.004], 7),
-    bone,
+    taperTube(curvePts([0.12, 0.35, 0.06], [0.2, 0.5, 0.1], [0.1, 0.6, 0.18], 7), [0.03, 0.028, 0.027, 0.026, 0.025, 0.024, 0.022], 6),
+    lam(0xd8c08a),
     0,
     0,
     0,
-    hd
+    keg
   );
+  mesh(new THREE.SphereGeometry(0.05, 8, 6), TORCH_MAT.inn, 0.1, 0.61, 0.19, keg);
+  mesh(new THREE.TorusGeometry(0.6, 0.035, 4, 20).rotateX(Math.PI / 2), lam(0x6b4423), 0, 0.18, -0.02, hd); // goggle strap
   [-1, 1].forEach(s => {
-    mesh(new THREE.TorusGeometry(0.13, 0.045, 5, 12), lam(0xc99a3a), s * 0.2, 0.0, 0.5, hd);
-    mesh(new THREE.CircleGeometry(0.11, 10), lam(0xbfe6ff), s * 0.2, 0.0, 0.51, hd);
+    const gg = mesh(new THREE.TorusGeometry(0.13, 0.04, 6, 14), lam(0xc99a3a), s * 0.2, 0.18, 0.55, hd);
+    gg.rotation.set(-0.35, s * 0.32, 0);
+    mesh(new THREE.CircleGeometry(0.11, 12), lam(0x2a5a46), s * 0.2, 0.18, 0.56, hd).rotation.set(-0.35, s * 0.32, 0);
     mesh(new THREE.SphereGeometry(0.06, 8, 6), skin, s * 0.29, 0.31, 0.06, g); // fingers on the rim
   });
   g.traverse(o => o.geometry && (o.geometry.userData.shared = true)); // clones (catapult cups, shots) share these
@@ -41718,7 +41730,7 @@ $('#egoLoad') &&
   });
 
 /* ---------- the own Feuerfass went off in the ego: the camera rises behind him and looks down on who flies where, holds, then back ---------- */
-const BOOM_CAM = { rise: 0.75, hold: 1.7, back: 0.55 };
+const BOOM_CAM = { rise: 0.7, hold: 1.35, back: 0.5, up: 23, out: 11 }; // (high and wide: the whole crater and who flies where)
 function boomCamStart(x, z, yaw, look) {
   V.boomCam = { x, z, yaw, t: 0, p0: camera.position.clone(), l0: look, up: new THREE.Vector3(), lk: new THREE.Vector3() };
   camS.x = x; // the map view afterwards looks at the crater
@@ -41737,7 +41749,7 @@ function boomCamTick(dt) {
     T1 = BOOM_CAM.rise,
     T2 = T1 + BOOM_CAM.hold,
     T3 = T2 + BOOM_CAM.back;
-  B.up.set(B.x - Math.sin(a) * 7, gy + 16, B.z - Math.cos(a) * 7);
+  B.up.set(B.x - Math.sin(a) * BOOM_CAM.out, gy + BOOM_CAM.up, B.z - Math.cos(a) * BOOM_CAM.out);
   B.lk.set(B.x, gy + 0.5, B.z);
   if (B.t >= T3) {
     V.boomCam = null;
@@ -41759,6 +41771,74 @@ function boomCamTick(dt) {
   }
   camera.lookAt(BOOM_V);
   camera.updateMatrixWorld();
+}
+
+/* ---------- a blast at a base wall knocks chunks out of it ---------- */
+const CHUNK_GEO = new THREE.BoxGeometry(1, 1, 1);
+CHUNK_GEO.userData.shared = true;
+function baseChunks(x, z, r, s) {
+  for (let i = 0; i < 2; i++) {
+    const B = BASES[i],
+      bv = baseViews[i];
+    if (!B || !bv || baseGap(B, x, z) >= r) continue;
+    if (FOG.on && i !== V.myTeam && !fogSeen(B.x, B.z) && !fogSeen(x, z)) continue;
+    // the wall point next to the blast, and which way is out
+    const wx = clamp(x, B.x - 6.6, B.x + 6.6),
+      wz = clamp(z, B.z - 3.6, B.z + 3.6),
+      gy = groundY(wx, wz);
+    let nx = x - wx,
+      nz = z - wz,
+      nl = Math.hypot(nx, nz);
+    if (nl < 0.3) {
+      nx = x - B.x;
+      nz = z - B.z;
+      nl = Math.hypot(nx, nz) || 1;
+    }
+    nx /= nl;
+    nz /= nl;
+    if (!bv.chunkCols) {
+      // the base's own colours (stone, wood, plaster), taken from its biggest pieces
+      const big = [],
+        bb = new THREE.Box3(),
+        sz = new THREE.Vector3();
+      bv.g.traverse(o => {
+        if (!o.isMesh || !o.material || !o.material.color || o.userData.isInk) return; // (not the black ink outlines)
+        bb.setFromObject(o).getSize(sz);
+        if (sz.y > 0.8 && Math.max(sz.x, sz.z) > 1.5) big.push([sz.x * sz.y * sz.z, o.material.color.getHex()]);
+      });
+      const cols = [...new Set(big.sort((a, b) => b[0] - a[0]).map(e => e[1]))].slice(0, 4);
+      bv.chunkCols = cols.length ? cols : [0xb9ad9a, 0x8a6a48];
+    }
+    const n = Math.round(16 * s);
+    for (let k = 0; k < n; k++) {
+      const m = new THREE.Mesh(CHUNK_GEO, lam(bv.chunkCols[k % bv.chunkCols.length]));
+      const sz = 0.45 + Math.random() * 0.7;
+      m.scale.set(sz * (0.8 + Math.random() * 0.8), sz * (0.6 + Math.random() * 0.6), sz * (0.8 + Math.random() * 0.6));
+      const side = (Math.random() - 0.5) * 3.2;
+      m.position.set(wx - nz * side, gy + 0.8 + Math.random() * 3.2, wz + nx * side);
+      m.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+      m.castShadow = UNIT_SHADOWS;
+      scene.add(m);
+      const pw = 4 + Math.random() * 7;
+      fx.debris.push({
+        m,
+        vx: nx * pw + (Math.random() - 0.5) * 3,
+        vy: 3 + Math.random() * 7,
+        vz: nz * pw + (Math.random() - 0.5) * 3,
+        rx: (Math.random() - 0.5) * 14,
+        rz: (Math.random() - 0.5) * 14,
+        t: 0,
+        delay: Math.random() * 0.06,
+      });
+    }
+    emitFX('building', wx, gy + 2, wz, { size: 1.2 * s });
+    for (let k = 0; k < 6; k++)
+      puff(wx - nz * (Math.random() - 0.5) * 4, gy + 1 + Math.random() * 3, wz + nx * (Math.random() - 0.5) * 4, 0xa89c88, 2, 1.4);
+    SFX.play('splinter', { x: wx, z: wz, vol: 1.1 });
+    SFX.play('collapse', { x: wx, z: wz, vol: 0.5 });
+    bv.shake = Math.max(bv.shake || 0, 0.6);
+    word(TR('KRACH!'), wx, gy + 5.5, wz, { color: '#ffd34d', scale: 1.3, prio: true });
+  }
 }
 
 // ---- src/js/80-animation.js ----
