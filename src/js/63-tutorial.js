@@ -394,7 +394,7 @@ function tutSteps(nar, adv) {
           spc
         ),
         start: () => {
-          prep(kOf('cav'), [[0, 12, E.kinds[3]]], 1);
+          prep(kOf('cav'), [[0, 12, E.kinds.find(k => KINDS[k].role === 'siege')]], 1);
           TUT.enterAt = now() + 400;
         },
         after: egoKeep,

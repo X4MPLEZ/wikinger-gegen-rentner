@@ -12,10 +12,10 @@ with sync_playwright() as p:
       const Q = W.dqToday(); Q.ids = ['online1', 'cliff3', 'rams6']; // daily quests that these matches never finish (checked below)
       const M = o => Object.assign({ won: true, online: false, ai: true, tut: false, adv: false, lvl: 'medium', fac: 'viking', map: 'wiesen',
         mode: 'classic', t: 500, k: 20, st: [10, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0], ost: [8, 9, 300, 0, 0, 0, 0, 0, 0, 0, 0], base: 900, mhp: 1500, ru: 0 }, o);
-      // first win: 40 + 40 + 20 kills = 100 XP -> level 2 (needs 100), first-win and daily bonus Juwelen
+      // first win: 50 + 40 + 20 kills = 110 XP -> level 2 (needs 70), first-win and daily bonus Juwelen
       let R = W.profMatchEnd(M({}));
       out.first = [R.xp, R.lv1.L, R.ach.includes('firstWin'), R.daily, W.PLAYER.gems];
-      // a loss online: (40 + 10 kills) x 1.5 = 75, streak back to 0
+      // a loss online: (50 + 10 kills) x 1.5 = 90, streak back to 0
       R = W.profMatchEnd(M({ won: false, online: true, ai: false, k: 10 }));
       out.loss = [R.xp, W.PLAYER.st.streak, W.PLAYER.st.onGames];
       // three wins in a row -> Siegesserie; extreme AI -> Legende (and its picture is owned)
@@ -29,8 +29,8 @@ with sync_playwright() as p:
       W.V.playing = true; W.V.tut = false; W.profEvent('hl', { ty: 'strike', mine: true, n: 5 }); W.profEvent('hl', { ty: 'strike', mine: false, n: 8 });
       out.strike = !!W.PLAYER.ach.strike5;
       W.V.playing = false;
-      // levels and rewards: enough XP for level 10 -> the Rotbart skin is owned
-      W.PLAYER.xp = 1700; R = W.profMatchEnd(M({ won: false, k: 0 }));
+      // levels and rewards: enough XP for level 10 (1120 + a lost match's 50) -> the Rotbart skin (level 3) is owned, Eiswolf (20) not
+      W.PLAYER.xp = 1120; R = W.profMatchEnd(M({ won: false, k: 0 }));
       out.lv10 = [R.lv1.L, R.lvUp.includes(10), W.profOwns('v1'), W.profOwns('v2')];
       // shop: too poor, then buy and equip; a locked level item cannot be bought
       W.PLAYER.gems = 50; out.poor = W.profBuy('goat');
@@ -72,7 +72,7 @@ with sync_playwright() as p:
     }""")
     print(json.dumps(r))
     peer = r['badPeer'][1]
-    ok = (r['first'] == [100, 2, True, 20, 25 + 20] and r['loss'][0] == 75 and r['loss'][1:] == [0, 1]
+    ok = (r['first'] == [110, 2, True, 20, 25 + 20] and r['loss'][0] == 90 and r['loss'][1:] == [0, 1]
           and r['streak'] == [3, True, True, True] and r['dailyOnce'] == 0 and r['fortressBlitz'] == [True, True] and r['strike']
           and r['lv10'][0] == 10 and r['lv10'][1] and r['lv10'][2] and not r['lv10'][3]
           and r['poor'] is False and r['buy'][0] is True and r['buy'][1] == 420 and r['buy'][2] is True and r['buy'][3] == 'goat' and r['buy'][4] is False

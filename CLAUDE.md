@@ -73,7 +73,7 @@ Every file starts with a short header comment saying what is in it.
 | 13-sim-hazards | bowling bodies, rolling boulders, cream puddles | `bowlStep`, `rollStep`, `gooStep` |
 | 14-sim-step | **the tick** and the snapshot; map events | `step(G)`, `snapOf(G)`, `worldStep`, `startEvent` |
 | 15-ai | computer opponent (levels: Einfach, Mittel, Schwer, Extrem, Killer) | `aiThink`, `aiRecruit`, `aiPossess`, `AI_LVL` |
-| 16-sim-fass-falle | Feuerfass (fuse, blast, dud, into the catapult) and Fallenleger (bear traps); burning and being caught | `FASS`, `TRAP`, `blast`, `fassLoad`, `layTrap`, `trapStep`, `specStep` |
+| 16-sim-fass-falle | Feuerfass (fuse, blast, dud, into the catapult) and Fallenleger (row of trap jaws, thrown bear traps); burning (panic, into the water) and being caught | `FASS`, `TRAP`, `FANG`, `blast`, `fassLoad`, `fangLine`, `fangPts`, `trapPlace`, `layTrap`, `trapStep`, `burnPanic`, `wetNear`, `specStep` |
 | 20-textures | canvas textures | `cnv`, `portrait`, `flagCanvas` |
 | 21-scene | renderer, camera, lights, materials, fog shader, outlines | `lam(color)` (cached!), `fogInject`, `inkify`, `mesh` |
 | 22-map-view | terrain, water, trees, flags | `buildMapView` |
@@ -99,13 +99,14 @@ Every file starts with a short header comment saying what is in it.
 | 65-profile | the player's profile: levels (Ruhmespfad), achievements, daily quests, Juwelen, pictures, skins, statistics, transfer code, god mode | `PLAYER`, `ACH`, `DQ_POOL`, `AVATARS`, `SKINS`, `LEVEL_REWARDS`, `profMatchEnd`, `profEvent`, `setSkins`, `avatarURL`, `godSet` |
 | 65a-avatar-pics | the hand-made profile pictures (data URLs by avatar id) | `AV_PIC` |
 | 66-profile-ui | profile page (home button, Ruhmespfad track, daily quests, collection with preview sheet), menu chip, end-screen rewards, VS card | `profOpen`, `profUi`, `profSheet`, `profEndUi`, `vsCard` |
-| 67-showcase | 3D showcase in the profile: a second small renderer drawing a squad in a skin, still pictures of skins | `showMount`, `showSet`, `showTick`, `skinThumb` |
+| 67-showcase | 3D showcase in the profile and the wiki: a second small renderer drawing a squad or one unit (scaled with `sc`), still pictures of skins | `showMount`, `showSet`, `showTick`, `skinThumb` |
+| 68-wiki | the wiki: per warrior a story, how he fights, numbers read from `KINDS`/`FASS`/`TRAP`, strong/weak faces, tips, the 3D showcase; a rules page; opens from menu, online wait, lobby, pause | `WIKI`, `wikiOpen`, `wikiText`, `WIKI_VS`, `wikiUi` |
 | 70-world-view | bears, holes, pads, pickups, fog of war (client) | `updateWorld`, `itemMesh`, `fogVis`, `fogSeen`, `fogWallTick` |
 | 71-worm-view | wild sandworms on screen, sounds, victims | `wormWorldView`, `grabTick` |
 | 72-hero-view | the hero sequence on screen | `heroTick`, `heroCam` |
 | 73-deaths | death animations, ghosts | `startDeath`, `deathTick` |
 | 74-fog-guides | flag/base markers, own silhouettes, watch fires, lanterns, enemy footprints in the sand | `fogGuidesTick`, `fogFeetTick` |
-| 75-fass-falle-view | explosions, lit fuses, burning warriors, bear traps, the loaded catapult and the barrel flight (camera), chicken dives | `boomTick`, `trapTick`, `fassFly`, `fassCamTick`, `egoLoad` |
+| 75-fass-falle-view | explosions, lit fuses, burning warriors (screams, splash), bear traps (thrown in an arc, the aim ring), the row of trap jaws, the loaded catapult and the barrel flight (camera), chicken dives | `boomTick`, `trapTick`, `trapAimTick`, `fangFx`, `fangTick`, `fassFly`, `fassCamTick`, `egoLoad` |
 | 80-animation | procedural poses | `humanRig`, `animateRig` |
 | 81-quality | graphics quality levels, auto-quality, profiler | `QS`, `perfTick`, `applyQuality` |
 | 82-frame | **the frame loop** | `frame`, `renderUnits` |
@@ -131,7 +132,8 @@ Every file starts with a short header comment saying what is in it.
 - `G` – the game state (sim): `G.units[]` `{id, k, team, x, z, hp, poss, ...}`, `G.bears[]` (wild bears and sandworms), `G.teams[0|1]`
   `{fac, gold, q (queue), pos (possessed id), pk (perks), ...}`, `G.flags[]`, `G.t`, `G.phase`, `G.over` (-1 running, else winner).
 - `KINDS[k]`: 0 Berserker, 1 Bogenschützin, 2 Krückstock-Opa, 3 Gebiss-Oma, 4 Ziegenreiter, 5 E-Mobil-Raser, 6 Wikinger-Katapult,
-  7 Torten-Katapult, 8/9 Eisbär, 10/11 Sandwurm, 12 Feuerfass, 13 Fallenleger. Wikinger = kinds [0, 1, 4, 6, 12], Rentner = [2, 3, 5, 7, 13].
+  7 Torten-Katapult, 8/9 Eisbär, 10/11 Sandwurm, 12 Feuerfass, 13 Fallenleger. Wikinger = kinds [0, 1, 4, 12, 6], Rentner = [2, 3, 5, 13, 7]
+  (`FAC[...].kinds`, in the order of the recruit bar).
   Roles: melee, ranged, cav, siege (12 and 13 are melee with `spec` 'bomb' / 'trap'). Kinds in the queue strings `q`/`au` are base 36.
 - `V` – the view: `V.latest` (newest snapshot), `V.units` (Map id → view), `V.poss` (the warrior you steer), `V.myTeam`, `V.mode`
   ('menu' | 'ai' | 'host' | 'guest').
@@ -182,15 +184,31 @@ Every file starts with a short header comment saying what is in it.
   the air dives; the client sends the height as `fh`/`dv` in the input packet, the host caps the climb; others see it via snapshot `hf`; up
   in the air no melee reaches it, `aloft(u)`); snapshot flag bit 32768 (drawn as a chicken with a team scarf, one merged mesh).
 - **Feuerfass / Fallenleger** (16-sim-fass-falle, 75-fass-falle-view): the Feuerfass carries the barrel on his left shoulder and a torch
-  in the right hand (`u.barrel`, `u.torchFlame`); every blow of his sets the victim on fire (`torchBurn`, from `traitHit`). A trap
-  catches everyone in `TRAP.r` (up to `TRAP.max`, `t.vs`), bites once and grinds on (`TRAP.dps`). New unit states `u.fuse`, `u.burn`, `u.trapT`, `u.trapC`, `u.fass`
-  (a catapult loaded with a barrel) are snapshot flag bits 131072, 65536, 262144, 1048576, 524288. One-shot impacts (blast, dud, catapult
-  barrel, chicken dive, trap snap, fizzle, loading) go through `xEvent()` (10-sim) into `G.xe` → snapshot `xe`, numbered like `ge`/`kf`;
-  traps are snapshot `tr`, warriors gone without dying (a barrel climbing into the catapult) `gn`. Command `{t: 'load', id}` puts the
-  steered Feuerfass into an own catapult next to it. An enemy trap is drawn barely visible (and never in the fog), an own one clear.
+  in the right hand (`u.barrel`, `u.torchFlame`), a smoking keg as a helmet (`u.hatTip`); every blow of his sets the victim on fire
+  (`torchBurn`, from `traitHit`). His barrel goes off only when a player lit it (ego special) – the computer never lights it; a headshot
+  (`hit(..., head)`) kills him at once and blasts for the shooter (`u.headBoom`, `fassDuds`). The Fallenleger's attack (AI and ego) is
+  `fangLine`: a row of trap jaws (`FANG`, points from `fangPts`, the same on host and screens) bites one after another in `fangStep` – each
+  enemy once per row, held a moment (`u.trapT` with `trapId` 0 = snapshot bit 2097152; riders longer); a steered one counters riders
+  softly (`fangNow` in `hit`). His special `trapPlace` throws the trap to the aim point (`In.gp`, at most `TRAP.throw` m) and picks up
+  an armed one lying out there (re-placed; at most one armed trap per Fallenleger). A trap catches everyone in `TRAP.r` (up to
+  `TRAP.max`, `t.vs`), bites once and grinds on (`TRAP.dps`). Burning warriors that are not steered panic (`burnPanic`): they run to
+  water they reach before the fire is out (`burnWater`: rays over walkable ground, at most `FASS.wet` m) and run on until they jump in
+  from the bank (`wetNear`: within `FASS.dip` m, at most `FASS.jump` m above it; the fire goes out, `u.fireImm`), else zigzag. New unit
+  states `u.fuse`, `u.burn`, `u.trapT`, `u.trapC`, `u.fass` (a catapult loaded with a barrel) are snapshot flag bits 131072, 65536,
+  262144, 1048576, 524288. One-shot impacts (blast, dud, catapult barrel, chicken dive, trap snap, fizzle, loading, a row of jaws) go
+  through `xEvent()` (10-sim) into `G.xe` → snapshot `xe`, numbered like `ge`/`kf`; a row adds `[src, yaw*100]` (the striker's own
+  screen has drawn it at once and skips it). Traps are snapshot `tr` (with the owner: a new one flies from his hand), warriors gone
+  without dying (a barrel climbing into the catapult) `gn`. Command `{t: 'load', id}` puts the steered Feuerfass into an own catapult
+  next to it. An enemy trap is drawn barely visible (and never in the fog), an own one clear.
+- **Weapon slashes** (51-ego `slashFx`): every weapon draws its own slash (`SLASH_STYLE` per kind: axe, cane, torch, electric, claws;
+  shader uniform `uStyle`), an enemy's with a red rim; the Fallenleger has none (his jaws are the attack).
+- **Ego camera** (51-ego): a spring arm (`egoArm`, `camBlocked`, `camFloor`) pulls the camera in front of hills, rocks and forests (fast in,
+  slow out) – it must never sit inside the terrain (enemies behind a mountain showed through). The Fallenleger's spade slam nods the view
+  down for a moment (`EG.dip`) so his row of jaws shows over his head.
 - **PC controls** (50-input): like a PC strategy game – left click selects, a click into the void deselects, left drag draws a rectangle
-  (`rectPts`; touch keeps the lasso), right click orders, `C`/Esc deselect, `Space` is the ego special, `F` takes over. `BIND_DEF` are
-  the defaults; `BIND_OLD` migrates stored bindings that still equal an older default. A tap on an own warrior always selects him.
+  (`rectPts`; touch keeps the lasso), right click orders, `C`/Esc deselect, `Space` is the ego special (the right mouse button never is),
+  `F` takes over. `BIND_DEF` are the defaults; `BIND_OLD` (lists of older defaults) migrates stored bindings that still equal one. A tap
+  on an own warrior always selects him.
 - **First steps** (53-guide): `guideStart()` in `beginMatch` shows the card until every step was done once or it was closed
   (`store 'wvr-guide'`); `guideOffer()` on the first "Los geht's" offers the tutorial once (`'wvr-first'`). The tests' harness sets both
   keys, so no test sees them (tests/t_guide.py removes them). While the card is up the one-line HINTS wait.
@@ -218,6 +236,7 @@ Every file starts with a short header comment saying what is in it.
 - **New sound:** add a synth function to `LIB` in 30-sound.js, play it with `SFX.play('name', { x, z })` (positional) or without x/z.
 - **New HUD element:** markup in src/body.html, style in src/style.css (+ landscape/portrait rules), update in `updateHud()`.
 - **New setting kept per device:** `store.get('wvr-…')` / `store.set('wvr-…', v)`.
+- **New wiki entry** (a new kind): texts in `wikiText(k)`, strong/weak in `WIKI_VS`, the tab from `FAC[...].kinds` (68-wiki) + translations.
 - **New achievement:** entry in `ACH` (65-profile: id, icon, gems, German name/description, a test on the match-end record or a live
   event from `profEvent`) + translations. **New daily quest:** entry in `DQ_POOL` (goal, gems, what one match adds).
 - **New picture / skin:** `AVATARS` / `SKINS` (colour swaps `sw`, unlock `u`: `lv` or `gems`, never both) + its pieces in `skinExtras`
@@ -239,8 +258,11 @@ Every file starts with a short header comment saying what is in it.
 - `tests/t_bear.py`: a polar bear shot from afar charges the shooter (`b.foe`, `BEAR_GRUDGE` in 10-sim).
 - `tests/t_bug.py`: the bug report form posts text, device info and the screenshot to FormSubmit (the request is caught in the test); the
   game's picture is copied right after a frame is drawn (`BUG.grab` → `bugGrab()` in 82-frame), a picked picture is re-encoded small.
-- `tests/t_fass.py`: Feuerfass blast/dud/catapult shot, the torch, the bear trap (holds, bites, lets go, new trap, several at once, the
-  computer lays it), the flying chicken.
+- `tests/t_fass.py`: Feuerfass blast/dud/catapult shot (never lit by the computer), the torch, burning warriors running into water, the
+  bear trap (holds, bites, lets go, new trap, several at once, the computer throws it), the flying chicken, the row of trap jaws (once per
+  enemy, held, riders longer, the steered one), the thrown and re-placed trap, the headshot on a Feuerfass.
+- `tests/t_wiki.py`: the wiki from the menu and the pause menu, tabs, a warrior's page, jumping via the strong/weak faces, the wait button,
+  English without German left.
 - `tests/t_guide.py`: the tutorial offer and the first-steps card step by step; mouse rectangle selection, click into the void, C, F, Space.
 - `tests/mp/mp_net.py` plays two pages against each other over local PeerJS/MQTT servers (quit, line drop, rejoin);
   `tests/mp/mp_recon.py` checks the ego movement online (no pull-backs on a clear walk or after a lag burst, knock-downs, a speed cheat).

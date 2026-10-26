@@ -427,7 +427,15 @@ function renderUnits(t, dt) {
     const jt = mine ? V.poss.jumpT || 0 : u.jumpT || 0,
       jd = mine ? V.poss.jDur || 0.9 : u.jDur || 0.9;
     if (!mine && u.jumpT > 0) u.jumpT = Math.max(0, u.jumpT - dt);
-    const jh = jt > 0 ? (jd > 1 ? 4 * PAD_H * (jt / PAD_FLY) * (1 - jt / PAD_FLY) : Math.sin(((jd - jt) / jd) * Math.PI) * 4.8) : 0;
+    // a burning warrior reaching water jumps in (16-sim-fass-falle.js puts the fire out there)
+    if (u.burning && !flight && !u.hopped && wetNear(x, z, FASS.dip)) {
+      u.hopped = 1;
+      u.hopT = 0.42;
+    }
+    if (!u.burning && !(u.hopT > 0)) u.hopped = 0;
+    const hop = u.hopT > 0 ? Math.sin((1 - u.hopT / 0.42) * Math.PI) * 1.2 : 0;
+    if (u.hopT > 0) u.hopT -= dt;
+    const jh = (jt > 0 ? (jd > 1 ? 4 * PAD_H * (jt / PAD_FLY) * (1 - jt / PAD_FLY) : Math.sin(((jd - jt) / jd) * Math.PI) * 4.8) : 0) + hop;
     if (u.wasJ && jt <= 0) {
       for (let i = 0; i < 12; i++) {
         const a = (i / 12) * TAU;
@@ -536,6 +544,19 @@ function renderUnits(t, dt) {
         if (now() - (V.rummsT || 0) > 250) {
           V.rummsT = now();
           word(pick([TR('RUMMS!'), TR('WUMMS!'), TR('BAMM!')]), x, y + 2.6, z, { color: '#ffcf6a', scale: 1.05 });
+        }
+      }
+      {
+        // over a gorge and dropping: a long cartoon scream (once per fall)
+        const ack = mine ? flight.ack : af[8],
+          vy = mine ? flight.vy : af[5] / 100;
+        if (u.screamAck !== ack && vy < 0 && kind !== 'dash' && fallZone(x, z) && !u.fogHid) {
+          u.screamAck = ack;
+          SFX.play('fallScream', { x, z, hi: u.k === 1 || u.k === 3, vol: mine ? 1.15 : 0.95, dur: 1.7 });
+          if (now() - (V.aahT || 0) > 450) {
+            V.aahT = now();
+            word(pick([TR('AAAAAH!'), TR('HIIILFE!'), TR('WAAAAH!')]), x, y + 2.8, z, { color: '#ffffff', scale: 1.15, prio: true });
+          }
         }
       }
       u.airPoseT = (u.airPoseT || 0) + dt;

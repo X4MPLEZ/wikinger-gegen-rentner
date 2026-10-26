@@ -42,7 +42,7 @@ const AVATARS = [
   { id: 'opa', k: 2, bg: ['#d9a3c8', '#6e3a62'], u: { free: 1 } },
   { id: 'berserker', k: 0, bg: ['#9cc4ea', '#2c4f78'], u: { free: 1 } },
   { id: 'oma', k: 3, bg: ['#f1bddc', '#7a3a63'], u: { lv: 2 } },
-  { id: 'archer', k: 1, bg: ['#a9d8f0', '#2f6a8a'], u: { lv: 3 } },
+  { id: 'archer', k: 1, bg: ['#a9d8f0', '#2f6a8a'], u: { lv: 4 } },
   { id: 'goat', k: 4, bg: ['#cfe3c0', '#3d6b3a'], u: { gems: 80 } },
   { id: 'racer', k: 5, bg: ['#f2b1a6', '#8a2f2a'], u: { gems: 80 } },
   { id: 'omaFlower', k: 3, bg: ['#c8ecb4', '#3f7a2a'], deco: 'flower', u: { lv: 6 } },
@@ -64,14 +64,15 @@ const AVATARS = [
   { id: 'falle', k: 13, bg: ['#d6e4b4', '#4a5a2a'], u: { ach: 'trap3' } },
 ];
 /* Army skins: colour swaps for the models of one faction (old colour -> new colour; no chains) plus their own extra pieces (skinExtras in
-   25-worm-model.js). Klassisch is free; three per faction come with the Ruhmespfad (Wikinger at levels 10/20/28, Rentner at 13/23/30 – only there, never
-   in the shop), one per faction is bought with Juwelen. */
+   25-worm-model.js). Klassisch is free; three per faction come with the Ruhmespfad (the first of both factions at level 3 – after the
+   first two or three matches –, then Wikinger at 20/28, Rentner at 23/30 – only there, never in the shop), one per faction is bought
+   with Juwelen. */
 const SKINS = {
   v0: { fac: 'viking', n: TR('Klassisch'), u: { free: 1 }, sw: null, c: ['#326a9e', '#9aa3ad'] },
   v1: {
     fac: 'viking',
     n: TR('Rotbart'),
-    u: { lv: 10 },
+    u: { lv: 3 },
     c: ['#a8322a', '#9aa3ad'],
     sw: {
       0x326a9e: 0xa8322a,
@@ -117,7 +118,7 @@ const SKINS = {
   r1: {
     fac: 'rentner',
     n: TR('Trainingsanzug'),
-    u: { lv: 13 },
+    u: { lv: 3 },
     c: ['#2e8b6e', '#f3ead2'],
     sw: {
       0x995a8d: 0x2e8b6e,
@@ -204,17 +205,17 @@ for (const id of SKIN_IDS) if (SKINS[id].sw) SKIN_MAPS[id] = new Map(Object.entr
 const LEVEL_MAX = 30;
 const LEVEL_REWARDS = {
   2: { av: 'oma' },
-  3: { av: 'archer' },
-  4: { gems: 30 },
+  3: { sk: ['v1', 'r1'] }, // the first army skin of both factions after two or three matches
+  4: { av: 'archer' },
   5: { gems: 40 },
   6: { av: 'omaFlower' },
   7: { gems: 40 },
   8: { av: 'archerStars' },
   9: { gems: 50 },
-  10: { sk: ['v1'] },
+  10: { gems: 50 },
   11: { gems: 50 },
   12: { av: 'berserkerFire' },
-  13: { sk: ['r1'] },
+  13: { gems: 60 },
   14: { gems: 60 },
   15: { gems: 60 },
   16: { gems: 60 },
@@ -233,7 +234,7 @@ const LEVEL_REWARDS = {
   29: { gems: 90 },
   30: { sk: ['r3'], av: 'goatCrown', gems: 200 },
 };
-const lvNeed = L => 100 + 20 * (L - 1);
+const lvNeed = L => 70 + 15 * (L - 1); // (a first match brings 50–150 XP: level 3 after two or three)
 function lvOf(xp) {
   let L = 1,
     x = Math.max(0, xp | 0);
@@ -649,7 +650,7 @@ function profMatchEnd(M) {
     S.holes += st[9] | 0;
     S.ego += st[10] | 0; // controlled enemies beaten with the own ego warrior (each one a rush)
     S.time += Math.round(M.t || 0);
-    xp = 40 + (M.won ? 40 : 0) + Math.min(40, M.k | 0) + Math.min(20, 2 * (st[10] | 0));
+    xp = 50 + (M.won ? 40 : 0) + Math.min(40, M.k | 0) + Math.min(20, 2 * (st[10] | 0));
     xp = Math.round(xp * (M.online ? 1.5 : M.ai ? AI_XP[M.lvl] || 1 : 1));
     if (M.won && PLAYER.daily !== today) {
       PLAYER.daily = today;

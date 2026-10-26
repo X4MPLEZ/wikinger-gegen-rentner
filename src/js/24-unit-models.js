@@ -635,6 +635,9 @@ function buildRider(k, parent, P, seated) {
     // Feuerfass: a bushy soot-black beard with glowing singed tips, a scorched leather apron, leather bracers, a powder horn and soot
     const bd = mesh(UG.beard, lam(0x2b2420), 0, -0.04, 0.3, neck);
     bd.scale.set(1.18, 1.15, 0.62);
+    mesh(UG.collar, lam(0xc0392b), 0, 1.27, 0, torso).scale.setScalar(1.15); // a red neckerchief ...
+    const kn = mesh(new THREE.BoxGeometry(0.1, 0.16, 0.03), lam(0xc0392b), 0, 1.16, -0.12, torso); // ... knotted at the back
+    kn.rotation.x = 0.35;
     [-1, 1].forEach(s2 => {
       const mu = mesh(UG.tuft, lam(0x231d1a), s2 * 0.14, 0.33, 0.55, neck);
       mu.scale.set(2.1, 0.8, 0.85);
@@ -662,21 +665,33 @@ function buildRider(k, parent, P, seated) {
     ].forEach(([x, y, z]) => (mesh(new THREE.SphereGeometry(0.05, 6, 4), lam(0x2a2826), x, y, z, torso).scale.z = 0.25)); // soot smudges
   }
   if (k === 13) {
-    // Fallenleger: a hunting jacket with big pockets and a collar, green braces, a checked shirt at the neck, a whistle on a cord
+    // Fallenleger: a green loden waistcoat over the shirt (horn buttons, two pockets), a big white beard, a pipe in the corner of his
+    // mouth, and a wooden pack frame on his back with a sack and a coil of chain (his bear trap hangs on it, 25-worm-model.js)
+    const loden = lam(0x4d6a3c),
+      wood2 = lam(0x7a5a36);
+    mesh(UG.body, loden, 0, 0.6, 0, torso).scale.set(1.08, 0.82, 1.1); // the waistcoat
     [-1, 1].forEach(s2 => {
-      const pk = mesh(UG.pocket, lam(dk), s2 * 0.12, 0.74, 0.19, torso);
-      pk.scale.set(1.35, 1.3, 1);
-      pk.rotation.y = s2 * 0.5;
-      mesh(UG.button, lam(0x6b4423), s2 * 0.12, 0.79, 0.205, torso);
-      const lap = mesh(new THREE.BoxGeometry(0.07, 0.16, 0.02), lam(dk), s2 * 0.07, 1.18, 0.15, torso);
-      lap.rotation.set(-0.35, 0, s2 * 0.45);
+      const pk = mesh(UG.pocket, lam(0x3e5730), s2 * 0.12, 0.78, 0.215, torso);
+      pk.scale.set(1.25, 1.2, 1);
+      pk.rotation.y = s2 * 0.45;
     });
-    mesh(UG.collar, lam(0x3f7a3a), 0, 1.29, 0, torso).scale.setScalar(1.1); // green neckerchief
-    mesh(new THREE.BoxGeometry(0.07, 0.07, 0.03), lam(0xc23a30), 0, 1.25, 0.12, torso); // checked shirt
-    mesh(new THREE.BoxGeometry(0.035, 0.035, 0.032), lam(0xf3ead2), 0.018, 1.265, 0.122, torso);
-    mesh(new THREE.TorusGeometry(0.15, 0.007, 3, 14, Math.PI).rotateZ(Math.PI), lam(0xd8c08a), 0, 1.2, 0.13, torso).rotation.x = 0.45; // cord
-    mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.07, 6).rotateZ(Math.PI / 2), lam(0xc9ced4), 0, 1.06, 0.2, torso); // whistle
-    [0.84, 0.98].forEach(y => mesh(UG.button, lam(0x6b4423), 0, y, 0.195, torso));
+    [0.82, 0.94, 1.06].forEach(y => mesh(UG.button, lam(0xe8dcc0), 0.02, y, 0.225, torso));
+    const bd = mesh(UG.beard, lam(0xeeeae2), 0, -0.04, 0.32, neck); // the beard
+    bd.scale.set(1.05, 1.0, 0.6);
+    for (let i = 0; i < 3; i++) mesh(UG.tuft, lam(0xf6f3ec), -0.12 + i * 0.12, -0.32, 0.42, neck).scale.setScalar(0.85);
+    const pipe = mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.26, 6).rotateX(Math.PI / 2), lam(0x3a2a1c), 0.2, 0.3, 0.66, neck); // pipe stem
+    pipe.rotation.y = 0.35;
+    mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.1, 8), lam(0x5a3a22), 0.25, 0.33, 0.78, neck); // and bowl
+    // the pack frame: two poles, cross bars, a sack, a coil of chain
+    [-1, 1].forEach(s2 => {
+      mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.86, 6), wood2, s2 * 0.15, 0.95, -0.3, torso);
+      const st = mesh(new THREE.TorusGeometry(0.12, 0.016, 4, 10, Math.PI), lam(0x5a3a22), s2 * 0.12, 1.18, -0.12, torso); // straps
+      st.rotation.set(0, Math.PI / 2, 0);
+    });
+    [0.62, 1.2].forEach(y => mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.32, 6).rotateZ(Math.PI / 2), wood2, 0, y, -0.3, torso));
+    mesh(new THREE.SphereGeometry(0.17, 10, 8), lam(0xb59a6a), 0, 1.12, -0.37, torso).scale.set(1.15, 0.8, 0.75); // the sack
+    mesh(new THREE.TorusGeometry(0.08, 0.02, 4, 12), lam(0x4f565e), 0.15, 0.7, -0.36, torso).rotation.y = Math.PI / 2; // chain coil
+    mesh(new THREE.TorusGeometry(0.07, 0.02, 4, 12), lam(0x4f565e), 0.17, 0.66, -0.36, torso).rotation.y = Math.PI / 2;
   }
   if (k === 5) {
     // E-Mobil racer: scarf flying behind, belt buckle

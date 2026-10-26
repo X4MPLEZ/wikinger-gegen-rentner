@@ -1373,9 +1373,75 @@ const SFX = (() => {
       thump(b, 160, t, 0.25, 0.6);
       tone(b, 'square', 2600, 1400, t + 0.01, 0.04, 0.08, { lp: 5000 });
     },
+    // the archer draws: the limbs creak under the tension, the string stretches (rising, a little uneven)
+    bowDraw(b, t) {
+      tone(b, 'sawtooth', R(120, 140), R(210, 240), t, 0.42, 0.05, { bp: 900, q: 9, vib: 23, vibD: 9, a: 0.04 });
+      tone(b, 'sawtooth', R(60, 70), R(95, 110), t + 0.05, 0.36, 0.035, { lp: 420, q: 7, vib: 11, vibD: 4, a: 0.05 });
+      for (let i = 0; i < 4; i++) noise(b, 'bandpass', R(1800, 3200), 0, t + 0.05 + i * R(0.06, 0.1), 0.025, 0.05, 5);
+    },
+    // a warrior falls off a cliff: a long cartoon "Aaaaaah…" that drops away (o.hi: a woman's voice; o.d: how far down)
+    fallScream(b, t, o = {}) {
+      const hi = o.hi ? 1.7 : 1,
+        d = o.dur || 1.5;
+      voice(b, t, R(330, 380) * hi, R(150, 180) * hi, d, 0.19, [750, 1250], { vib: 6, vibD: 14 * hi, a: 0.04, fm2: [520, 900] });
+      voice(b, t + 0.02, R(165, 190) * hi, R(75, 90) * hi, d * 0.95, 0.06, [1100, 2400], { vib: 6.3, vibD: 8 * hi, a: 0.06 });
+    },
+    // on fire: short panicked yelps, the pitch jumping up and down
+    burnScream(b, t, o = {}) {
+      const hi = o.hi ? 1.6 : 1;
+      for (let i = 0; i < 3; i++) {
+        const f = R(300, 420) * hi;
+        voice(b, t + i * R(0.2, 0.27), f, f * R(1.2, 1.45), R(0.13, 0.18), 0.16, [800, 1300], { vib: 13, vibD: 30 * hi, a: 0.01 });
+      }
+    },
+    // the E-Mobil-Raser's blow: an electric crackle
+    zap(b, t) {
+      for (let i = 0; i < 4; i++) noise(b, 'highpass', R(3500, 6000), 0, t + i * R(0.015, 0.03), 0.02, 0.32);
+      tone(b, 'square', R(900, 1100), R(300, 380), t, 0.12, 0.05, { lp: 4000 });
+      tone(b, 'sawtooth', 120, 60, t, 0.1, 0.05, { lp: 900 });
+    },
+    // the torch swung through the air: a fiery whoosh
+    fireSwing(b, t) {
+      noise(b, 'bandpass', 700, 1800, t, 0.22, 0.38, 1.2);
+      noise(b, 'lowpass', 500, 200, t + 0.03, 0.25, 0.3);
+      thump(b, 90, t + 0.02, 0.12, 0.12);
+    },
+    // into the water
+    splash(b, t) {
+      noise(b, 'lowpass', 2600, 400, t, 0.45, 0.6);
+      noise(b, 'bandpass', 1200, 500, t + 0.02, 0.35, 0.4, 1.5);
+      for (let i = 0; i < 6; i++) tone(b, 'sine', R(500, 900), R(1200, 1900), t + 0.05 + i * R(0.03, 0.06), 0.04, 0.05);
+      thump(b, 90, t, 0.3, 0.25);
+    },
+    // the Fallenleger's row of trap jaws: one after the other they burst out of the ground and snap shut 0.19 s later (FANG_T in
+    // 75-fass-falle-view.js; o.n jaws, o.gap seconds apart)
+    fangs(b, t, o = {}) {
+      const n = o.n || 6,
+        gap = o.gap || 0.08;
+      for (let i = 0; i < n; i++) {
+        const ti = t + i * gap;
+        noise(b, 'lowpass', 900, 200, ti, 0.08, 0.22);
+        thump(b, R(120, 150), ti, 0.12, 0.4);
+        metal(b, R(800, 1000), ti + 0.19, 0.22, 0.11);
+        noise(b, 'highpass', 3200, 0, ti + 0.19, 0.02, 0.32);
+      }
+    },
   };
   /* --- recorded foley layered with the synth: every hit, step and creak is a real recording, varied per play --- */
   const NEW = {
+    // the row of trap jaws: real dirt bursting, then real steel clacking shut (the synth adds the thump and the bite)
+    fangs(b, t, o = {}) {
+      const n = o.n || 6,
+        gap = o.gap || 0.08;
+      if (!S(b, 'fDirt', t, { vol: 0.5, rate: 0.7 })) return SYN.fangs(b, t, o);
+      for (let i = 0; i < n; i++) {
+        const ti = t + i * gap;
+        if (i) S(b, 'fDirt', ti, { vol: 0.38, rate: R(0.62, 0.8) });
+        S(b, 'metalL', ti + 0.19, { vol: 0.4, rate: R(1.3, 1.55), lp: 7500 });
+        thump(b, R(120, 150), ti, 0.12, 0.28);
+        noise(b, 'highpass', 3200, 0, ti + 0.19, 0.02, 0.2);
+      }
+    },
     // weapons on bodies
     axe(b, t) {
       if (!S(b, 'punchH', t, { vol: 0.8, rate: 0.95 })) return SYN.axe(b, t);
@@ -1923,6 +1989,13 @@ const SFX = (() => {
   };
   const LIB = Object.assign({}, SYN, NEW);
   const GAP = {
+    bowDraw: 250,
+    fallScream: 350,
+    burnScream: 450,
+    splash: 150,
+    fangs: 120,
+    zap: 60,
+    fireSwing: 60,
     bearRoar: 400,
     bearSwipe: 120,
     bearHit: 60,

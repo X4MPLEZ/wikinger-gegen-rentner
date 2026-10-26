@@ -10,6 +10,8 @@ const EG = {
   camInit: false,
   intro: 0,
   kick: 0,
+  dip: 0, // the Fallenleger's spade slam: the view nods down for a moment, so the row of jaws in front of him shows over his head
+  dipV: 0,
   piv: new THREE.Vector3(),
   pivT: new THREE.Vector3(),
   dir: new THREE.Vector3(),
@@ -55,6 +57,9 @@ function enterEgo() {
   EG.joy = null;
   EG.intro = 1.6;
   EG.kick = 0;
+  EG.arm = 1;
+  EG.dip = 0;
+  EG.dipV = 0;
   $('#xhair').hidden = K.role !== 'ranged' && K.role !== 'siege';
   $('#xhair').className = '';
   V.selected.clear();
@@ -222,6 +227,8 @@ function exitEgo(send, keepLock) {
   resetInput();
   mlReset();
   $('#xhair').hidden = true;
+  $('#bowGauge').hidden = true;
+  trapAimTick(null);
   if (V.mode === 'ai' || V.mode === 'host') G.teams[V.myTeam].posIn = null;
   else if (NET.r) NET.r.presence({ in: null }).catch(() => {});
   fx.swings.forEach(w => scene.remove(w.m));
@@ -669,6 +676,22 @@ function egoAttack() {
   P.a = (P.a + 1) % 1000;
   const base = K.cd * CFG.possCd * (K.ego || NO_EGO).cd * (P.rageT > 0 ? 0.75 : 1);
   P.cdT = base;
+  if (K.spec === 'trap') {
+    // the Fallenleger: the spade into the ground, and the row of jaws starts at once here (the host bites, 16-sim-fass-falle.js)
+    P.cb = 0;
+    P.ad = null;
+    const mu = V.units.get(P.id);
+    if (mu) {
+      mu.atkT = 0;
+      mu.av = mu.av === 0 ? 1 : 0;
+      mu.ownStrike = now();
+    }
+    fangFx(P.x, P.z, P.yaw, FANG.n, V.myTeam, FANG.delay - FANG_T.shut + 0.05, true); // (it snaps when the host bites)
+    SFX.play('swing', { vol: 1 });
+    EG.kick = Math.max(EG.kick, 0.16);
+    EG.dip = 1.0;
+    return;
+  }
   if (melee) {
     const tn = now(),
       step = (P.cmb || 0) < 3 && tn - (P.cmbT || -1e9) < base * CMB.win * 1000 ? (P.cmb || 0) + 1 : 1;
@@ -743,7 +766,26 @@ function egoStrike(P, K, step) {
   EG.kick = Math.max(EG.kick, fin ? 0.26 : 0.14);
   setTimeout(() => egoStrikeHit(P, K, step, mv), (W + 0.035) * 1000);
 }
-const u2swing = k => (k === 2 ? 'swingR' : 'swing');
+const u2swing = k => (k === 2 ? 'swingR' : k === 12 ? 'fireSwing' : k === 5 ? 'zap' : 'swing');
+// the little bow under the crosshair follows the real draw (u.pull, 80-animation.js): the string comes back, the arrow lies on it
+function bowGaugeTick(P) {
+  const el = $('#bowGauge');
+  if (!el) return;
+  const on = P.k === 1 && !P.hen && !P.nadeAim;
+  if (el.hidden === on) el.hidden = !on;
+  if (!on) return;
+  const mu = V.units.get(P.id),
+    pull = mu ? clamp(mu.pull || 0, 0, 1) : 0,
+    q = Math.round(pull * 20) / 20;
+  if (el._q === q) return;
+  el._q = q;
+  const ny = 6 + 11 * q;
+  el.querySelector('.str').setAttribute('points', `-25,6 0,${ny} 25,6`);
+  el.querySelector('.arw').setAttribute('transform', `translate(0 ${ny - 6})`);
+  el.querySelector('.arw').style.opacity = q > 0.08 ? 1 : 0;
+  el.classList.toggle('drawn', q > 0.08);
+  el.classList.toggle('full', q > 0.97);
+}
 function egoStrikeHit(P, K, step, mv) {
   if (V.poss !== P) return;
   const fin = step === 3,
@@ -850,7 +892,9 @@ function impactStar(x, y, z, big) {
   fx.swings.push({ star: true, m: g, mats: [ink, fill, core], t: 0, big });
 }
 /* the cartoon slash: a fat crescent (or a streak for a thrust) with a white core, a coloured body and an ink edge. Its head races
-   along the arc in a few frames, the tail follows and thins out, an echo crescent trails a little behind. */
+   along the arc in a few frames, the tail follows and thins out, an echo crescent trails a little behind. Every weapon draws its own
+   (SLASH_STYLE): the axe a heavy steel crescent with a chipped inner edge, the Opa's cane a thin wooden swish of three lines, the
+   torch ragged flame tongues, the E-Mobil an electric zigzag, claws and beaks three scratches; an enemy's has a red rim. */
 const SLASH_VS = `varying vec2 vUv;
 uniform float uSpan; uniform float uR0; uniform float uR1; uniform float uMode; uniform float uLen;
 void main() {
@@ -864,19 +908,29 @@ void main() {
 }`;
 const SLASH_FS = `varying vec2 vUv;
 uniform float uHead; uniform float uTail; uniform float uFade; uniform float uMode; uniform vec3 uCol; uniform float uFlip;
+uniform float uStyle; uniform float uTime; uniform vec3 uRim; uniform vec3 uCore;
 void main() {
   float x = uFlip > 0.5 ? 1.0 - vUv.x : vUv.x;
   if (x > uHead || x < uTail) discard;
   float s = (x - uTail) / max(0.001, uHead - uTail);
   float th = pow(sin(3.14159 * pow(s, 0.65)), 0.75); // fat just behind the head, a thin tail
   float v = uMode < 0.5 ? vUv.y : 1.0 - abs(vUv.y - 0.5) * 2.0;
+  bool axe = uStyle < 0.5, stick = uStyle > 0.5 && uStyle < 1.5, fire = uStyle > 1.5 && uStyle < 2.5,
+    zap = uStyle > 2.5 && uStyle < 3.5, claw = uStyle > 3.5;
+  if (zap) v += 0.22 * (abs(fract(x * 9.0 + uTime * 3.0) - 0.5) * 4.0 - 1.0) * th; // the bolt zigzags
+  if (stick) th *= 0.6;
+  if (axe) th = min(1.0, th * 1.12);
   float edge = 1.0 - th;                                // the band grows from the outer edge inwards
-  if (v < edge) discard;
-  float k = (v - edge) / max(0.001, th);                // 0 at the inner border .. 1 at the outer edge
-  vec3 ink = vec3(0.106, 0.078, 0.188);
-  // ink outline on both borders, a white hot edge outside, the colour inside
-  vec3 c = k < 0.14 || k > 0.93 ? ink : k > 0.58 ? vec3(1.0) : mix(uCol * 0.85, uCol, (k - 0.14) / 0.44);
-  if (s > 0.96) c = ink;                                // a dark lip on the leading edge
+  if (axe) edge += th * 0.16 * step(0.55, fract(x * 11.0)); // chips in the heavy blade's inner edge
+  if (fire) edge += th * 0.45 * (0.5 + 0.5 * sin(x * 47.0 - uTime * 26.0) * sin(x * 19.0 + uTime * 11.0)); // flame tongues
+  if (v < edge || v > 1.0) discard;
+  float k = (v - edge) / max(0.001, 1.0 - edge);        // 0 at the inner border .. 1 at the outer edge
+  if ((stick || claw) && fract(k * 3.0) < (claw ? 0.5 : 0.42)) discard; // three lines
+  vec3 c;
+  // fire: a red root, the body, a yellow tip (no ink); else an outline on both borders, a hot edge outside, the colour inside
+  if (fire) c = k > 0.72 ? uCore : mix(vec3(0.72, 0.1, 0.04), uCol, k / 0.72);
+  else c = k < 0.14 || k > 0.93 ? uRim : k > 0.58 ? uCore : mix(uCol * 0.85, uCol, (k - 0.14) / 0.44);
+  if (s > 0.96 && (axe || zap)) c = uRim;               // a dark lip on the leading edge
   gl_FragColor = vec4(c, uFade);
 }`;
 const SLASH_GEO = (() => {
@@ -898,16 +952,27 @@ const SLASH_BASE = new THREE.ShaderMaterial({
     uFade: { value: 1 },
     uCol: { value: new THREE.Color() },
     uFlip: { value: 0 },
+    uStyle: { value: 0 },
+    uTime: { value: 0 },
+    uRim: { value: new THREE.Color(0x1b1430) },
+    uCore: { value: new THREE.Color(0xffffff) },
   },
   transparent: true,
   depthWrite: false,
   side: THREE.DoubleSide,
 });
 SLASH_BASE.userData.shared = true;
+// the weapon decides the slash: 0 axe (Berserker, Ziegenreiter), 1 cane (Opa), 2 torch (Feuerfass), 3 electric (E-Mobil), 4 claws
+const SLASH_STYLE = { 0: 0, 4: 0, 2: 1, 12: 2, 5: 3, 8: 4, 9: 4 },
+  SLASH_COL = [0xd6e4f2, 0xc9955c, 0xff8a2a, 0x7fdcff, 0xfaf6ee],
+  SLASH_TMP = new THREE.Color();
 function slashFx(P, K, av, step, col, delay = 0, follow = null) {
   if (fx.swings.length > 40) return;
   const mv = moveOf(P.k, av),
     sh = mv ? mv.sl : { m: 'h', d: -1 },
+    st = P.hen ? 4 : (SLASH_STYLE[P.k] ?? 0),
+    foe = col === 0xff4a3d, // (an enemy's blow: a red rim)
+    hot = col === 0xff6a3d, // (raging: the colour runs red)
     fin = step === 3,
     cav = K.role === 'cav',
     ring = sh.m === 'r',
@@ -920,7 +985,11 @@ function slashFx(P, K, av, step, col, delay = 0, follow = null) {
       m.uniforms.uR0.value = ring ? reach * 0.35 : 0.45;
       m.uniforms.uR1.value = reach * scale * (sh.m === 'v' || sh.m === 'u' ? 0.85 : 1);
       m.uniforms.uLen.value = reach * 1.15 * scale;
-      m.uniforms.uCol.value.set(colr);
+      m.uniforms.uCol.value.set(SLASH_COL[st]);
+      if (hot) m.uniforms.uCol.value.lerp(SLASH_TMP.set(colr), 0.6);
+      m.uniforms.uStyle.value = st;
+      m.uniforms.uRim.value.set(foe ? 0xd8231a : st === 4 ? 0x8a1a12 : 0x1b1430);
+      m.uniforms.uCore.value.set(fin ? 0xffd34d : st === 2 ? 0xffe27a : 0xffffff);
       m.uniforms.uFlip.value = sh.d === 1 || sh.m === 'u' ? 1 : 0;
       const me = new THREE.Mesh(SLASH_GEO, m);
       me.renderOrder = 9;
@@ -949,6 +1018,17 @@ function slashFx(P, K, av, step, col, delay = 0, follow = null) {
   }
   scene.add(g);
   fx.swings.push({ slash: true, m: g, layers, t: -delay, dur: ring ? 0.2 : fin ? 0.16 : 0.12, follow: follow || P, yaw: P.yaw });
+  if (st === 2 || st === 3) {
+    // the torch scatters embers along the arc, the electric one sparks
+    g.updateMatrixWorld();
+    const p = new THREE.Vector3();
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 4 - 0.5) * (ring ? TAU : 2.4) * (sh.d === 1 ? -1 : 1);
+      g.localToWorld(p.set(Math.sin(a) * reach * 0.8, 0, Math.cos(a) * reach * 0.8));
+      if (st === 2) puff(p.x, p.y, p.z, i % 2 ? 0xffd34d : 0xff7a22, 1, 0.45, 'flame');
+      else emitFX('spark', p.x, p.y, p.z, { n: 1, size: 0.3, col: i % 2 ? 0xffffff : 0x7fdcff });
+    }
+  }
 }
 const swingGeo = new THREE.RingGeometry(0.7, 2.3, 28, 1, -1.25, 2.5).rotateX(-Math.PI / 2);
 function swingFx(P, K, col, quiet) {
@@ -1001,6 +1081,7 @@ function swingTick(dt) {
           tail = t < w.dur * 0.35 ? 0 : Math.min(1.1, ((t - w.dur * 0.35) / (w.dur * 1.4)) * 1.1);
         L.m.uniforms.uHead.value = head;
         L.m.uniforms.uTail.value = tail;
+        L.m.uniforms.uTime.value = w.t; // (flames flicker, the bolt crawls)
         if (t >= 0) L.m.uniforms.uFade.value = (L.lag ? 0.6 : 1) * (1 - sstep(w.dur * 1.2, w.dur * 2.2, t));
         if (t < w.dur * 2.2 && tail < 1.05) alive = true;
       }
@@ -1179,14 +1260,16 @@ function egoSpecial() {
   }
   if (P.spT > 0) return;
   if (P.k === 13) {
-    // the Fallenleger has one trap: while it lies out there (or a new one is not ready yet) there is nothing to lay
-    const mu = V.units.get(P.id);
-    if (mu && !mu.trapC) {
-      egoHint(TR('Deine Falle liegt schon – eine neue gibt es erst, wenn sie zugeschnappt ist.'), 1800);
+    // the Fallenleger throws his trap where the ring on the ground is; one lying out there is picked up and thrown again
+    const mu = V.units.get(P.id),
+      out = ((V.latest && V.latest.tr) || []).some(t => t[5] === P.id && t[4] < 2);
+    if (mu && !mu.trapC && !out) {
+      egoHint(TR('Deine Falle hat gerade zugeschnappt – die nächste ist gleich bereit.'), 1800);
       SFX.play('error');
       return;
     }
-    SFX.play('trapSet', { vol: 0.9 });
+    const t = trapAimPt(P);
+    P.gp = [+t.x.toFixed(1), +t.z.toFixed(1)];
   }
   if (P.k === 12) {
     if (P.fuse) return;
@@ -1231,6 +1314,36 @@ function egoSpecial() {
     SFX.play('whoosh', { vol: 1 });
     stompFx(P.x, unitY(P.x, P.z), P.z, true);
   }
+}
+/* The ego camera and the ground: looking up lowers the camera behind the warrior, and there it could sink into a hillside (the terrain
+   mesh can stand above the smooth height function on a steep cell), a rock or a forest – then the inside of the mountain is not drawn
+   and enemies behind it showed. camFloor takes the highest ground round the spot; egoArm walks from the warrior out to the camera and
+   stops a little before the first hill, rock or forest in the way. */
+function camFloor(x, z) {
+  let h = groundY(x, z);
+  for (let i = 0; i < 4; i++) h = Math.max(h, groundY(x + (i < 2 ? (i ? 0.9 : -0.9) : 0), z + (i < 2 ? 0 : i === 2 ? 0.9 : -0.9)));
+  return h;
+}
+function camBlocked(x, y, z) {
+  if (y < camFloor(x, z) + 0.45) return true;
+  for (const b of MAP.blockers || []) {
+    const dx = x - b.x,
+      dz = z - b.z,
+      r = b.f ? b.r * 0.75 : b.rk || b.r; // (inside the circles a warrior cannot stand: the forest's core, the rock itself)
+    if (dx * dx + dz * dz > r * r) continue;
+    const top = groundY(b.x, b.z) + (b.f ? 6.5 : b.rk ? b.rk * 1.25 : b.igloo ? 2.6 : 2.6);
+    if (y < top) return true;
+  }
+  return false;
+}
+// how far out the camera may go (1: all the way)
+function egoArm(piv, cam) {
+  const n = 14;
+  for (let i = 1; i <= n; i++) {
+    const q = i / n;
+    if (camBlocked(lerp(piv.x, cam.x, q), lerp(piv.y, cam.y, q), lerp(piv.z, cam.z, q))) return Math.max(0.12, (i - 1.5) / n);
+  }
+  return 1;
 }
 // the steered chicken's height: rises while the special is held, sinks when let go, a dive drops fast and pecks on landing (HFLY)
 function henFly(P, dt) {
@@ -1852,6 +1965,8 @@ function egoUpdate(dt) {
     }
   }
   egoLoadUi(P); // "Ins Katapult" (75-fass-falle-view.js)
+  bowGaugeTick(P);
+  trapAimTick(P);
   if (!!P.burning !== document.body.classList.contains('burnOn')) document.body.classList.toggle('burnOn', !!P.burning);
   if (P.fassCam && fassCamTick(P, dt)) return; // the camera rides along with the own Feuerfass
   if (P.heroOn && heroCam(P, dt)) return;
@@ -1859,7 +1974,7 @@ function egoUpdate(dt) {
     sg = KINDS[P.k].role === 'siege',
     wmE = !!KINDS[P.k].worm,
     back = (sg ? 10.5 : wmE ? 10.5 : cav ? 7.2 : 6.3) + (P.held && !wmE ? 5 : 0) + (P.hen ? Math.min(5, (P.fh || 0) * 0.35) : 0),
-    side = KINDS[P.k].role === 'ranged' && !P.hen ? -2.6 : 0, // archer and Oma: over the left shoulder, a little lower, so you see the bow drawn and the arm wound up
+    side = 0,
     gy =
       (P.fy ?? unitY(P.x, P.z)) +
       (wmE ? 1.4 : 0) +
@@ -1869,13 +1984,15 @@ function egoUpdate(dt) {
           ? 4 * PAD_H * (P.jumpT / PAD_FLY) * (1 - P.jumpT / PAD_FLY)
           : Math.sin(((0.9 - P.jumpT) / 0.9) * Math.PI) * 3
         : 0);
+  EG.dip = Math.max(0, EG.dip - dt);
+  EG.dipV += ((EG.dip > 0.3 ? 0.45 : 0) - EG.dipV) * (1 - Math.exp(-dt * (EG.dip > 0.3 ? 16 : 3.5)));
   const rx = -cyz,
     rz = cy,
-    cp = Math.cos(P.pitch),
-    sp2 = Math.sin(P.pitch);
+    cp = Math.cos(P.pitch + EG.dipV),
+    sp2 = Math.sin(P.pitch + EG.dipV);
   // Camera: rotation follows yaw/pitch IMMEDIATELY (no lag, no sponge); only the pivot POSITION is smoothed,
   // frame-rate independently, to hide terrain steps and network corrections.
-  const pv = EG.pivT.set(P.x + rx * side, gy + (sg ? 5.2 : cav ? 4.3 : side ? 3.0 : 3.7), P.z + rz * side);
+  const pv = EG.pivT.set(P.x + rx * side, gy + (sg ? 5.2 : cav ? 4.3 : 3.7), P.z + rz * side);
   if (!EG.camInit) {
     EG.piv.copy(pv);
     EG.lift = 0;
@@ -1891,7 +2008,13 @@ function egoUpdate(dt) {
   EG.kick = Math.max(0, EG.kick - dt * 1.6);
   const want = EG.want.copy(EG.piv).addScaledVector(dir, -(back - EG.kick * 1.2));
   {
-    const need = Math.max(0, groundY(want.x, want.z) + 0.9 - want.y);
+    // never behind a hill, inside a rock or a forest: the camera comes in closer at once (a spring arm) and eases back out
+    const q = egoArm(EG.piv, want);
+    EG.arm = !EG.camInit || q < (EG.arm ?? 1) ? q : EG.arm + (q - EG.arm) * (1 - Math.exp(-dt * 3.5));
+    if (EG.arm < 0.999) want.lerpVectors(EG.piv, want, EG.arm);
+  }
+  {
+    const need = Math.max(0, camFloor(want.x, want.z) + 0.9 - want.y);
     EG.lift = need > EG.lift ? need : EG.lift + (need - EG.lift) * (1 - Math.exp(-dt * 6));
     want.y += EG.lift;
   } // never clip into a hill; ease back down
@@ -1942,6 +2065,11 @@ function egoUpdate(dt) {
   EG.camInit = true;
   camera.position.copy(EG.cam);
   camera.lookAt(EG.lk);
+  if (camS.fix) {
+    // (screenshots and tests: a fixed camera also in the ego view, like the commander's camS.fix)
+    camera.position.fromArray(camS.fix.p);
+    camera.lookAt(...camS.fix.t);
+  }
   {
     // shooting: the view widens a little while the bow is drawn (the Oma winds up) and tightens again when it is ready; the
     // release punches in for a moment (EG.punch) – you feel the shot
@@ -1950,7 +2078,7 @@ function egoUpdate(dt) {
       drawn = ranged && mu ? mu.drawn || 0 : 0;
     EG.draw = lerp(EG.draw || 0, ranged ? 1 - drawn : 0, Math.min(1, dt * 9));
     const f0 = camera.aspect < 1 ? 78 : 62,
-      want = f0 + (P.dashT > 0 ? 9 : 0) - (EG.punch || 0) * 4 + EG.draw * 4; // a combo finisher punches in for a moment
+      want = f0 + (P.dashT > 0 ? 9 : 0) - (EG.punch || 0) * 4 + EG.draw * 2.5; // a combo finisher punches in for a moment
     EG.punch = Math.max(0, (EG.punch || 0) - dt * 5);
     if (Math.abs(camera.fov - want) > 0.05) {
       camera.fov = lerp(camera.fov, want, Math.min(1, dt * (P.dashT > 0 || EG.punch > 0 ? 14 : 5)));

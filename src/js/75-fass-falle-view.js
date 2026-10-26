@@ -4,7 +4,9 @@
    - a lit Feuerfass: sparks at the fuse, the barrel throbs, a red ring on the ground shows how far the blast will reach;
    - burning warriors: flames and soot, they flail (80-animation.js), a steered one sees the screen glow;
    - bear traps (s.tr): own ones grey and clear with a ring in the team colour, enemy ones barely visible (and hidden in the fog);
-     they open when laid and snap shut;
+     thrown, they fly in an arc from the Fallenleger's hand, open when they land and snap shut; one picked up leaves a puff of dirt;
+     the steered Fallenleger sees a ring where his trap would land;
+   - the Fallenleger's attack (XE.fangs): a row of trap jaws comes up out of little molehills one after another, snaps, sinks back;
    - the catapult with a Feuerfass in its cup, the barrel in flight (tumbling, smoking, the helmet peeking out) and the camera that
      follows the steered player's barrel to the bang before going back to the commander view; the "Ins Katapult" button;
    - the flying chicken's dive for the others, a Feuerfass that climbs into a catapult (no death).
@@ -336,6 +338,7 @@ function boomTick(dt) {
       BOOM.scorch.splice(i, 1);
     }
   }
+  fangTick(dt);
   if (!M) return;
 }
 function boomReset() {
@@ -352,6 +355,8 @@ function boomReset() {
   BOOM.smoke.length = 0;
   for (const v of BOOM.traps.values()) trapViewDrop(v);
   BOOM.traps.clear();
+  fangReset();
+  if (trapAimRing) trapAimRing.visible = false;
   V.trapN = 0;
   V.specTold = {};
 }
@@ -370,14 +375,18 @@ function specTip(u) {
     u.k === 12
       ? own
         ? TR(
-            'Feuerfass: Er zündet von selbst mitten im Gegnerhaufen. Selbst gesteuert: Spezial = Lunte. Neben deinem Katapult: „Ins Katapult“!'
+            'Feuerfass: Seine Fackel zündet jeden an, den er schlägt. Selbst gesteuert: Spezial = Lunte – dann fliegt alles im Umkreis. Neben deinem Katapult: „Ins Katapult“!'
           )
         : TR(
-            'Achtung, Feuerfass! Der rote Ring zeigt, wie weit es knallt. Abstand halten oder aus der Ferne erledigen – dann platzt das Fass kleiner.'
+            'Achtung, Feuerfass! Seine Fackel zündet dich an – ab ins Wasser. Ein Kopfschuss lässt sein Fass sofort hochgehen, mitten zwischen seinen Leuten.'
           )
       : own
-        ? TR('Fallenleger: Er legt seine Bärenfalle von selbst, wenn Gegner kommen. Selbst gesteuert: Spezial = Falle legen.')
-        : TR('Achtung, Fallenleger! Seine Bärenfallen sind kaum zu sehen. Wer hineintritt, sitzt ein paar Sekunden fest.');
+        ? TR(
+            'Fallenleger: Sein Spaten lässt eine Reihe Fangeisen aus dem Boden schnappen – alle auf der Linie hängen kurz fest. Selbst gesteuert: Spezial = Bärenfalle werfen, wohin der Ring zeigt.'
+          )
+        : TR(
+            'Achtung, Fallenleger! Seine Fangeisen schnappen in einer Linie aus dem Boden, seine Bärenfallen sind kaum zu sehen. Reiter hält er besonders lange fest.'
+          );
   setTimeout(() => V.playing && toast(t, 5200), 400);
 }
 // one-shot impacts from the host (G.xe): [seq, x*10, z*10, r*10, kind, team]
@@ -405,6 +414,8 @@ function xeProcess(s) {
     else if (kind === XE.snap) {
       snapFx(x, z, e[5]);
       if (e[5] === V.myTeam) profEvent('trap', e[6] || 0, (V.trapN = (V.trapN || 0) + 1));
+    } else if (kind === XE.fangs) {
+      if (!(V.poss && V.poss.id === e[7])) fangFx(x, z, (e[8] || 0) / 100, e[6], e[5], 0); // (the own row is drawn already)
     } else if (kind === XE.load) {
       const y = groundY(x, z);
       puff(x, y + 2.4, z, 0xf6f1e7, 6, 0.8);
@@ -453,9 +464,13 @@ function trapTick(dt) {
     let v = BOOM.traps.get(id);
     const own = e[1] === V.myTeam;
     if (!v) {
-      const g = trapModel(true, own ? M.own : M.foe),
-        x = e[2] / 10,
-        z = e[3] / 10;
+      const x = e[2] / 10,
+        z = e[3] / 10,
+        // freshly thrown (still arming): it flies from the Fallenleger's hand, he throws – everyone sees it fly (an enemy's turns
+        // barely visible once it lies)
+        o = e[4] === 0 ? V.units.get(e[5]) : null,
+        from = o && !o.dead && Math.hypot(o.g.position.x - x, o.g.position.z - z) < TRAP.throw + 2 ? o.g.position : null,
+        g = trapModel(true, own || from ? M.own : M.foe);
       g.position.set(x, groundY(x, z) + 0.03, z);
       g.rotation.y = (id * 2.4) % TAU;
       g.scale.setScalar(2.2);
@@ -471,16 +486,46 @@ function trapTick(dt) {
         const ring = new THREE.Mesh(ringGeo, rm);
         ring.scale.setScalar(TRAP.r / 2.2);
         ring.position.y = 0.02;
+        ring.visible = !from;
         g.add(ring);
       }
-      v = { g, jaws: g.userData.jaws, own, st: -1, open: 0, t: 0, foeVis: false, x, z };
+      v = { g, jaws: g.userData.jaws, own, st: -1, open: 0, t: 0, foeVis: false, x, z, fly: from ? 0 : -1 };
+      if (from) {
+        v.from = [from.x, from.y + 1.6, from.z];
+        o.layT = 0.5;
+        if (o.isPoss && o.team === V.myTeam) SFX.play('throw', { vol: 0.8 });
+      } else trapLand(v);
       BOOM.traps.set(id, v);
-      if (own || !FOG.on || fogSeen(x, z)) {
-        const L = listenerPos();
-        if (own || Math.hypot(x - L.x, z - L.z) < 18) SFX.play('trapSet', { x, z, vol: own ? 0.9 : 0.5 });
-      }
     }
     v.t += dt;
+    if (v.fly >= 0) {
+      // in flight: an arc, tumbling, shut; it opens when it lands
+      v.fly += dt;
+      const k = Math.min(1, v.fly / TRAP_FLY),
+        gy = groundY(v.x, v.z) + 0.03,
+        h = 0.8 + Math.hypot(v.x - v.from[0], v.z - v.from[2]) * 0.18;
+      v.g.position.set(lerp(v.from[0], v.x, k), lerp(v.from[1], gy, k) + Math.sin(k * Math.PI) * h, lerp(v.from[2], v.z, k));
+      v.g.rotation.x = (1 - k) * 9;
+      if (k >= 1) {
+        v.fly = -1;
+        v.g.position.y = gy;
+        v.g.rotation.x = 0;
+        if (v.own)
+          v.g.children[v.g.children.length - 1].visible = true; // its ring shows once it lies
+        else if (!v.foeVis)
+          v.g.traverse(m => {
+            if (m.isMesh && m.material === M.own.steel) m.material = M.foe.steel;
+            else if (m.isMesh && m.material === M.own.dark) m.material = M.foe.dark;
+            else if (m.isMesh && m.material === M.own.rust) m.material = M.foe.rust;
+          }); // an enemy's trap hides in the grass
+        trapLand(v);
+      } else {
+        v.jaws[0].rotation.x = -Math.PI / 2;
+        v.jaws[1].rotation.x = Math.PI / 2;
+        v.g.visible = v.own || !FOG.on || fogSeen(v.x, v.z);
+        continue;
+      }
+    }
     const st = e[4];
     if (st !== v.st) {
       v.st = st;
@@ -508,40 +553,265 @@ function trapTick(dt) {
   }
   for (const [id, v] of BOOM.traps)
     if (!seen.has(id)) {
+      // gone without snapping: picked up to be thrown again (or rusted away) – a little puff of dirt where it lay
+      if (v.st <= 1 && v.fly < 0 && v.g.visible) puff(v.x, groundY(v.x, v.z) + 0.2, v.z, 0x8a7458, 3, 0.45, 'dust');
       trapViewDrop(v);
       BOOM.traps.delete(id);
     }
+}
+const TRAP_FLY = 0.35; // seconds a thrown trap flies (within TRAP.arm)
+// a trap lands (or is first seen lying): a puff of dirt and the clack of the spring
+function trapLand(v) {
+  const vis = v.own || !FOG.on || fogSeen(v.x, v.z);
+  if (!vis) return;
+  const L = listenerPos(),
+    y = groundY(v.x, v.z);
+  if (v.own || Math.hypot(v.x - L.x, v.z - L.z) < 18) SFX.play('trapSet', { x: v.x, z: v.z, vol: v.own ? 0.9 : 0.5 });
+  if (v.own || v.foeVis) puff(v.x, y + 0.15, v.z, 0x8a7458, 3, 0.5, 'dust');
+}
+// the steered Fallenleger: where his trap would land (the host clamps the same way, trapPlace in 16-sim-fass-falle.js)
+function trapAimPt(P) {
+  const k = clamp((P.pitch + 0.42) / 1.12, 0, 1),
+    d = lerp(TRAP.throw, 1.6, Math.pow(k, 0.8)),
+    a = P.camYaw,
+    dx = Math.sin(a) * d,
+    dz = Math.cos(a) * d;
+  let x = clampX(P.x + dx),
+    z = clampZ(P.z + dz);
+  for (let q = 0.85; !walkable(x, z) && q > 0; q -= 0.15) {
+    x = P.x + dx * q;
+    z = P.z + dz * q;
+  }
+  return { x, z };
+}
+let trapAimRing = null;
+function trapAimTick(P) {
+  const mu = P && V.units.get(P.id),
+    on =
+      !!mu &&
+      P.k === 13 &&
+      !P.hen &&
+      !P.trap &&
+      !P.down &&
+      !P.nadeAim &&
+      !(P.spT > 0) &&
+      (mu.trapC || ((V.latest && V.latest.tr) || []).some(t => t[5] === P.id && t[4] < 2));
+  if (!on) {
+    if (trapAimRing) trapAimRing.visible = false;
+    return;
+  }
+  if (!trapAimRing) {
+    const m = new THREE.MeshBasicMaterial({
+      color: lin(V.facs[V.myTeam] === 'viking' ? 0x5aa8ff : 0xff7ab8),
+      transparent: true,
+      opacity: 0.55,
+      depthTest: false,
+      depthWrite: false,
+    });
+    trapAimRing = new THREE.Group();
+    const r = new THREE.Mesh(ringGeo, m);
+    r.scale.setScalar(TRAP.r);
+    trapAimRing.add(r);
+    for (let i = 0; i < 4; i++) {
+      const t = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.42).rotateX(-Math.PI / 2), m);
+      t.position.set(Math.sin((i * Math.PI) / 2) * (TRAP.r + 0.3), 0, Math.cos((i * Math.PI) / 2) * (TRAP.r + 0.3));
+      t.rotation.y = (i * Math.PI) / 2;
+      trapAimRing.add(t);
+    } // four little ticks round it: a sight on the ground
+    trapAimRing.renderOrder = 8;
+    trapAimRing.traverse(o => (o.renderOrder = 8));
+    scene.add(trapAimRing);
+  }
+  const t = trapAimPt(P);
+  trapAimRing.visible = true;
+  trapAimRing.position.set(t.x, groundY(t.x, t.z) + 0.08, t.z);
+  trapAimRing.rotation.y += 0.02;
+}
+/* ---------- the Fallenleger's attack: a row of trap jaws out of the ground (XE.fangs; fangPts in 16-sim-fass-falle.js) ----------
+   Each jaw: a molehill bursts, the open jaws come up (0.08 s), wait a heartbeat, snap shut (clack, sparks), and sink back in.
+   Shared geometry and materials; the steered Fallenleger's own row starts at once on his screen (egoAttack, 51-ego.js). */
+let FANG_V = null;
+const FANG_T = { up: 0.08, snap: 0.15, shut: 0.2, sink: 0.52, gone: 0.8 };
+function fangParts() {
+  if (FANG_V) return FANG_V;
+  const R = 0.3,
+    jaw = side => {
+      const parts = [new THREE.TorusGeometry(R, 0.034, 4, 14, Math.PI).rotateX((side * Math.PI) / 2).toNonIndexed()];
+      for (let i = 0; i < 6; i++) {
+        const a = 0.25 + (i + (side > 0 ? 0 : 0.5)) * ((Math.PI - 0.5) / 6);
+        parts.push(new THREE.ConeGeometry(0.034, 0.12, 4).translate(Math.cos(a) * R, 0.055, side * Math.sin(a) * R).toNonIndexed());
+      }
+      return mergeGeos(parts);
+    },
+    base = mergeGeos([
+      new THREE.BoxGeometry(R * 2.3, 0.05, 0.08).toNonIndexed(),
+      new THREE.CylinderGeometry(0.11, 0.11, 0.025, 10).toNonIndexed(),
+      new THREE.TorusGeometry(0.06, 0.022, 4, 8)
+        .rotateY(Math.PI / 2)
+        .translate(R + 0.08, 0, 0)
+        .toNonIndexed(),
+      new THREE.TorusGeometry(0.06, 0.022, 4, 8)
+        .rotateY(Math.PI / 2)
+        .translate(-R - 0.08, 0, 0)
+        .toNonIndexed(),
+    ]),
+    mound = new THREE.SphereGeometry(FANG.r, 10, 4, 0, TAU, 0, Math.PI / 2).toNonIndexed();
+  FANG_V = { jaw: [jaw(1), jaw(-1)], base, mound, steel: lam(0x9aa2aa), dark: lam(0x4f565e), dirt: lam(0x6e5236), rows: [] };
+  for (const g of [...FANG_V.jaw, base, mound]) g.userData.shared = true;
+  return FANG_V;
+}
+// a row: from (x, z) along yaw, n jaws (the host's count), drawn after `delay` s (the own spade has to come down first)
+function fangFx(x, z, yaw, n, team, delay, own) {
+  const F = fangParts(),
+    pts = fangPts(x, z, yaw, n);
+  if (!pts.length) return;
+  const hide = FOG.on && team !== V.myTeam && !pts.some(p => fogSeen(p[0], p[1]));
+  F.rows.push({ pts, yaw, t: -delay, team, own: !!own, hide, jaws: [] });
+  if (hide) return;
+  const L = listenerPos();
+  if (own || Math.hypot(x - L.x, z - L.z) < 30)
+    setTimeout(() => SFX.play('fangs', { x: pts[0][0], z: pts[0][1], n: pts.length, gap: FANG.gap, vol: own ? 1 : 0.8 }), delay * 1000);
+}
+function fangJaw(F, x, z, yaw) {
+  const g = new THREE.Group(),
+    j = F.jaw.map(geo => {
+      const h = new THREE.Group();
+      h.add(new THREE.Mesh(geo, F.steel));
+      g.add(h);
+      return h;
+    }),
+    md = new THREE.Mesh(F.mound, F.dirt),
+    gy = groundY(x, z);
+  g.add(new THREE.Mesh(F.base, F.dark));
+  g.scale.setScalar(FANG.r / 0.3); // as wide as it bites (and its shut jaws stand tall enough to show over a head)
+  g.rotation.y = yaw; // the hinge lies across the row: from behind him (and from the victim's side) the shut jaws show as a full ring
+  g.position.set(x, gy - 0.5, z);
+  md.position.set(x, gy - 0.05, z);
+  md.scale.set(1, 0.01, 1);
+  scene.add(g, md);
+  return { g, j, md, gy, x, z, snapped: false, sunk: false };
+}
+function fangTick(dt) {
+  if (!FANG_V || !FANG_V.rows.length) return;
+  const F = FANG_V,
+    T = FANG_T;
+  for (let r = F.rows.length - 1; r >= 0; r--) {
+    const R = F.rows[r];
+    R.t += dt;
+    let alive = false;
+    for (let i = 0; i < R.pts.length; i++) {
+      const tau = R.t - i * FANG.gap;
+      if (tau < 0) {
+        alive = true;
+        continue;
+      }
+      let J = R.jaws[i];
+      if (tau >= T.gone) {
+        if (J && J.g.parent) {
+          scene.remove(J.g, J.md);
+        }
+        continue;
+      }
+      alive = true;
+      if (R.hide) continue;
+      if (!J) {
+        const [x, z] = R.pts[i];
+        J = R.jaws[i] = fangJaw(F, x, z, R.yaw);
+        // the molehill bursts: clods and dust fly
+        sandBurst(x, z, 7, { r: 0.4, out: 2.2, up: 4.5, size: 0.13, life: 0.9, gy: J.gy });
+        puff(x, J.gy + 0.2, z, 0x7b5e3c, 3, 0.75, 'dust');
+      }
+      const up = Math.min(1, tau / T.up),
+        e = 1 - (1 - up) * (1 - up),
+        sink = tau > T.sink ? Math.min(1, (tau - T.sink) / (T.gone - T.sink)) : 0,
+        // open (flat, a little raised) until the snap, then shut in a blink
+        sh = tau < T.snap ? 0 : Math.min(1, (tau - T.snap) / (T.shut - T.snap)),
+        a = lerp(0.32, Math.PI / 2, sh * sh);
+      J.g.position.y = J.gy - 0.5 + 0.53 * e - 0.6 * sink * sink + (sh > 0 && tau < T.sink ? Math.sin(tau * 90) * 0.012 : 0);
+      J.j[0].rotation.x = -a;
+      J.j[1].rotation.x = a;
+      J.md.scale.set(1, Math.max(0.01, (tau < 0.06 ? tau / 0.06 : 1) * (1 - sink) * 0.4), 1);
+      if (sh >= 1 && !J.snapped) {
+        J.snapped = true;
+        emitFX('spark', J.x, J.gy + 0.45, J.z, { n: 4, size: 0.3 });
+        if (R.own) shake(0.06);
+      }
+      if (sink > 0 && !J.sunk) {
+        J.sunk = true;
+        puff(J.x, J.gy + 0.15, J.z, 0x7b5e3c, 2, 0.6, 'dust');
+      }
+    }
+    if (!alive) {
+      for (const J of R.jaws) if (J && J.g.parent) scene.remove(J.g, J.md);
+      F.rows.splice(r, 1);
+    }
+  }
+}
+function fangReset() {
+  if (!FANG_V) return;
+  for (const R of FANG_V.rows) for (const J of R.jaws) if (J && J.g.parent) scene.remove(J.g, J.md);
+  FANG_V.rows.length = 0;
 }
 /* ---------- per warrior, every frame (from updateStatusFx in 42-view-world-fx.js) ---------- */
 const BOOM_V = new THREE.Vector3();
 function specFx(u, dt, x, y, z) {
   // burning: flames and soot from the whole body
   if (u.burning && !u.fogHid) {
-    const rate = (u.isPoss ? 44 : 28) * Math.max(0.5, QS.fx);
+    // the whole body in flames, the head too (a burning warrior must be seen from afar), soot rising behind him
+    const rate = (u.isPoss ? 46 : 38) * Math.max(0.5, QS.fx);
     u.flameAcc = (u.flameAcc || 0) + dt * rate;
-    for (; u.flameAcc >= 1; u.flameAcc--)
+    for (; u.flameAcc >= 1; u.flameAcc--) {
+      const hd = Math.random() < 0.3;
       puff(
-        x + (Math.random() - 0.5) * 0.7,
-        y + 0.4 + Math.random() * 1.5,
-        z + (Math.random() - 0.5) * 0.7,
+        x + (Math.random() - 0.5) * (hd ? 0.9 : 0.75),
+        y + (hd ? 2.2 + Math.random() * 0.6 : 0.4 + Math.random() * 1.6),
+        z + (Math.random() - 0.5) * (hd ? 0.9 : 0.75),
         Math.random() < 0.35 ? 0xffd34d : Math.random() < 0.5 ? 0xff7a22 : 0xff5a1a,
         1,
-        0.6 + Math.random() * 0.3,
+        (hd ? 0.75 : 0.65) + Math.random() * 0.35,
         'flame'
       );
-    if (Math.random() < dt * 4) puff(x, y + 1.8, z, 0x3a3634, 1, 0.5, 'soot');
+    }
+    if (Math.random() < dt * 7) puff(x, y + 2.4, z, 0x3a3634, 1, 0.6, 'soot');
     if (Math.random() < dt * 1.3) SFX.play('burn', { x, z, vol: 0.45 });
+    // he screams (now and then, not all at once when a blast lit a crowd)
+    u.screamT = (u.screamT ?? 0.25) - dt;
+    if (u.screamT <= 0) {
+      u.screamT = 1.1 + Math.random() * 0.9;
+      SFX.play('burnScream', { x, z, hi: u.k === 1 || u.k === 3, vol: u.isPoss ? 0.9 : 0.75 });
+    }
     if (!u.burnSaid) {
       u.burnSaid = 1;
       // one shout at a time (a blast sets a whole crowd on fire: a pile of words would hide the fun)
       if (u.isPoss || now() - (BOOM.shoutT || 0) > 900) {
         BOOM.shoutT = now();
-        word(pick([TR('HEISS!'), TR('FEUER!'), TR('AUA, HEISS!')]), x, y + 3, z, { color: '#ffb35c', scale: 1 });
+        word(pick([TR('HEISS!'), TR('FEUER!'), TR('AUA, HEISS!'), TR('WASSER!')]), x, y + 3, z, { color: '#ffb35c', scale: 1.05 });
       }
     }
   } else if (u.burnSaid) {
     u.burnSaid = 0;
-    puff(x, y + 1.2, z, 0xdddddd, 4, 0.6); // out: a little steam
+    u.screamT = undefined;
+    const wet = !u.fogHid && wetNear(x, z, FASS.dip + 0.3);
+    if (wet) {
+      // into the water: splash, steam, out
+      emitFX('water', wet.x, groundY(wet.x, wet.z) + 0.3, wet.z, { n: 12, size: 0.9 });
+      puff(x, y + 1.3, z, 0xeeeeee, 6, 0.8);
+      SFX.play('splash', { x, z, vol: 0.9 });
+      if (now() - (BOOM.zischT || 0) > 700) {
+        BOOM.zischT = now();
+        word(TR('ZISCH!'), x, y + 2.8, z, { color: '#b6eaff', scale: 1.1 });
+      }
+    } else puff(x, y + 1.2, z, 0xdddddd, 4, 0.6); // out: a little steam
+  }
+  // the Feuerfass's keg helmet: its wick smoulders – a thin wisp of smoke, now and then a spark (only close to the camera)
+  if (u.hatTip && !u.fogHid && !u.dead && Math.abs(x - camera.position.x) + Math.abs(z - camera.position.z) < 60) {
+    u.wickAcc = (u.wickAcc || 0) + dt * 6 * Math.max(0.4, QS.fx);
+    if (u.wickAcc >= 1) {
+      u.wickAcc = 0;
+      u.hatTip.getWorldPosition(BOOM_V);
+      puff(BOOM_V.x, BOOM_V.y + 0.05, BOOM_V.z, 0x6a625c, 1, 0.24, 'soot');
+      if (Math.random() < 0.3) puff(BOOM_V.x, BOOM_V.y, BOOM_V.z, Math.random() < 0.5 ? 0xffb347 : 0xffe07a, 1, 0.12, 'spark');
+    }
   }
   // a lit fuse: sparks, the barrel throbs, a red ring shows how far the blast reaches
   if (u.fuseOn && u.fuseTip) {

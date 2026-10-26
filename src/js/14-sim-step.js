@@ -538,8 +538,7 @@ function step(G) {
       continue;
     }
     if (K.worm && wormUnitStep(G, u, byId)) continue;
-    if (K.spec === 'bomb') fassAuto(G, u);
-    else if (K.spec === 'trap') fallenAuto(G, u);
+    if (K.spec === 'trap') fallenAuto(G, u); // (a Feuerfass never lights his barrel on his own: only a player in the ego does)
     const panic = burnPanic(G, u); // burning: runs about instead of fighting
     if (u.wind) {
       u.wind.t -= DT;
@@ -694,6 +693,7 @@ function step(G) {
             u.at = -3;
             if (K.proj)
               G.proj.push({ t: dist / K.pspeed, dmg: K.dmg, tgt: -3, bear: u.btg, team: u.team, k: u.k, aoe: K.aoe, tx, tz, src: u.id });
+            else if (K.spec === 'trap') fangLine(G, u, Math.atan2(tx - u.x, tz - u.z));
             else hitBear(G, b, K.dmg * charge, u.team, u.k, false, false, u.id);
           } else if (K.proj && K.role === 'siege')
             u.wind = { t: SIEGE_WIND, tx, tz, tgt: u.at }; // the arm winds up first: everyone can see it coming
@@ -731,11 +731,13 @@ function step(G) {
                 tz: t2.z,
               });
             }
-          } else {
+          } else if (K.spec === 'trap' && !u.hen)
+            fangLine(G, u, Math.atan2(tx - u.x, tz - u.z)); // the Fallenleger: a row of trap jaws out of the ground (16-sim-fass-falle.js)
+          else {
             hit(
               G,
               u.at,
-              K.dmg * hm * charge * (u.hen ? (u.at === -2 ? HEN.base : HEN.dmg) : u.chick > 0 ? 0.3 : 1) * (rage ? 1.5 : 1) * specDmg(u),
+              K.dmg * hm * charge * (u.hen ? (u.at === -2 ? HEN.base : HEN.dmg) : u.chick > 0 ? 0.3 : 1) * (rage ? 1.5 : 1),
               u.team,
               byId,
               u.k
@@ -1551,6 +1553,7 @@ function snapOf(G) {
           (u.burn > 0 ? 65536 : 0) |
           (u.fuse > 0 ? 131072 : 0) |
           (u.trapT > 0 ? 262144 : 0) |
+          (u.trapT > 0 && !u.trapId ? 2097152 : 0) |
           (u.fass ? 524288 : 0) |
           (u.trapC ? 1048576 : 0),
       ];

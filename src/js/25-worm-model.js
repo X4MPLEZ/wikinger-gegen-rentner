@@ -572,6 +572,8 @@ const AXE_BLADE = (() => {
   g.computeVertexNormals();
   return g;
 })();
+// one half of a bowstring: a thin cylinder from its base (a limb tip) along +y, scaled to length every frame
+const BOW_STRING = new THREE.CylinderGeometry(0.008, 0.008, 1, 4).translate(0, 0.5, 0);
 const BOW_LIMB = (() => {
   const c = new THREE.CatmullRomCurve3(
       [
@@ -704,7 +706,7 @@ function buildUnitRaw0(k) {
     4: { body: 0x396f9e, leg: 0x5a4330, arm: 0xf0c39c, skin: 0xf0c39c, boot: 0x4a3424 },
     5: { body: 0x83517d, leg: 0x55565e, arm: 0x83517d, belt: 0x4e3250, skin: 0xecc1a3 },
     12: { body: 0x326a9e, leg: 0x5a4330, arm: 0xe9b38c, skin: 0xe9b38c, boot: 0x4a3424, belt: 0x3a2a1c }, // Feuerfass: bare arms, tunic
-    13: { body: 0x83517d, leg: 0x5f5a52, arm: 0x83517d, belt: 0x4e3250, skin: 0xefc4a6, boot: 0x4a3020 }, // Fallenleger: hunting jacket
+    13: { body: 0x83517d, leg: 0x6a5238, arm: 0x83517d, belt: 0x4e3250, skin: 0xefc4a6, boot: 0x3d5a32 }, // Fallenleger: shirt, leather breeches, rubber boots
   }[k];
   // the skin's swaps already here, so shades derived from these colours (sleeves, dark trims) follow the skin
   const P = LAM_MAP ? Object.fromEntries(Object.entries(P0).map(([n, c]) => [n, LAM_MAP.has(c) ? LAM_MAP.get(c) : c])) : P0;
@@ -1001,7 +1003,23 @@ function buildUnitRaw0(k) {
     U.drops.push(bow);
     U.bow = bow; // recurve bow with a leather grip and a string
     mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.13, 8).rotateZ(Math.PI / 2), leather, 0, 0.5, 0, bow);
-    rod(bow, [-0.555, 0.365, 0], [0.555, 0.365, 0], 0.005, lam(0xf1ead8), 4);
+    // the string in two halves from the limb tips to the nocking point: drawing pulls the point back (80-animation.js), and while
+    // drawn an arrow lies on the string
+    U.str = [-1, 1].map(sx => {
+      const st = mesh(BOW_STRING, lam(0xf1ead8), sx * 0.555, 0.365, 0, bow);
+      st.rotation.z = (sx * Math.PI) / 2;
+      st.scale.y = 0.555;
+      (U.keep || (U.keep = [])).push(st);
+      return st;
+    });
+    const nock = new THREE.Group();
+    nock.position.set(0, 0.365, 0);
+    bow.add(nock);
+    U.nock = nock;
+    (U.keep || (U.keep = [])).push(nock);
+    mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.74, 5).translate(0, 0.37, 0), lam(0x9a6a3a), 0, 0, 0, nock); // shaft
+    mesh(new THREE.ConeGeometry(0.03, 0.09, 6).translate(0, 0.78, 0), lam(0xc9ced4), 0, 0, 0, nock); // head
+    [-1, 1].forEach(sz => mesh(new THREE.BoxGeometry(0.012, 0.12, 0.05), lam(0xe8e2d0), 0, 0.08, sz * 0.025, nock)); // fletching
     const qv = mesh(new THREE.CylinderGeometry(0.09, 0.07, 0.56, 10), lam(0x6b4423), 0.1, 1.0, -0.19, torso);
     qv.rotation.x = 0.35; // quiver with arrows
     mesh(new THREE.TorusGeometry(0.09, 0.018, 5, 12).rotateX(Math.PI / 2), lam(0x4a2e17), 0, 0.28, 0, qv);
@@ -1055,31 +1073,37 @@ function buildUnitRaw0(k) {
     vis.rotation.x = 0.12;
     vis.scale.set(1.1, 1, 0.9);
   } else if (k === 12) {
-    // Feuerfass: a dented steel cap with one horn (the other blown off long ago), brass blast goggles pushed up on the forehead ...
-    mesh(new THREE.SphereGeometry(0.61, 20, 9, 0, TAU, 0, Math.PI * 0.43), steel, 0, 0.06, -0.02, H);
-    mesh(new THREE.TorusGeometry(0.6, 0.055, 5, 22).rotateX(Math.PI / 2), steelD, 0, 0.21, -0.02, H);
-    mesh(new THREE.SphereGeometry(0.12, 8, 6), steelD, 0.3, 0.52, 0.18, H).scale.set(1, 0.35, 1); // the dent
+    // Feuerfass: he wears a small powder keg as a helmet – oak staves, iron hoops, a red band with a painted flame and a wick on the
+    // lid that keeps smouldering (75-fass-falle-view.js puffs smoke from it); brass blast goggles strapped round it over his brow
+    const keg = new THREE.Group();
+    keg.position.set(0.02, 0.6, -0.03);
+    keg.rotation.set(-0.06, 0, 0.13);
+    H.add(keg);
+    mesh(fassBarrelGeo(), lam(0x9a5f2c), 0, 0, 0, keg).scale.set(1.95, 1.05, 1.95);
+    [-0.21, 0.21].forEach(y => mesh(new THREE.TorusGeometry(0.513, 0.032, 5, 24).rotateX(Math.PI / 2), lam(0x4a4f57), 0, y, 0, keg));
+    mesh(new THREE.CylinderGeometry(0.556, 0.556, 0.12, 24, 1, true), lam(0xc0392b), 0, 0.02, 0, keg); // the red band ...
+    mesh(FLAME_GEO, lam(0xffd34d), 0, -0.02, 0.56, keg).scale.setScalar(1.7); // ... with the painted flame
+    mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.03, 20), lam(0x7a4a22), 0, 0.31, 0, keg); // lid
+    mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.05, 8), lam(0x4a4f57), 0.12, 0.34, 0.06, keg); // the bung
     mesh(
-      taperTube(
-        curvePts([-0.42, 0.33, 0], [-0.98, 0.45, 0.06], [-0.9, 1.0, 0.18], 9),
-        [0.13, 0.12, 0.105, 0.09, 0.075, 0.058, 0.04, 0.022, 0.004],
-        9
-      ),
-      bone,
+      taperTube(curvePts([0.12, 0.35, 0.06], [0.2, 0.5, 0.1], [0.1, 0.6, 0.18], 7), [0.03, 0.028, 0.027, 0.026, 0.025, 0.024, 0.022], 6),
+      lam(0xd8c08a),
       0,
       0,
       0,
-      H
-    );
-    const stub = mesh(new THREE.CylinderGeometry(0.07, 0.12, 0.2, 8), bone, 0.5, 0.42, 0.02, H);
-    stub.rotation.z = -1.05;
-    mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.02, 8), lam(0x2a2220), 0.585, 0.47, 0.02, H).rotation.z = -1.05; // charred break
-    mesh(new THREE.TorusGeometry(0.62, 0.035, 4, 24, Math.PI * 0.9).rotateX(Math.PI / 2).rotateY(Math.PI * 0.55), leather, 0, 0.28, 0, H); // goggle strap
+      keg
+    ); // the wick ...
+    mesh(new THREE.SphereGeometry(0.045, 8, 6), TORCH_MAT.inn, 0.1, 0.61, 0.19, keg); // ... with its ember
+    const hatTip = new THREE.Object3D();
+    hatTip.position.set(0.1, 0.64, 0.19);
+    keg.add(hatTip);
+    U.hatTip = hatTip;
+    mesh(new THREE.TorusGeometry(0.6, 0.035, 4, 24).rotateX(Math.PI / 2), leather, 0, 0.3, -0.02, H); // goggle strap
     [-1, 1].forEach(s => {
-      const g2 = mesh(new THREE.TorusGeometry(0.13, 0.04, 6, 16), lam(0xc99a3a), s * 0.2, 0.3, 0.53, H);
-      g2.rotation.set(-0.45, s * 0.32, 0);
-      const ln = mesh(new THREE.CircleGeometry(0.11, 14), lam(0x3a2a14), s * 0.2, 0.3, 0.525, H);
-      ln.rotation.set(-0.45, s * 0.32, 0);
+      const g2 = mesh(new THREE.TorusGeometry(0.13, 0.04, 6, 16), lam(0xc99a3a), s * 0.2, 0.3, 0.55, H);
+      g2.rotation.set(-0.35, s * 0.32, 0);
+      const ln = mesh(new THREE.CircleGeometry(0.11, 14), lam(0x2a5a46), s * 0.2, 0.3, 0.545, H);
+      ln.rotation.set(-0.35, s * 0.32, 0);
     });
     // ... the barrel on his left shoulder (held with the left hand): oak staves, iron hoops, a red band with a painted flame, the fuse
     // at the front end; and a burning torch in the right hand – whoever he hits with it catches fire (16-sim-fass-falle.js)
@@ -1122,40 +1146,58 @@ function buildUnitRaw0(k) {
     mesh(new THREE.ConeGeometry(0.075, 0.26, 7).translate(0, 0.1, 0).rotateX(Math.PI / 2), TORCH_MAT.out, 0, 0, 0, fl);
     mesh(new THREE.ConeGeometry(0.045, 0.17, 6).translate(0, 0.07, 0).rotateX(Math.PI / 2), TORCH_MAT.inn, 0, 0.02, 0.0, fl);
   } else if (k === 13) {
-    // Fallenleger: a felt hunting hat with a cord and a feather brush, round glasses on the face texture, and his bear trap
-    const hatC = lam(0x7a6e5f),
-      band = lam(0x5d544b);
-    const brim = mesh(new THREE.CylinderGeometry(0.84, 0.84, 0.05, 22), hatC, 0, 0.36, -0.02, H);
-    brim.scale.set(1, 1, 0.9);
-    brim.rotation.x = -0.08; // turned up a little at the back
-    mesh(new THREE.CylinderGeometry(0.44, 0.56, 0.42, 18), hatC, 0, 0.58, -0.02, H); // crown ...
-    mesh(new THREE.SphereGeometry(0.44, 16, 6, 0, TAU, 0, Math.PI / 2), hatC, 0, 0.78, -0.02, H).scale.set(1, 0.32, 0.92); // ... rounded top
-    mesh(new THREE.BoxGeometry(0.46, 0.05, 0.08), band, 0, 0.9, -0.02, H); // the pinch
-    mesh(new THREE.TorusGeometry(0.535, 0.04, 5, 22).rotateX(Math.PI / 2), band, 0, 0.44, -0.02, H); // cord
-    const brush = new THREE.Group();
-    brush.position.set(-0.42, 0.52, -0.2);
-    brush.rotation.set(-0.3, 0, 0.35);
-    H.add(brush);
-    for (let i = 0; i < 7; i++) {
-      const b2 = mesh(new THREE.ConeGeometry(0.03, 0.42, 4).translate(0, 0.21, 0), lam(i % 2 ? 0x3d3a34 : 0x6a6458), 0, 0, 0, brush);
-      b2.rotation.set(((i % 3) - 1) * 0.12, 0, (i - 3) * 0.07);
+    // Fallenleger, the old trapper: a fur cap with ear flaps and a striped raccoon tail down the back, round glasses (face texture),
+    // a spade in his right hand (he strikes it into the ground and a row of traps bursts out, 16-sim-fass-falle.js) and his one
+    // big bear trap on the pack frame on his back (gone while it lies out there)
+    const fur = lam(0x6e5236),
+      furL = lam(0xc9ae84);
+    mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.42, 20), fur, 0, 0.46, -0.02, H); // the cap: a fur drum ...
+    mesh(new THREE.SphereGeometry(0.5, 18, 6, 0, TAU, 0, Math.PI * 0.5), fur, 0, 0.66, -0.02, H).scale.set(1, 0.38, 1); // ... rounded on top
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * TAU;
+      mesh(UG.tuft, furL, Math.sin(a) * 0.62, 0.26 + (i % 2) * 0.03, Math.cos(a) * 0.62 - 0.02, H).scale.set(2.2, 1.6, 2.2); // a fluffy fur rim
     }
-    mesh(new THREE.SphereGeometry(0.06, 8, 6), lam(0x8a7d5a), 0, 0, 0, brush);
-    // the trap in his right hand: steel jaws shut, hanging from a short chain; laid, it lies on the ground (75-fass-falle-view.js)
+    [-1, 1].forEach(sx => {
+      const fl = mesh(rbox(0.12, 0.46, 0.34, 0.06, 3), fur, sx * 0.62, 0.02, -0.04, H); // ear flaps
+      fl.rotation.z = sx * 0.22;
+      mesh(UG.tuft, furL, sx * 0.68, -0.22, -0.04, H).scale.set(1.6, 1.3, 2.6); // their fluffy ends
+    });
+    for (let i = 0; i < 7; i++) {
+      const q = i / 6;
+      mesh(
+        new THREE.SphereGeometry(0.12 - q * 0.05, 9, 7),
+        lam(i % 2 ? 0x2e2620 : 0x8a7a66),
+        0.05 + q * 0.12,
+        0.5 - q * 0.62 - q * q * 0.12,
+        -0.5 - q * 0.22,
+        H
+      ).scale.set(1, 1.25, 1); // the raccoon tail, ring by ring
+    }
+    const spade = new THREE.Group();
+    spade.position.set(0, -0.245, 0.05);
+    foreR.add(spade);
+    U.drops.push(spade);
+    U.weapon = spade;
+    spade.rotation.x = Math.PI / 2; // at rest it stands like a walking staff, the blade down
+    mesh(new THREE.CylinderGeometry(0.024, 0.028, 0.72, 7).rotateX(Math.PI / 2), wood, 0, 0, 0.18, spade); // shaft
+    mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.18, 6).rotateZ(Math.PI / 2), wood, 0, 0, -0.18, spade); // the T grip
+    mesh(new THREE.CylinderGeometry(0.032, 0.04, 0.09, 7).rotateX(Math.PI / 2), steelD, 0, 0, 0.56, spade); // socket
+    mesh(rbox(0.22, 0.03, 0.26, 0.05, 3), steel, 0, 0, 0.71, spade); // the blade
+    // the bear trap on the pack frame: steel jaws shut, chained to it
     const trap = new THREE.Group();
-    trap.position.set(0, -0.27, 0.02);
-    foreR.add(trap);
+    trap.position.set(0, 0.86, -0.42);
+    torso.add(trap);
     U.trap = trap;
     U.drops.push(trap);
     const tg = trapModel(true, null, true);
-    tg.scale.setScalar(0.62);
-    tg.rotation.set(0, Math.PI / 2, 0); // hangs from the top of its shut jaws, alongside the leg
-    tg.position.set(0, -0.09 - 0.3 * 0.62, 0);
+    tg.scale.setScalar(0.5);
+    tg.rotation.set(0, 0, 0);
+    tg.position.set(0, -0.05, 0);
     trap.add(tg);
     for (let i = 0; i < 2; i++) {
-      const l = mesh(new THREE.TorusGeometry(0.028, 0.009, 3, 8), lam(0x4f565e), 0, -0.025 - i * 0.035, 0, trap);
+      const l = mesh(new THREE.TorusGeometry(0.028, 0.009, 3, 8), lam(0x4f565e), 0, 0.12 - i * 0.035, 0.02, trap);
       l.rotation.y = i * 1.4;
-    } // two chain links from the hand
+    } // two chain links up to the frame
   }
   if (SKIN_NOW) skinExtras(U, k, SKIN_NOW);
   if (k === 0 || k === 2 || k === 4 || k === 5 || k === 12 || k === 13) {

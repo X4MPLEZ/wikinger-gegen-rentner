@@ -60,6 +60,7 @@
     <div id="hitMk" aria-hidden="true"><svg viewBox="-30 -30 60 60"><g class="ink"><path d="M-9-9l-11-11M9-9l11-11M-9 9l-11 11M9 9l11 11"/></g><g class="hl"><path d="M-9-9l-11-11M9-9l11-11M-9 9l-11 11M9 9l11 11"/></g></svg></div>
     <div id="speedLn" aria-hidden="true"></div>
     <div id="xhairTxt">KOPFSCHUSS!</div>
+    <div id="bowGauge" hidden aria-hidden="true"><svg viewBox="-30 -22 60 40"><path class="limb" d="M-25 6Q-14-12 0-13Q14-12 25 6"/><polyline class="str" points="-25,6 0,6 25,6"/><g class="arw"><path class="shaft" d="M0 6V-19"/><path class="tip" d="M-3.4-15.5L0-21L3.4-15.5z"/><path class="fl" d="M-3 9L0 5L3 9"/></g></svg></div>
     <div class="stat panel ego-gold"><span id="egoResIco"></span><b id="egoGold">0</b></div>
     <div id="joy" hidden><i></i></div>
     <div class="ego-btns">
@@ -132,7 +133,7 @@
         <button class="mcard m4" data-map="4" aria-pressed="false"><i class="sic" data-si="mountain"></i><b>Klippen</b><small>Absturzgefahr</small></button>
       </div>
       <button class="btn gold big" id="btnAi"><span class="lg"><span class="sic" data-si="swords"></span> Los geht's</span> <small id="aiInfo"></small></button>
-      <div class="row tutrow"><button class="btn" id="btnTut"><span id="tutBadge" class="badge" hidden>Neu hier?</span><span>Tutorial</span><small>Grundlagen</small></button><button class="btn" id="btnTutPro" title="Profi-Tutorial: alle Tricks"><span>Profi</span><small>Tutorial</small></button></div>
+      <div class="row tutrow"><button class="btn" id="btnTut"><span id="tutBadge" class="badge" hidden>Neu hier?</span><span>Tutorial</span><small>Grundlagen</small></button><button class="btn" id="btnTutPro" title="Profi-Tutorial: alle Tricks"><span>Profi</span><small>Tutorial</small></button><button class="btn" id="btnWiki" title="Wiki: alles über alle Krieger"><span>Wiki</span><small>alle Krieger</small></button></div>
       <div class="online panel">
         <div class="olabel">Online spielen</div>
         <button class="btn quick" id="btnQuick"><span class="sic" data-si="swords"></span> Schnelles Spiel</button>
@@ -143,6 +144,7 @@
         <p class="note" id="onlineNote" hidden></p>
         <div class="online-actions" id="onlineActions" hidden><button class="btn small" id="btnCodeCopy">Code kopieren</button><button class="btn small" id="btnHostCancel">Abbrechen</button></div>
         <button class="btn small quick" id="btnPractice" hidden>Solange gegen den Computer üben</button>
+        <button class="btn small quick" id="btnWikiWait"><span class="sic" data-si="book"></span> Im Wiki stöbern, solange du wartest</button>
       </div>
       <div class="mfoot"><span></span><button class="linkbtn" id="btnGfx"><span class="sic" data-si="gfx"></span> Grafik</button><button class="linkbtn" id="btnSnd"><span class="sic" data-si="snd"></span> Sound</button><button class="linkbtn pcOnly" id="btnKeys"><span class="sic" data-si="keys"></span> Steuerung</button><button class="linkbtn" id="btnBug"><span class="sic" data-si="bug"></span> Fehler melden</button><button class="linkbtn" id="btnPriv">Datenschutz</button><button class="linkbtn" id="btnLang" aria-label="Sprache"><span class="sic" data-si="globe"></span> <span id="langNow" data-nol></span></button></div>
       <details class="help">
@@ -248,6 +250,20 @@
     <div class="psheet" id="pSheet" data-nol hidden></div>
   </div>
 
+  <div id="wikiScr" class="screen pscreen" hidden>
+    <div class="ppage wpage">
+      <div class="ptop">
+        <button class="iconbtn" id="wikiBack" aria-label="Zurück" title="Zurück"><span class="sic" data-si="back"></span></button>
+        <b class="ptitle">Wiki</b>
+        <small class="wsub">Alles über alle Krieger</small>
+      </div>
+      <div class="ptabs" id="wikiTabs" role="tablist" data-fit>
+        <button data-w="viking" role="tab">Wikinger</button><button data-w="rentner" role="tab">Rentner</button><button data-w="wild" role="tab">Wildnis</button><button data-w="rules" role="tab">Regeln</button>
+      </div>
+      <div class="pbody" id="wikiBody" data-nol></div>
+    </div>
+  </div>
+
   <div id="privScr" class="screen" hidden>
     <div class="card keyscard privcard">
       <h2 class="h2">Datenschutz</h2>
@@ -294,6 +310,7 @@
       <div id="lobbyCodeWrap"><div class="label" style="text-align:center;margin-bottom:8px">Code für deinen Gegner</div><div class="bigcode" id="lobbyCode">----</div></div>
       <p class="status" id="lobbyStatus"></p>
       <p class="note" id="lobbyNote"></p>
+      <button class="btn" id="btnWikiLobby"><span class="sic" data-si="book"></span> Im Wiki stöbern, solange du wartest</button>
       <button class="btn" id="btnLobbyBack">Zurück</button>
     </div>
   </div>
@@ -306,6 +323,7 @@
       <button class="btn" id="btnSnd2"><span class="sic" data-si="snd"></span> Sound</button>
       <button class="btn pcOnly" id="btnKeys2"><span class="sic" data-si="keys"></span> Steuerung</button>
       <button class="btn" id="btnBug2"><span class="sic" data-si="bug"></span> Fehler melden</button>
+      <button class="btn" id="btnWiki2"><span class="sic" data-si="book"></span> Wiki</button>
       <button class="btn" id="btnQuit">Aufgeben</button>
     </div>
   </div>

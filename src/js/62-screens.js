@@ -1,6 +1,6 @@
 /* 62-screens.js - SCREENS: menu, lobby, pause (Aufgeben asks twice; online it tells the opponent: quitMatch), graphics/sound/keys settings, the menu scene. */
 function showScreen(id) {
-  ['menu', 'lobby', 'pause', 'end', 'faceScr', 'keysScr', 'gfxScr', 'sndScr', 'langScr', 'profScr', 'privScr', 'bugScr'].forEach(
+  ['menu', 'lobby', 'pause', 'end', 'faceScr', 'keysScr', 'gfxScr', 'sndScr', 'langScr', 'profScr', 'privScr', 'bugScr', 'wikiScr'].forEach(
     s => ($('#' + s).hidden = s !== id)
   );
   fitText();

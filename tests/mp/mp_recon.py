@@ -24,28 +24,40 @@ PICK = """()=>{ const W=__wvr,P=W.V.poss; let best=null; for (let a=0;a<Math.PI*
   if(!best||d>best.d) best={a,d}; } P.camYaw=best.a; P.yaw=best.a; P.pullN=0; P.pullD=0; return best; }"""
 GP = "(()=>{const P=__wvr.V.poss; return P?{x:+P.x.toFixed(2),z:+P.z.toFixed(2),pullN:P.pullN||0,pullD:+(P.pullD||0).toFixed(2),rtt:__wvr.NET.rtt|0}:null;})()"
 HP = "(()=>{const u=__wvr.G.units.find(u=>u.poss&&u.team===1); return u?{x:+u.x.toFixed(2),z:+u.z.toFixed(2)}:null;})()"
-def dist(a, b): return round(math.hypot(a['x']-b['x'], a['z']-b['z']), 2)
+def dist(a, b): return round(math.hypot(a['x']-b['x'], a['z']-b['z']), 2) if a and b else 999
 R = {}; errs = []
 with sync_playwright() as p:
     b=p.chromium.launch(args=['--use-gl=swiftshader','--enable-webgl','--ignore-gpu-blocklist','--disable-features=WebRtcHideLocalIpsWithMdns','--allow-loopback-in-peer-connection'])
-    ctx=b.new_context(viewport={'width':390,'height':700}); pgs=[]
-    for i in range(2):
-        pg=ctx.new_page(); pg.route('**/*', route); pg.on('pageerror', lambda e, i=i: errs.append(('h' if i==0 else 'g')+': '+str(e)))
-        pg.add_init_script("window.WVR_LANG='de';window.WVR_MQTT=['ws://127.0.0.1:9001'];window.WVR_PEER={host:'127.0.0.1',port:9000,path:'/myapp',secure:false,debug:0};")
-        pg.goto('http://127.0.0.1:9000/'); pgs.append(pg)
-    h,g=pgs; h.wait_for_timeout(2500); h.click('#btnHost'); h.wait_for_timeout(3500); code=h.input_value('#codeIn')
-    g.fill('#codeIn',code); g.click('#btnJoin')
-    for i in range(40):
-        g.wait_for_timeout(1000)
-        if h.evaluate('__wvr.V.mode')=='host' and g.evaluate('__wvr.V.mode')=='guest': break
-    R['connected'] = g.evaluate('__wvr.V.mode')=='guest'
+    def connect():  # host a game, join it with the code; (host, guest, connected)
+        ctx=b.new_context(viewport={'width':390,'height':700}); pgs=[]
+        for i in range(2):
+            pg=ctx.new_page(); pg.route('**/*', route); pg.on('pageerror', lambda e, i=i: errs.append(('h' if i==0 else 'g')+': '+str(e)))
+            pg.add_init_script("window.WVR_LANG='de';window.WVR_MQTT=['ws://127.0.0.1:9001'];window.WVR_PEER={host:'127.0.0.1',port:9000,path:'/myapp',secure:false,debug:0};")
+            pg.goto('http://127.0.0.1:9000/'); pgs.append(pg)
+        h,g=pgs; h.wait_for_timeout(2500); h.click('#btnHost'); h.wait_for_timeout(3500); code=h.input_value('#codeIn')
+        g.fill('#codeIn',code); g.click('#btnJoin')
+        for i in range(40):
+            g.wait_for_timeout(1000)
+            if h.evaluate('__wvr.V.mode')=='host' and g.evaluate('__wvr.V.mode')=='guest': return ctx,h,g,True
+        return ctx,h,g,False
+    # a slow machine now and then misses the first connection (the local servers are shared with the test before): one more try
+    ctx,h,g,ok = connect()
+    if not ok: ctx.close(); ctx,h,g,ok = connect()
+    R['connected'] = ok
+    if not ok: print(json.dumps(R)); print('MP_RECON FAIL'); sys.exit(1)
     g.wait_for_timeout(4000)
+    try: g.wait_for_selector('.spawn[data-slot="0"] .main', state='visible', timeout=20000)  # (the VS card first)
+    except Exception:
+        R['hud'] = g.evaluate("({mode: __wvr.V.mode, playing: __wvr.V.playing, shown: [...document.querySelectorAll('.screen:not([hidden]), [id$=Scr]:not([hidden])')].map(e => e.id)})")
+        print(json.dumps(R)); print('MP_RECON FAIL'); sys.exit(1)
     for k in range(2): g.click('.spawn[data-slot="0"] .main', force=True); g.wait_for_timeout(300)
     g.wait_for_timeout(5000)
     for pg in (h, g): pg.evaluate("__wvr.setGfx('vlow'); __wvr.renderer.setPixelRatio(0.1)")  # software GL must not starve the sim and the line
     g.evaluate("""()=>{ const W=__wvr,V=W.V; V.selected.clear(); const u=[...V.units.values()].find(u=>u.team===V.myTeam); V.selected.add(u.id); W.enterEgo(); }""")
     g.wait_for_timeout(6000)
     R['map'] = g.evaluate('__wvr.MAP.type')
+    # the walks cross the map: enemies on the way must not end the test by killing the warrior
+    h.evaluate("()=>{ const u=__wvr.G.units.find(u=>u.poss&&u.team===1); if (u) u.hp = 1e5; }")
     # 1) clear walk
     best = g.evaluate(PICK); p0 = g.evaluate(GP)
     g.keyboard.down('w'); g.wait_for_timeout(2500); g.keyboard.up('w'); g.wait_for_timeout(1500)
@@ -74,7 +86,7 @@ with sync_playwright() as p:
     g.evaluate("__wvr.KINDS[__wvr.V.poss.k].speed = 40")
     g.keyboard.down('w'); g.wait_for_timeout(2000); g.keyboard.up('w'); g.wait_for_timeout(2000)
     p1 = g.evaluate(GP); h1 = h.evaluate(HP)
-    R['cheat'] = {'guestFromStart': dist(p0, p1), 'hostFromStart': dist(p0, h1), 'pullD': p1['pullD'], 'hostGap': dist(p1, h1)}
+    R['cheat'] = {'guestFromStart': dist(p0, p1), 'hostFromStart': dist(p0, h1), 'pullD': p1['pullD'] if p1 else -1, 'hostGap': dist(p1, h1), 'lost': not p1}
     b.close()
 print(json.dumps(R)); print('ERRS', errs[:5])
 w, s, kn, c = R['walk'], R['stall'], R['knock'], R['cheat']

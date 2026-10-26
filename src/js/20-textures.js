@@ -397,46 +397,104 @@ function portrait(k) {
     x.fillRect(58, -2, 12, 30);
   }
   if (k === 12) {
-    x.fillStyle = '#9aa3ad';
+    // the powder keg he wears as a helmet: staves, two iron hoops, a red band with a painted flame, a smouldering wick; brass goggles
+    x.fillStyle = '#9a5f2c';
     x.beginPath();
-    x.arc(64, 44, 49, Math.PI, 0);
+    x.moveTo(24, 44);
+    x.quadraticCurveTo(18, 18, 30, -4);
+    x.lineTo(98, -4);
+    x.quadraticCurveTo(110, 18, 104, 44);
+    x.closePath();
     x.fill();
-    x.fillStyle = '#f3ead2';
+    x.strokeStyle = 'rgba(70,40,18,.55)';
+    x.lineWidth = 2;
+    [44, 64, 84].forEach(cx => {
+      x.beginPath();
+      x.moveTo(cx, -4);
+      x.quadraticCurveTo(cx + (cx - 64) * 0.12, 20, cx, 44);
+      x.stroke();
+    }); // the staves
+    x.fillStyle = '#c0392b';
+    x.fillRect(20, 16, 88, 12);
+    x.fillStyle = '#ffd34d';
     x.beginPath();
-    x.moveTo(16, 40);
-    x.lineTo(2, 4);
-    x.lineTo(28, 30);
-    x.fill();
-    x.fillStyle = '#c99a3a';
-    [46, 82].forEach(cx => {
+    x.moveTo(58, 28);
+    x.quadraticCurveTo(52, 20, 60, 12);
+    x.quadraticCurveTo(62, 18, 66, 16);
+    x.quadraticCurveTo(74, 22, 68, 28);
+    x.closePath();
+    x.fill(); // the flame on the band
+    x.fillStyle = '#4a4f57';
+    x.fillRect(21, 6, 86, 5);
+    x.fillRect(22, 36, 84, 5); // the hoops
+    x.strokeStyle = '#d8c08a';
+    x.lineWidth = 4;
+    x.beginPath();
+    x.moveTo(88, 6);
+    x.quadraticCurveTo(100, 0, 104, 12);
+    x.stroke(); // the wick ...
+    x.fillStyle = '#ff9a2a';
+    x.beginPath();
+    x.arc(105, 14, 5, 0, TAU);
+    x.fill(); // ... its ember
+    x.strokeStyle = '#c99a3a';
+    x.lineWidth = 5;
+    [44, 84].forEach(cx => {
+      x.fillStyle = '#2a5a46';
       x.beginPath();
-      x.arc(cx, 34, 11, 0, TAU);
+      x.arc(cx, 48, 11, 0, TAU);
       x.fill();
-    });
-    x.fillStyle = '#3a2a14';
-    [46, 82].forEach(cx => {
-      x.beginPath();
-      x.arc(cx, 34, 7, 0, TAU);
-      x.fill();
-    });
+      x.stroke();
+    }); // the brass blast goggles
+    x.fillStyle = '#5a3a1e';
+    x.fillRect(55, 45, 18, 5);
   }
   if (k === 13) {
-    x.fillStyle = '#7a6e5f';
+    // the old trapper's fur cap: a fur drum with a fluffy rim and ear flaps, the striped raccoon tail peeking out at the side
+    x.fillStyle = '#8a7a66';
+    for (let i = 0; i < 5; i++) {
+      x.fillStyle = i % 2 ? '#2e2620' : '#8a7a66';
+      x.beginPath();
+      x.ellipse(110 + i * 3, 30 + i * 13, 11 - i, 8, 0.5, 0, TAU);
+      x.fill();
+    } // the raccoon tail
+    x.fillStyle = '#6e5236';
     x.beginPath();
-    x.ellipse(64, 34, 62, 12, 0, 0, TAU);
+    x.moveTo(20, 40);
+    x.lineTo(24, 6);
+    x.quadraticCurveTo(64, -10, 104, 6);
+    x.lineTo(108, 40);
+    x.closePath();
     x.fill();
-    x.beginPath();
-    x.ellipse(64, 24, 34, 22, 0, Math.PI, 0);
-    x.fill();
-    x.fillRect(30, 18, 68, 12);
-    x.fillStyle = '#5d544b';
-    x.fillRect(30, 26, 68, 5);
-    x.fillStyle = '#3d3a34';
-    x.beginPath();
-    x.moveTo(30, 22);
-    x.lineTo(18, -2);
-    x.lineTo(36, 16);
-    x.fill();
+    x.fillStyle = '#5c4430';
+    [-1, 1].forEach(sd => {
+      x.beginPath();
+      x.ellipse(64 + sd * 50, 62, 12, 26, sd * -0.18, 0, TAU);
+      x.fill();
+    }); // the ear flaps
+    x.fillStyle = '#c9ae84';
+    for (let i = 0; i < 11; i++) {
+      x.beginPath();
+      x.arc(18 + i * 9.2, 40 + (i % 2) * 2, 7.5, 0, TAU);
+      x.fill();
+    } // the fluffy rim
+    [-1, 1].forEach(sd => {
+      x.beginPath();
+      x.arc(64 + sd * 52, 86, 8, 0, TAU);
+      x.fill();
+    });
+    x.fillStyle = '#eceae4';
+    for (const [bx, by, br] of [
+      [64, 112, 17],
+      [48, 106, 12],
+      [80, 106, 12],
+      [56, 120, 11],
+      [72, 120, 11],
+    ]) {
+      x.beginPath();
+      x.arc(bx, by, br, 0, TAU);
+      x.fill();
+    } // the white beard (under the moustache)
   }
   if (KINDS[k].bear) {
     [

@@ -224,20 +224,20 @@ const KINDS = [
     role: 'melee',
     spec: 'bomb', // 16-sim-fass-falle.js
     name: TR('Feuerfass'),
-    hp: 105,
-    dmg: 9,
+    hp: 150,
+    dmg: 10,
     cd: 1.1,
     range: 1.5,
     aggro: 10,
-    speed: 4.7,
-    cost: 60, // tuned in computer-vs-computer runs (tools/balance.py): 95 hp / 70 gold / blast 78 left the Wikinger a few points behind
+    speed: 5.4,
+    cost: 60, // (balance: tools/balance.py)
     build: 1.6,
     r: 0.55,
     sp: TR('Lunte zünden'),
-    tag: TR('sprengt Gruppen'),
+    tag: TR('zündet alles an'),
     ego: { hp: 1, cd: 1, dmg: 1 },
     trait: TR(
-      'Fass auf der Schulter, Fackel in der Hand: Wen er schlägt, der brennt. Zündet mitten im Gegnerhaufen sein Pulverfass: alle fliegen und brennen, eigene Leute nur ein bisschen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
+      'Fass auf der Schulter, Fackel in der Hand: Wen er schlägt, der brennt und rennt schreiend davon. Das Pulverfass zündet nur, wer ihn selbst steuert – dann fliegen alle im Umkreis. Ein Kopfschuss lässt ihn sofort hochgehen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
     ),
   },
   {
@@ -246,19 +246,19 @@ const KINDS = [
     role: 'melee',
     spec: 'trap',
     name: TR('Fallenleger'),
-    hp: 120,
-    dmg: 13,
-    cd: 1.0,
-    range: 1.5,
-    aggro: 9,
+    hp: 130,
+    dmg: 11, // per jaw of his row (FANG in 16-sim-fass-falle.js)
+    cd: 1.3,
+    range: 5, // the row of jaws reaches 6 m: he strikes from a few steps away
+    aggro: 10,
     speed: 4.3,
     cost: 65,
     build: 1.5,
     r: 0.5,
-    sp: TR('Bärenfalle'),
+    sp: TR('Falle werfen'),
     tag: TR('stellt Fallen'),
     trait: TR(
-      'Legt eine Bärenfalle, die der Gegner kaum sieht: Wer hineintritt, sitzt fest und wird zerbissen – auch mehrere auf einmal. Schlägt mit der Falle zu, danach mit den Fäusten'
+      'Rammt den Spaten in den Boden: Eine Reihe alter Fangeisen schnappt nacheinander aus der Erde – wenig Schaden, aber jeden auf der Linie, und alle hängen kurz fest (Reiter länger). Spezial: wirft seine Bärenfalle, die der Gegner kaum sieht; eine liegende holt er zurück und wirft sie neu'
     ),
   },
 ];
@@ -273,7 +273,7 @@ const FAC = {
     base: TR('Langhaus'),
     css: '#4f86c4',
     col: 0x3b6ea5,
-    kinds: [0, 1, 4, 6, 12],
+    kinds: [0, 1, 4, 12, 6], // the order of the recruit bar (the special warrior between the rider and the catapult)
     other: 'rentner',
     icon: 'coin',
   },
@@ -283,7 +283,7 @@ const FAC = {
     base: TR('Haus Abendrot'),
     css: '#c07aa8',
     col: 0xa0628f,
-    kinds: [2, 3, 5, 7, 13],
+    kinds: [2, 3, 5, 13, 7],
     other: 'viking',
     icon: 'bottle',
   },

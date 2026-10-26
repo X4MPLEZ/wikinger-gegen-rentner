@@ -503,7 +503,7 @@ const BIND_DEF = {
   left: ['KeyA', 'ArrowLeft'],
   right: ['KeyD', 'ArrowRight'],
   attack: ['Mouse0', 'KeyE'],
-  special: ['Space', 'Mouse2'],
+  special: ['Space', ''],
   jump: ['ShiftLeft', 'KeyC'],
   nade: ['KeyG', ''],
   hero: ['KeyR', ''],
@@ -531,11 +531,14 @@ const BIND_DEF = {
 };
 // defaults of earlier versions: a stored binding that still equals the old default moves to the new one (own choices stay)
 const BIND_OLD = {
-  attack: ['Mouse0', 'Space'],
-  special: ['Mouse2', 'KeyE'],
-  take: ['Space', 'KeyF'],
-  desel: ['Escape', ''],
-  selCav: ['KeyC', ''],
+  attack: [['Mouse0', 'Space']],
+  special: [
+    ['Mouse2', 'KeyE'],
+    ['Space', 'Mouse2'],
+  ],
+  take: [['Space', 'KeyF']],
+  desel: [['Escape', '']],
+  selCav: [['KeyC', '']],
 };
 const BIND_GROUPS = [
   [
@@ -586,7 +589,7 @@ try {
   if (b) {
     for (const k in BIND) if (Array.isArray(b[k])) BIND[k] = [b[k][0] || '', b[k][1] || ''];
     for (const k in BIND_OLD)
-      if (Array.isArray(b[k]) && BIND[k][0] === BIND_OLD[k][0] && BIND[k][1] === BIND_OLD[k][1]) BIND[k] = BIND_DEF[k].slice();
+      if (Array.isArray(b[k]) && BIND_OLD[k].some(o => BIND[k][0] === o[0] && BIND[k][1] === o[1])) BIND[k] = BIND_DEF[k].slice();
     if (
       !b.hero &&
       ['fwd', 'back', 'left', 'right', 'attack', 'special', 'jump', 'nade', 'exit', 'cmdHere', 'cmdAtk', 'swap'].some(k =>

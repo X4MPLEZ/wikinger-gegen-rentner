@@ -355,35 +355,16 @@ const CPOSE = (() => {
     13: set(r13, [
       mv(
         r13,
-        { aR: -2.85, eR: -1.0, ln: -0.1, tw: 0.25, nx: -0.3, hop: 0.03 },
-        { aR: -0.6, eR: -0.1, ln: 0.5, tw: -0.1, kL: 0.5, kR: 0.5, hop: -0.06, thL: -0.35 },
-        { sl: { m: 'v' } }
-      ), // the trap (or the fist) slammed down
+        { aR: -2.95, eR: -0.85, aL: -2.2, eL: -1.0, ln: -0.15, tw: 0.2, nx: -0.25, hop: 0.03, kL: 0.25, kR: 0.25 },
+        { aR: -0.72, eR: -0.08, aL: -0.9, eL: -0.3, ln: 0.55, tw: -0.05, kL: 0.55, kR: 0.55, hop: -0.07, thL: -0.4 },
+        { W: 0.1, sl: { m: 'v', d: -1, none: 1 } }
+      ), // the spade struck into the ground over his head: the row of traps bursts out (16-sim-fass-falle.js)
       mv(
         r13,
-        { aR: -1.2, zR: 1.1, eR: -1.6, yR: 0.3, tw: 0.7 },
-        { aR: -1.45, zR: -0.4, eR: -0.4, yR: -0.3, tw: -0.7, ln: 0.3, thL: -0.3, kL: 0.4 },
-        { sl: { m: 'h', d: -1 } }
-      ), // right hook
-      mv(
-        r13,
-        { aL: -1.3, zL: -1.0, eL: -1.6, tw: -0.6 },
-        { aL: -1.5, zL: 0.4, eL: -0.4, tw: 0.65, ln: 0.3, thR: -0.3, kR: 0.4 },
-        { sl: { m: 'h', d: 1, s: 0.85 } }
-      ), // left hook
-      mv(r13, { aR: 0.2, eR: -1.6, ln: 0.35, kL: 0.5, kR: 0.5 }, { aR: -2.4, eR: -0.9, ln: -0.1, hop: 0.06 }, { n: 'a', sl: { m: 'u' } }), // uppercut
-      mv(
-        r13,
-        { aR: -1.55, zR: 1.5, eR: -0.1, tw: 1.0, aL: -0.8, zL: -1.1, kL: 0.4, kR: 0.4 },
-        { aR: -1.55, zR: 1.5, eR: -0.05, tw: -0.2, aL: -0.6, zL: -1.2, kL: 0.35, kR: 0.35 },
-        { n: 'f', spin: 1, W: 0.12, sl: { m: 'r' } }
-      ), // the trap swung all round on its chain
-      mv(
-        r13,
-        { aR: -2.9, aL: -2.7, eR: -1.2, eL: -1.2, ln: -0.2, kL: 0.6, kR: 0.6 },
-        { aR: -0.8, aL: -0.9, eR: -0.1, eL: -0.2, ln: 0.55, hop: -0.08, kL: 0.8, kR: 0.8 },
-        { n: 'f', jump: 0.55, W: 0.16, sl: { m: 'v', s: 1.2 } }
-      ), // the old trapper's leap
+        { aR: -2.3, eR: -1.3, zR: 0.7, tw: 0.75, ln: 0.0, kR: 0.4, thR: 0.25 },
+        { aR: -0.85, eR: -0.12, zR: -0.1, tw: -0.25, ln: 0.48, kL: 0.5, thL: -0.35 },
+        { W: 0.1, sl: { m: 'v', d: -1, none: 1 } }
+      ), // ... and from the side
     ]),
   };
 })();
@@ -472,18 +453,17 @@ function rangedPose(u, C, at, pre, cd) {
       lerpPose(C, C, A.LOW, q);
       ba *= 1 - q;
     }
-    // the steered archer keeps the bow drawn until the next shot – and the draw hand trembles the longer she holds it
+    // the steered archer keeps the bow drawn until the next shot; held a while, the arms strain a little: a slow, small sway (no buzz)
     if (u.isPoss && pre > 0.95) {
-      const hold = Math.min(1, (at - cd * 0.92) / 2.5),
-        tr = (0.25 + 0.75 * hold) * 0.022;
-      C[A_R] += tr * Math.sin(u.ph * 31);
-      C[E_R] += tr * 0.8 * Math.sin(u.ph * 27 + 1.1);
-      C[A_L] += tr * 0.6 * Math.sin(u.ph * 23 + 2);
-      C[TW] += tr * 0.4 * Math.sin(u.ph * 19);
-      C[NX] += tr * 0.3 * Math.sin(u.ph * 29 + 0.5);
+      const hold = clamp((at - cd * 0.92 - 0.6) / 3, 0, 1),
+        tr = 0.004 + 0.009 * hold;
+      C[A_R] += tr * Math.sin(u.ph * 7.1);
+      C[A_L] += tr * 0.7 * Math.sin(u.ph * 5.3 + 1.3);
+      C[TW] += tr * 0.3 * Math.sin(u.ph * 3.7);
     }
     u.bowA = ba;
     u.drawn = u.isPoss ? pre : 0;
+    u.pull = pre * sstep(0.6, 0.75, at); // how far the string is drawn back (the arrow on it shows from 8 %)
     return true;
   }
   if (u.k === 3) {
@@ -969,17 +949,18 @@ function humanRig(u, dt, moving, attacking) {
   }
   if (u.fuseOn) rx += Math.sin(ph * 47) * 0.012;
   if (u.layT > 0) {
-    // the Fallenleger bends down and sets his trap on the ground
+    // the Fallenleger throws his trap: the left arm reaches back over the shoulder, then swings it forward and lets go
     u.layT -= dt;
-    const q = Math.sin(clamp(1 - u.layT / 0.55, 0, 1) * Math.PI);
-    P[LN] = lerp(P[LN], 0.75, q);
-    P[K_L] = lerp(P[K_L], 0.9, q);
-    P[K_R] = lerp(P[K_R], 0.9, q);
-    P[T_L] = lerp(P[T_L], -0.55, q);
-    P[T_R] = lerp(P[T_R], -0.35, q);
-    P[A_R] = lerp(P[A_R], -0.9, q);
-    P[E_R] = lerp(P[E_R], -0.2, q);
-    P[NX] = lerp(P[NX], 0.3, q);
+    const t = clamp(1 - u.layT / 0.5, 0, 1),
+      back = sstep(0, 0.3, t) * (1 - sstep(0.3, 0.55, t)),
+      fwd = sstep(0.3, 0.55, t) * (1 - sstep(0.7, 1, t));
+    P[A_L] = lerp(lerp(P[A_L], -2.9, back), -1.7, fwd);
+    P[E_L] = lerp(lerp(P[E_L], -1.6, back), -0.15, fwd);
+    P[Z_L] = lerp(P[Z_L], -0.25, back);
+    P[TW] = lerp(P[TW], 0.45, back) - 0.4 * fwd;
+    P[LN] = lerp(P[LN], -0.12, back) + 0.3 * fwd;
+    P[T_R] = lerp(P[T_R], -0.4, fwd);
+    P[K_R] = lerp(P[K_R], 0.4, fwd);
   }
   // apply the pose
   u.armL.rotation.set(P[A_L], P[Y_L], P[Z_L]);
@@ -1022,6 +1003,21 @@ function humanRig(u, dt, moving, attacking) {
       -(P[A_L] + Math.min(0, P[E_L]) + P[LN]) * 0.95 + 0.3 * Math.sin(t + 1) * mb + u.hitA * 0.8 + Math.sin(ph * 1.7) * 0.04;
     u.bag.rotation.z = -P[Z_L] + 0.15 * c * mb;
   }
+  if (u.str) {
+    // the archer's string: both halves run from the limb tips to the nocking point, which the draw pulls back towards her face
+    const pull = clamp(u.pull || 0, 0, 1) * Math.min(1, u.cw * 1.5),
+      ny = 0.365 - 0.42 * pull;
+    for (let i = 0; i < 2; i++) {
+      const tx = i ? 0.555 : -0.555;
+      u.str[i].rotation.z = Math.atan2(tx, ny - 0.365);
+      u.str[i].scale.y = Math.hypot(tx, ny - 0.365);
+    }
+    u.nock.position.y = ny;
+    u.nock.visible = pull > 0.08;
+    // the own archer hears her bow creak as she draws
+    if (u.isPoss && u.team === V.myTeam && pull > 0.08 && !(u.pullPrev > 0.08)) SFX.play('bowDraw', { vol: 0.9 });
+    u.pullPrev = pull;
+  }
   if (u.barrel) {
     // the Feuerfass's barrel rides on his left shoulder and rocks a little with every step and hit
     u.barrel.rotation.z = 0.12 * Math.sin(ph * 2.1) * mb + u.hitA * 0.4;
@@ -1034,9 +1030,9 @@ function humanRig(u, dt, moving, attacking) {
     u.torchFlame.rotation.z = 0.25 * Math.sin(ph * 19);
   }
   if (u.trap) {
-    // the Fallenleger's trap: hangs from his hand on its chain, swings with the blow; gone once it is laid
+    // the Fallenleger's spare trap: hangs on his pack frame and rocks a little with his steps (gone while it lies out there)
     u.trap.visible = u.trapC !== false;
-    u.trap.rotation.x = -(P[A_R] + Math.min(0, P[E_R]) + P[LN]) * (u.cw > 0.5 ? 0.25 : 0.9) + Math.sin(ph * 2.1) * 0.05 * mb;
+    u.trap.rotation.x = 0.07 * Math.sin(ph * 2.1) * mb + u.hitA * 0.25;
   }
   if (k === 2 && u.weapon) {
     // Opa leans on the cane while walking and standing, swings it in a fight

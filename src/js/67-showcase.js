@@ -101,6 +101,7 @@ function showSet(spec) {
   });
   SHOW.single = ks.length === 1;
   SHOW.n = ks.length;
+  SHOW.grp.scale.setScalar(spec.sc || 1); // (the wiki shrinks catapults, bears and sandworms to fit)
   return true;
 }
 // put the showcase canvas into an element of the page (the canvas moves; only one showcase is on screen at a time)
@@ -129,7 +130,7 @@ function showFrame(w, h) {
 }
 function showTick(dt) {
   const h = SHOW.host;
-  if (!SHOW.r || !h || !h.isConnected || $('#profScr').hidden) return;
+  if (!SHOW.r || !h || !h.isConnected || h.closest('[hidden]')) return; // (the profile or the wiki)
   SHOW.acc += dt;
   if (SHOW.acc < 1 / 40) return; // at most 40 pictures a second
   const st = SHOW.acc;

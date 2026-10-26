@@ -335,19 +335,17 @@ function processSnap(s) {
     u.burning = (e[7] & 65536) === 65536;
     u.fuseOn = (e[7] & 131072) === 131072;
     u.trapped = (e[7] & 262144) === 262144;
+    u.snag = (e[7] & 2097152) === 2097152; // (held a moment by a jaw of the Fallenleger's row, not in a trap)
     u.fassLoaded = (e[7] & 524288) === 524288;
-    if (u.k === 13) {
-      const c = (e[7] & 1048576) === 1048576;
-      if (pe && u.trapC && !c) u.layT = 0.55; // he bends down and lays it
-      u.trapC = c;
-    }
+    if (u.k === 13) u.trapC = (e[7] & 1048576) === 1048576; // (his throw is told by the trap that flies off, trapTick)
     if (V.poss && V.poss.id === id) {
-      if (u.trapped && !V.poss.trap)
+      if (u.trapped && !u.snag && !V.poss.trap)
         egoHint(
           COARSE ? TR('In der Falle! Tippe Angriff, um dich loszureißen!') : TR('In der Falle! Drück Angriff, um dich loszureißen!'),
           2000
         );
       V.poss.trap = u.trapped;
+      if (u.burning && !V.poss.burning) egoHint(TR('Du brennst! Spring ins Wasser, dann ist es sofort aus.'), 1800);
       V.poss.burning = u.burning;
       V.poss.fuse = u.fuseOn;
     }
@@ -633,6 +631,11 @@ function onAttack(u, at, cur, poss) {
   u.atkT = 0;
   u.av = u.avN ?? pickAv(u);
   u.avN = pickAv(u); // the arm already comes back up into the next blow
+  if (K.spec === 'trap') {
+    // the Fallenleger rams his spade into the ground: the row of jaws itself comes as its own event (XE.fangs, 75-fass-falle-view.js)
+    SFX.play('swing', { x: u.g.position.x, z: u.g.position.z, vol: poss ? 0.9 : 0.6 });
+    return;
+  }
   if (poss && melee) {
     // a steered enemy: his combo is read from his rhythm (the same window as the host's), so the moves and the slash match
     const base = K.cd * CFG.possCd * (K.ego || NO_EGO).cd,
@@ -767,11 +770,14 @@ function onAttack(u, at, cur, poss) {
   }
   if (!K.proj && !poss && !K.bear && !K.worm && u.team !== V.myTeam) swooshFx(u, K); // where an enemy swing reaches: you can step out of it
   if (!K.proj)
-    SFX.play(K.bear ? 'bearSwipe' : u.k === 2 ? 'swingR' : u.k === 5 ? 'motor' : u.k === 4 ? 'gallop' : 'swing', {
-      x: u.g.position.x,
-      z: u.g.position.z,
-      vol: poss ? 1 : 0.7,
-    });
+    SFX.play(
+      K.bear ? 'bearSwipe' : u.k === 2 ? 'swingR' : u.k === 5 ? 'motor' : u.k === 4 ? 'gallop' : u.k === 12 ? 'fireSwing' : 'swing',
+      {
+        x: u.g.position.x,
+        z: u.g.position.z,
+        vol: poss ? 1 : 0.7,
+      }
+    );
   if (!K.proj)
     setTimeout(() => {
       const p = follow ? follow.g.position : to;

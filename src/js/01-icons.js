@@ -1,6 +1,8 @@
 /* 01-icons.js - Vector icon set as SVG paths (SI_D, si(name)) and siCanvas() to paint one into a canvas for sprites. No emoji anywhere in the game. */
 /* ---------- vector icon set (no emoji) ---------- */
 const SI_D = {
+  book: '<path d="M12 6.2c-2.2-1.6-5-2-8.4-1.6v13.6c3.4-.4 6.2 0 8.4 1.6 2.2-1.6 5-2 8.4-1.6V4.6c-3.4-.4-6.2 0-8.4 1.6z" fill="#f6f1e7" stroke="#2b2238" stroke-width="1.3" stroke-linejoin="round"/><path d="M12 6.2v13.6" stroke="#2b2238" stroke-width="1.2"/><path d="M5.8 8.4c1.6-.2 3 0 4.2.6M5.8 11.2c1.6-.2 3 0 4.2.6M14 9c1.2-.6 2.6-.8 4.2-.6M14 11.8c1.2-.6 2.6-.8 4.2-.6" stroke="#8a7f99" stroke-width="1" stroke-linecap="round"/><path d="M16.2 4.9v5.4l1.3-1 1.3 1V4.6" fill="#ff5f9e" stroke="#7a1d44" stroke-width=".8" stroke-linejoin="round"/>',
+  back: '<path d="M14.5 5.5L8 12l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>',
   gem: '<path d="M7 4h10l4 5-9 11L3 9z" fill="#5fd3f3" stroke="#14506a" stroke-width="1.3" stroke-linejoin="round"/><path d="M3 9h18M9.5 4L8 9l4 11 4-11-1.5-5" fill="none" stroke="#14506a" stroke-width="1" stroke-linejoin="round"/><path d="M8 9l1.5-5h5L16 9z" fill="#b8f0ff"/>',
   lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.2" fill="#c9ced6" stroke="#2b2f3a" stroke-width="1.3"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="#2b2f3a" stroke-width="1.8"/><circle cx="12" cy="15" r="1.6" fill="#2b2f3a"/><path d="M12 15.5v2.4" stroke="#2b2f3a" stroke-width="1.4"/>',
   globe:

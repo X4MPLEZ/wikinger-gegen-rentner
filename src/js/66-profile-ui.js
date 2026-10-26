@@ -43,13 +43,13 @@ function profUi() {
   $('#pBar').style.width = Math.round((lv.x / lv.need) * 100) + '%';
   $('#pXp').textContent = TR('{0} / {1} EP', lv.x, lv.need);
   $('#pGems').textContent = GOD.on ? '∞' : PLAYER.gems;
-  $$('.ptabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === PUI.tab)));
+  $$('#profScr .ptabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === PUI.tab)));
   {
     // what is new: a dot on the tab, "NEU" on the level nodes (kept for this visit, cleared from the count right away)
     const nw = profNews();
     if (PUI.tab === 'path' && PUI.newFrom === undefined) PUI.newFrom = PLAYER.sL;
-    $('.ptabs [data-tab="path"]').classList.toggle('nw', nw.lv > 0 && PUI.tab !== 'path');
-    $('.ptabs [data-tab="ach"]').classList.toggle('nw', nw.ach > 0 && PUI.tab !== 'ach');
+    $('#profScr .ptabs [data-tab="path"]').classList.toggle('nw', nw.lv > 0 && PUI.tab !== 'path');
+    $('#profScr .ptabs [data-tab="ach"]').classList.toggle('nw', nw.ach > 0 && PUI.tab !== 'ach');
     if (PUI.tab === 'ach' && PUI.newAch === undefined) PUI.newAch = PLAYER.sA;
     profSeen(PUI.tab);
   }
@@ -627,7 +627,7 @@ $('#profChip').addEventListener('click', () => {
   profOpen();
 });
 $('#pAvBtn').addEventListener('click', () => profOpen('coll'));
-$$('.ptabs button').forEach(b =>
+$$('#profScr .ptabs button').forEach(b =>
   b.addEventListener('click', () => {
     SFX.play('click');
     profOpen(b.dataset.tab);

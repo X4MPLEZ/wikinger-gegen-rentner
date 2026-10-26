@@ -618,7 +618,7 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
       dr = KINDS[e.k].role,
       mh = maxHp(e);
     if (BEATS[ar] === dr && (ar !== 'ranged' || head))
-      d = Math.max(d, mh * 0.7); // controlled counter: two clean hits, not one
+      d = Math.max(d, mh * (fangNow ? FANG.soft : 0.7)); // controlled counter: two clean hits, not one (a row of trap jaws: softer)
     else if (ar === 'ranged' && dr === 'cav') d = Math.max(d, mh * (head ? 0.62 : 0.4));
   }
   if (G.chaos) {
@@ -640,6 +640,10 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   }
   if (attK >= 0 && KINDS[attK].role === 'ranged' && KINDS[e.k].role === 'siege') d *= 1.25;
   e.hp -= d;
+  if (head && e.k === 12 && !e.boomed && !e.hero) {
+    e.hp = 0; // a Feuerfass shot in the head: dead at once, and his barrel goes off (fassDuds, 16-sim-fass-falle.js)
+    e.headBoom = team + 1;
+  }
   if (e.heroBy && e.hp <= 0) {
     e.hp = 1; // a worm with a hero on it holds out until the hero is swallowed (heroEnd finishes it)
     e.heroBeat = team + 1;
@@ -995,7 +999,7 @@ function possAttack(G, u, byId) {
   let step = 0;
   {
     const In = G.teams[u.team].posIn;
-    if ((K.role === 'melee' || K.role === 'cav') && !K.bear && In && (In.cb === 1 || In.cb === 2 || In.cb === 3)) {
+    if ((K.role === 'melee' || K.role === 'cav') && !K.bear && K.spec !== 'trap' && In && (In.cb === 1 || In.cb === 2 || In.cb === 3)) {
       const inWin = G.t - (u.cmbT ?? -99) < K.cd * CFG.possCd * EG.cd * CMB.win + 0.5;
       step = In.cb > 1 && inWin && In.cb === (u.cmb || 0) + 1 ? In.cb : 1;
       u.cmb = step;
@@ -1012,14 +1016,7 @@ function possAttack(G, u, byId) {
   u.atk = (u.atk + 1) % 100;
   u.at = 0;
   const dmg =
-    K.dmg *
-    CFG.possDmg[K.role] *
-    EG.dmg *
-    (u.rage > 0 ? 1.3 : 1) *
-    homeMul(G, u) *
-    (step ? CMB.dmg[step - 1] : 1) *
-    (u.hen ? HEN.dmg : 1) *
-    specDmg(u);
+    K.dmg * CFG.possDmg[K.role] * EG.dmg * (u.rage > 0 ? 1.3 : 1) * homeMul(G, u) * (step ? CMB.dmg[step - 1] : 1) * (u.hen ? HEN.dmg : 1);
   if (K.role === 'siege') {
     const In = G.teams[u.team].posIn;
     let tx = u.x + Math.sin(u.yaw) * 12,
@@ -1079,6 +1076,11 @@ function possAttack(G, u, byId) {
       if (bearHere(b) && Math.hypot(b.x - cx, b.z - cz) < WORM.biteR + 1.3) hitBear(G, b, d0, u.team, u.k, true, false, u.id);
     if (baseInReach(u, K.range + 1.5)) hit(G, -2, dmg, u.team, byId, u.k);
     u.at = -6;
+    u.run = 0;
+    return;
+  }
+  if (K.spec === 'trap' && !u.hen) {
+    fangLine(G, u, u.yaw); // the Fallenleger: a row of trap jaws out of the ground where he faces (16-sim-fass-falle.js)
     u.run = 0;
     return;
   }
@@ -1292,8 +1294,15 @@ function possSpecial(G, u, byId) {
   } else if (u.k === 12) {
     fassLight(G, u); // the fuse: in FASS.fuse seconds the barrel goes off
   } else if (u.k === 13) {
-    const ok = layTrap(G, u, u.x + Math.sin(u.yaw) * 1.3, u.z + Math.cos(u.yaw) * 1.3) || layTrap(G, u, u.x, u.z);
-    if (!ok) u.spcd = 0.3;
+    // the trap flies where he aims (or a little ahead); one lying out there is picked up and thrown again
+    const In = G.teams[u.team].posIn;
+    let tx = u.x + Math.sin(u.yaw) * 4,
+      tz = u.z + Math.cos(u.yaw) * 4;
+    if (In && Array.isArray(In.gp) && In.gp.length === 2 && In.gp.every(Number.isFinite)) {
+      tx = In.gp[0];
+      tz = In.gp[1];
+    }
+    if (!trapPlace(G, u, tx, tz)) u.spcd = 0.3;
   } else {
     u.ramNow = 0;
     startRam(G, u, byId); // riders dash at once (no wind-up), also when landing from an air dash
@@ -1429,7 +1438,7 @@ function possStep(G, u, byId) {
       });
     }
   }
-  if (u.k === 13 && !u.trapC) u.spcd = Math.max(u.spcd, u.trapRe > 0 ? u.trapRe : 3); // no trap in the hand: the special waits
+  if (u.k === 13 && !u.trapC && !trapsOf(G, u).length) u.spcd = Math.max(u.spcd, u.trapRe > 0 ? u.trapRe : 0.5); // nothing to throw: wait
   if (u.trapT > 0) {
     // caught in a trap: no step away; every attack press wriggles a little loose, the Feuerfass may still light his fuse
     if (In && In.id === u.id) {
@@ -1740,12 +1749,15 @@ function henDive(G, u, byId) {
   if (baseInReach(u, HFLY.diveR)) hit(G, -2, dm * HEN.base, u.team, byId, -1);
   xEvent(G, u.x, u.z, HFLY.diveR, XE.dive, u.team);
 }
-// one-shot impacts every screen shows once (explosions, the chicken's dive, snapping traps): [seq, x*10, z*10, r*10, kind, team, n]
-// (n: how many enemies a blast caught, or 1 when a trap caught a steered warrior)
-const XE = { blast: 0, dud: 1, cata: 2, dive: 3, snap: 4, fizz: 5, load: 6 };
-function xEvent(G, x, z, r, kind, team, n = 0) {
+// one-shot impacts every screen shows once (explosions, the chicken's dive, snapping traps, a row of trap jaws):
+// [seq, x*10, z*10, r*10, kind, team, n] (n: how many enemies a blast caught, or 1 when a trap caught a steered warrior, or the jaws
+// in a row) – a row adds [src, yaw*100]: who struck (his own screen has drawn it already) and the direction
+const XE = { blast: 0, dud: 1, cata: 2, dive: 3, snap: 4, fizz: 5, load: 6, fangs: 7 };
+function xEvent(G, x, z, r, kind, team, n = 0, src = -1, yaw = 0) {
   G.xeS = ((G.xeS || 0) + 1) % 10000;
-  (G.xe || (G.xe = [])).push([G.xeS, Math.round(x * 10), Math.round(z * 10), Math.round(r * 10), kind, team, n]);
+  const e = [G.xeS, Math.round(x * 10), Math.round(z * 10), Math.round(r * 10), kind, team, n];
+  if (src >= 0) e.push(src, Math.round(yaw * 100));
+  (G.xe || (G.xe = [])).push(e);
   if (G.xe.length > 10) G.xe.shift();
 }
 function hitBear(G, b, dmg, team, attK, bp, head, src) {
