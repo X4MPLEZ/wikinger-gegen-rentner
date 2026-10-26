@@ -41,8 +41,9 @@ with sync_playwright() as p:
         const yaw = trial * 0.7, v = mk(G, 0, 0, spot.x, spot.z); W.applyCmd(G, 0, { t:'poss', id:v.id }); W.step(G); v.yaw = yaw; v.down = 0;
         for (let i = 0; i < 3; i++) { const d = 0.9 + i * 0.9; mk(G, 1, 2, spot.x + Math.sin(yaw) * d, spot.z + Math.cos(yaw) * d); }
         v.spcd = 0; W.possSpecial(G, v, new Map(G.units.map(u => [u.id, u])));
-        if (G.units.some(u => u.team === 1 && u.air)) thrown++;
-        for (let t = 0; t < 60; t++) { W.step(G); if (v.down > 0 || v.air) { selfDown++; break; } } }
+        // (he holds him up over his head first, LIFT.hold s, then the throw)
+        let flew = false;
+        for (let t = 0; t < 60; t++) { W.step(G); if (!flew && G.units.some(u => u.team === 1 && u.air)) { flew = true; thrown++; } if (v.down > 0 || v.air) { selfDown++; break; } } }
       out.throw = { selfDown, thrown };
       // 5) the rider's ram: he keeps galloping after his victims (the E-Mobil dash ends before they land); they must never floor him
       out.ram = {};

@@ -167,7 +167,7 @@ ok = (not bl['selfLit'] and bl['lit'] and bl['fuseFlag'] and bl['burnFlag'] and 
       and 0 < r['wetTorch']['outAt'] < 34 and r['wetTorch']['atWater'] and r['wetTorch']['ran'] > 5))
       and hn['oneTick'] < 0.3 and hn['top'] >= 15 and hn['aloft'] and hn['foeAtkWhileUp'] == 0 and hn['diveLoss'] >= 15 and hn['xeDive']
       and fg['xe'] and fg['n'] >= 4 and fg['src'] and fg['lossA'] >= 8 and fg['lossC'] >= 10 and fg['lossFar'] == 0 and fg['snagA'] >= 1 and fg['snagC'] > fg['snagA']
-      and all(10 <= x <= 14 for x in fg['line']) and fg['pts'] == 6
+      and all(13 <= x <= 17 for x in fg['line']) and fg['pts'] == 6
       and 0.25 <= fg['ego']['rider'] < 0.7 and fg['ego']['behind'] == 0
       and 0 <= fg['throw1'] < 0.3 and 6.5 < fg['throw2'] <= 7.6 and fg['moved']
       and fg['head']['dead'] and fg['head']['boom'] and fg['head']['nbLoss'] > 30 and not errs)

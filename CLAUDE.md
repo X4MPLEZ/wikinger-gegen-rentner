@@ -96,10 +96,10 @@ Every file starts with a short header comment saying what is in it.
 | 62-screens | menus, pause, settings, quit, bug report (FormSubmit) | `showScreen`, `toMenu`, `quitMatch`, `menuScene`, `bugOpen` |
 | 63-tutorial | tutorial and Profi tutorial | `tutSteps`, `startTutorial`, `tutBlock` |
 | 64-lobby | public games: list „Offene Spiele“, „Schnelles Spiel“, practising while waiting | `LOBBY`, `lobbyWatch`, `lobbyValid`, `lobbyHostStart`, `quickMatch` |
-| 65-profile | the player's profile: levels (Ruhmespfad), achievements, daily quests, Juwelen, pictures, skins, statistics, transfer code, god mode | `PLAYER`, `ACH`, `DQ_POOL`, `AVATARS`, `SKINS`, `LEVEL_REWARDS`, `profMatchEnd`, `profEvent`, `setSkins`, `avatarURL`, `godSet` |
+| 65-profile | the player's profile: levels (Ruhmespfad), achievements, daily quests, Juwelen, pictures, skins, statistics, transfer code, god mode | `PLAYER`, `ACH`, `DQ_POOL`, `AVATARS`, `SKINS`, `LEVEL_REWARDS`, `profMatchEnd`, `profEvent`, `profPending`, `profClaim`, `setSkins`, `avatarURL`, `godSet` |
 | 65a-avatar-pics | the hand-made profile pictures (data URLs by avatar id) | `AV_PIC` |
-| 66-profile-ui | profile page (home button, Ruhmespfad track, daily quests, collection with preview sheet), menu chip, end-screen rewards, VS card | `profOpen`, `profUi`, `profSheet`, `profEndUi`, `vsCard` |
-| 67-showcase | 3D showcase in the profile and the wiki: a second small renderer drawing a squad or one unit (scaled with `sc`), still pictures of skins | `showMount`, `showSet`, `showTick`, `skinThumb` |
+| 66-profile-ui | profile page (home button, Ruhmespfad track, daily quests, collection with preview sheet), menu chip, end-screen rewards, VS card | `profOpen`, `profUi`, `profSheet`, `profCollect`, `gemFly`, `profEndUi`, `vsCard` |
+| 67-showcase | 3D showcase in the profile and the wiki: a second small renderer drawing a squad or one unit (scaled with `sc`; a sandworm stands up out of its hole), still pictures of skins and of a kind (the wiki's catapults) | `showMount`, `showSet`, `showTick`, `skinThumb`, `unitThumb` |
 | 68-wiki | the wiki: per warrior a story, how he fights, numbers read from `KINDS`/`FASS`/`TRAP`, strong/weak faces, tips, the 3D showcase; a rules page; opens from menu, online wait, lobby, pause | `WIKI`, `wikiOpen`, `wikiText`, `WIKI_VS`, `wikiUi` |
 | 70-world-view | bears, holes, pads, pickups, fog of war (client) | `updateWorld`, `itemMesh`, `fogVis`, `fogSeen`, `fogWallTick` |
 | 71-worm-view | wild sandworms on screen, sounds, victims | `wormWorldView`, `grabTick` |
@@ -200,6 +200,16 @@ Every file starts with a short header comment saying what is in it.
   screen has drawn it at once and skips it). Traps are snapshot `tr` (with the owner: a new one flies from his hand), warriors gone
   without dying (a barrel climbing into the catapult) `gn`. Command `{t: 'load', id}` puts the steered Feuerfass into an own catapult
   next to it. An enemy trap is drawn barely visible (and never in the fog), an own one clear.
+- **Counters** (10-sim `beats`, `dmgMult`): rock-paper-scissors by role, except the Feuerfass: he beats ranged and siege and is beaten by
+  riders (archers no longer count as his counter); catapults hit bears hard. Feuerfass and Fallenleger hit bases at full force (like
+  catapults). The wiki's strong/weak faces (`WIKI_VS`) must match.
+- **Berserker throw / Stockwirbel** (10-sim): the Berserker's special lifts the warrior in front (`u.lift`, `liftStep`, `LIFT`): held over
+  his head (snapshot `lf`, drawn lying across by 82-frame, the Berserker's arms up) while he turns to aim, then hurled. The Opa's
+  Stockwirbel (`WHIRL`): three turns in `WHIRL.t`, running speed times `WHIRL.speed` on the client meanwhile (`P.whirlT`), the host
+  knocks again every `WHIRL.pulse` (`u.spinT`).
+- **Trap catch and fire on screen** (75-fass-falle-view): a sprung trap slams, bounces and hops, then rattles; a caught warrior wears its
+  jaws on his ankle with a chain to the trap (`trapLegFx`); burning warriors carry flames (`fireCrown`) besides the sparks. When the own
+  steered Feuerfass goes off, the camera rises over the blast for a moment before the map view (`boomCamStart`, `boomCamTick`).
 - **Weapon slashes** (51-ego `slashFx`): every weapon draws its own slash (`SLASH_STYLE` per kind: axe, cane, torch, electric, claws;
   shader uniform `uStyle`), an enemy's with a red rim; the Fallenleger has none (his jaws are the attack).
 - **Ego camera** (51-ego): a spring arm (`egoArm`, `camBlocked`, `camFloor`) pulls the camera in front of hills, rocks and forests (fast in,
@@ -218,6 +228,10 @@ Every file starts with a short header comment saying what is in it.
   made bodies jump about in crowds while the feet stayed put).
 - **Ruhmespfad** (66-profile-ui): every reward is a card on one horizontal road over a progress bar; touch scrolls natively, the mouse
   drags (with momentum) or uses the wheel, ← → scroll; a tap opens the preview sheet (`profSheet`).
+- **Collecting rewards:** nothing is paid out at the end of a match. Level rewards (`PLAYER.lvC` reached, `PLAYER.cl` collected; a level item
+  is owned only once collected), master bonuses (`mC`/`mCl`), the Juwelen of daily quests and daily wins (`PLAYER.pq`) and achievements
+  (`PLAYER.ach` earned, `PLAYER.ac` collected) wait in the profile: `profPending()` (the red number on the menu chip), `profClaim(c)`;
+  the profile's buttons call `profCollect`, Juwelen fly into the counter (`gemFly`). Old saves count as collected (`profClean`).
 - **God mode** (`GOD.on`, 65-profile): everything owned, `profSave()` does nothing; for trying out skins, not for players.
 - **Strangers:** nothing typed by a player and no photos ever reach another player in a public match; everything received from the
   lobby or a peer is validated (`lobbyValid`, `profPeer`).
@@ -261,6 +275,7 @@ Every file starts with a short header comment saying what is in it.
 - `tests/t_fass.py`: Feuerfass blast/dud/catapult shot (never lit by the computer), the torch, burning warriors running into water, the
   bear trap (holds, bites, lets go, new trap, several at once, the computer throws it), the flying chicken, the row of trap jaws (once per
   enemy, held, riders longer, the steered one), the thrown and re-placed trap, the headshot on a Feuerfass.
+- `tests/t_moves.py`: the Berserker's lift and throw, the Stockwirbel's later turns, the counters (`dmgMult`).
 - `tests/t_wiki.py`: the wiki from the menu and the pause menu, tabs, a warrior's page, jumping via the strong/weak faces, the wait button,
   English without German left.
 - `tests/t_guide.py`: the tutorial offer and the first-steps card step by step; mouse rectangle selection, click into the void, C, F, Space.

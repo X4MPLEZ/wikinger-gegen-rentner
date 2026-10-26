@@ -58,6 +58,7 @@ function showUnit(k, skin) {
   u.blob.visible = false;
   u.ring.visible = false;
   u.g.traverse(o => (o.castShadow = o.receiveShadow = false));
+  if (KINDS[k].worm) u.wP = { ws: 'up', st: 9 }; // a sandworm stands up out of its hole (crawling, it lay flat across the picture)
   SHOW.cache.set(key, u);
   return u;
 }
@@ -142,6 +143,7 @@ function showTick(dt) {
   SHOW.units.forEach((u, i) => {
     u.atkT = (clock * 0.7 + i * 0.9) % 3;
     animateRig(u, Math.min(st, 0.1), false, false);
+    if (u.segs) for (const sg of u.segs) if (sg.position.y < 0.25) sg.visible = false; // (a sandworm: no sand here to hide what is below)
   });
   showFrame(w, hh);
 }
@@ -153,6 +155,7 @@ function skinThumb(id) {
   if (!S || !showInit()) return '';
   const keepKey = SHOW.key,
     keepYaw = SHOW.yaw,
+    keepSc = SHOW.grp.scale.x,
     keepUnits = SHOW.units.slice();
   SHOW.units.forEach(u => SHOW.grp.remove(u.g));
   SHOW.units = [];
@@ -170,7 +173,36 @@ function skinThumb(id) {
   SHOW.key = keepKey;
   SHOW.yaw = keepYaw;
   SHOW.single = keepUnits.length === 1;
+  SHOW.grp.scale.setScalar(keepSc);
   SK_THUMB[id] = url;
+  return url;
+}
+// a still picture of one kind in its faction's basic look (the wiki shows the catapults so: a machine has no face)
+const UNIT_THUMB = {};
+function unitThumb(k) {
+  if (UNIT_THUMB[k]) return UNIT_THUMB[k];
+  if (!showInit()) return PORTRAIT[k];
+  const keepKey = SHOW.key,
+    keepYaw = SHOW.yaw,
+    keepSc = SHOW.grp.scale.x,
+    keepUnits = SHOW.units.slice();
+  SHOW.units.forEach(u => SHOW.grp.remove(u.g));
+  SHOW.units = [];
+  SHOW.key = '';
+  showSet({ k, skin: KINDS[k].fac === 'rentner' ? 'r0' : 'v0', sc: KINDS[k].role === 'siege' ? 0.95 : 1 });
+  SHOW.yaw = 0.75;
+  SHOW.disc.visible = false;
+  showFrame(160, 160);
+  SHOW.disc.visible = true;
+  const url = SHOW.r.domElement.toDataURL('image/png');
+  SHOW.units.forEach(u => SHOW.grp.remove(u.g));
+  SHOW.units = keepUnits;
+  keepUnits.forEach(u => SHOW.grp.add(u.g));
+  SHOW.key = keepKey;
+  SHOW.yaw = keepYaw;
+  SHOW.single = keepUnits.length === 1;
+  SHOW.grp.scale.setScalar(keepSc);
+  UNIT_THUMB[k] = url;
   return url;
 }
 

@@ -227,7 +227,6 @@ function exitEgo(send, keepLock) {
   resetInput();
   mlReset();
   $('#xhair').hidden = true;
-  $('#bowGauge').hidden = true;
   trapAimTick(null);
   if (V.mode === 'ai' || V.mode === 'host') G.teams[V.myTeam].posIn = null;
   else if (NET.r) NET.r.presence({ in: null }).catch(() => {});
@@ -767,25 +766,6 @@ function egoStrike(P, K, step) {
   setTimeout(() => egoStrikeHit(P, K, step, mv), (W + 0.035) * 1000);
 }
 const u2swing = k => (k === 2 ? 'swingR' : k === 12 ? 'fireSwing' : k === 5 ? 'zap' : 'swing');
-// the little bow under the crosshair follows the real draw (u.pull, 80-animation.js): the string comes back, the arrow lies on it
-function bowGaugeTick(P) {
-  const el = $('#bowGauge');
-  if (!el) return;
-  const on = P.k === 1 && !P.hen && !P.nadeAim;
-  if (el.hidden === on) el.hidden = !on;
-  if (!on) return;
-  const mu = V.units.get(P.id),
-    pull = mu ? clamp(mu.pull || 0, 0, 1) : 0,
-    q = Math.round(pull * 20) / 20;
-  if (el._q === q) return;
-  el._q = q;
-  const ny = 6 + 11 * q;
-  el.querySelector('.str').setAttribute('points', `-25,6 0,${ny} 25,6`);
-  el.querySelector('.arw').setAttribute('transform', `translate(0 ${ny - 6})`);
-  el.querySelector('.arw').style.opacity = q > 0.08 ? 1 : 0;
-  el.classList.toggle('drawn', q > 0.08);
-  el.classList.toggle('full', q > 0.97);
-}
 function egoStrikeHit(P, K, step, mv) {
   if (V.poss !== P) return;
   const fin = step === 3,
@@ -1307,6 +1287,7 @@ function egoSpecial() {
   P.s = (P.s + 1) % 1000;
   P.spT = spCdOf(P.k) * [1, 0.34][tpk(V.myTeam, 'charge')];
   if (P.k === 0) P.rageT = 4;
+  if (P.k === 2) P.whirlT = tpk(V.myTeam, 'spin') ? 2.4 : WHIRL.t; // the Stockwirbel: he spins and runs much faster meanwhile
   if (P.k === 4 || P.k === 5) {
     // riders dash at once (the host starts the ram from the same spot, P.dp)
     P.dashT = 0.42;
@@ -1614,6 +1595,7 @@ function egoUpdate(dt) {
     }
   }
   P.rageT = Math.max(0, P.rageT - rdt);
+  P.whirlT = Math.max(0, (P.whirlT || 0) - rdt);
   let jx = 0,
     jy = 0;
   if (EG.joy) {
@@ -1673,6 +1655,7 @@ function egoUpdate(dt) {
       1.15 *
       (slowMu && slowMu.slowed ? 0.7 : 1) *
       (P.rageT > 0 ? 1.4 : 1) *
+      (P.whirlT > 0 ? WHIRL.speed : 1) *
       [1, 2][tpk(V.myTeam, 'turbo')] *
       (K.role === 'cav' ? [1, 1.5][tpk(V.myTeam, 'cavspd')] : 1) *
       (P.hen ? HEN.speed * (P.fh > 0.4 ? HFLY.spd : 1) : 1);
@@ -1965,7 +1948,6 @@ function egoUpdate(dt) {
     }
   }
   egoLoadUi(P); // "Ins Katapult" (75-fass-falle-view.js)
-  bowGaugeTick(P);
   trapAimTick(P);
   if (!!P.burning !== document.body.classList.contains('burnOn')) document.body.classList.toggle('burnOn', !!P.burning);
   if (P.fassCam && fassCamTick(P, dt)) return; // the camera rides along with the own Feuerfass

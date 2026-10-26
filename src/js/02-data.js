@@ -17,7 +17,9 @@ const KINDS = [
     r: 0.5,
     sp: TR('Raserei + Wurf'),
     ego: { hp: 1.25, cd: 0.8, dmg: 1.15 },
-    trait: TR('Blutrausch: nach jedem Sieg schlägt er kurz schneller. Spezial: packt den Vordermann und wirft ihn in seine Kumpels'),
+    trait: TR(
+      'Blutrausch: nach jedem Sieg schlägt er kurz schneller. Spezial: stemmt den Vordermann über den Kopf und wirft ihn in seine Kumpels'
+    ),
   },
   {
     key: 'bogen',
@@ -53,7 +55,7 @@ const KINDS = [
     build: 1.3,
     r: 0.5,
     sp: TR('Stockwirbel'),
-    trait: TR('Standfest: lässt sich kaum wegstoßen'),
+    trait: TR('Standfest: lässt sich kaum wegstoßen. Spezial: dreifacher Stockwirbel, dabei viel schneller'),
   },
   {
     key: 'oma',
@@ -234,10 +236,10 @@ const KINDS = [
     build: 1.6,
     r: 0.55,
     sp: TR('Lunte zünden'),
-    tag: TR('zündet alles an'),
+    tag: TR('sprengt Schützen'),
     ego: { hp: 1, cd: 1, dmg: 1 },
     trait: TR(
-      'Fass auf der Schulter, Fackel in der Hand: Wen er schlägt, der brennt und rennt schreiend davon. Das Pulverfass zündet nur, wer ihn selbst steuert – dann fliegen alle im Umkreis. Ein Kopfschuss lässt ihn sofort hochgehen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
+      'Fass auf der Schulter, Fackel in der Hand: Wen er schlägt, der brennt und rennt schreiend davon. Stark gegen Fernkämpfer, Katapulte und Basen, schwach gegen Reiter. Das Pulverfass zündet nur, wer ihn selbst steuert, dann fliegen alle im Umkreis. Ein Kopfschuss lässt ihn sofort hochgehen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
     ),
   },
   {
@@ -247,7 +249,7 @@ const KINDS = [
     spec: 'trap',
     name: TR('Fallenleger'),
     hp: 130,
-    dmg: 11, // per jaw of his row (FANG in 16-sim-fass-falle.js)
+    dmg: 15, // per jaw of his row (FANG in 16-sim-fass-falle.js)
     cd: 1.3,
     range: 5, // the row of jaws reaches 6 m: he strikes from a few steps away
     aggro: 10,
@@ -258,7 +260,7 @@ const KINDS = [
     sp: TR('Falle werfen'),
     tag: TR('stellt Fallen'),
     trait: TR(
-      'Rammt den Spaten in den Boden: Eine Reihe alter Fangeisen schnappt nacheinander aus der Erde – wenig Schaden, aber jeden auf der Linie, und alle hängen kurz fest (Reiter länger). Spezial: wirft seine Bärenfalle, die der Gegner kaum sieht; eine liegende holt er zurück und wirft sie neu'
+      'Rammt den Spaten in den Boden: Eine Reihe alter Fangeisen schnappt nacheinander aus der Erde. Jeder auf der Linie wird gebissen und hängt kurz fest (Reiter länger), auch Basen bekommen ordentlich ab. Spezial: wirft seine Bärenfalle, die der Gegner kaum sieht; eine liegende holt er zurück und wirft sie neu'
     ),
   },
 ];
@@ -344,6 +346,9 @@ const CFG = {
    The client counts the combo and sends its step (input packet cb); the host checks it (possAttack). */
 // specials that recharge faster than CFG.spCd: the Krückstock-Opa's Stockwirbel a little faster than the Berserker's rage
 const SP_CD = { 0: 6.5, 2: 5.5, 12: 1, 13: 2 };
+// the Krückstock-Opa's Stockwirbel: three turns in t seconds, running speed times speed meanwhile, and every pulse s the stick knocks
+// everyone in r m away again (dmg)
+const WHIRL = { t: 1.05, turns: 3, speed: 1.9, pulse: 0.35, dmg: 20, r: 3.4 };
 // the recharge time of kind k's special (siege, bears and sandworms have their own)
 function spCdOf(k) {
   const K = KINDS[k];

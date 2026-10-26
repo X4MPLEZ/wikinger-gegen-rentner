@@ -397,6 +397,12 @@ function profBlank() {
     dq: null,
     sL: 1, // the highest level whose reward the player has seen on the Ruhmespfad
     sA: 0, // how many achievements he has seen
+    // rewards are collected by hand in the profile (a burst of Juwelen): the highest level collected, the master bonuses collected,
+    // Juwelen of quests and daily wins waiting, achievements collected
+    cl: 1,
+    mCl: 0,
+    pq: 0,
+    ac: {},
     st: profStatsBlank(),
   };
 }
@@ -436,8 +442,14 @@ function profClean(d) {
   P.lvC = int(d.lvC, 1, LEVEL_MAX, 1);
   P.mC = int(d.mC, 0, 1e6, 0);
   P.sL = int(d.sL, 1, LEVEL_MAX, P.lvC); // older saves: everything up to now counts as seen
+  P.cl = Math.min(P.lvC, int(d.cl, 1, LEVEL_MAX, P.lvC)); // older saves: everything reached counts as collected
+  P.mCl = Math.min(P.mC, int(d.mCl, 0, 1e6, P.mC));
+  P.pq = int(d.pq, 0, 1e6, 0);
   if (d.own && typeof d.own === 'object') for (const k in d.own) if (AV_BY[k] || SKINS[k]) P.own[k] = 1;
   if (d.ach && typeof d.ach === 'object') for (const k in d.ach) if (ACH_BY[k]) P.ach[k] = int(d.ach[k], 0, 1e13, 1);
+  if (d.ac && typeof d.ac === 'object') {
+    for (const k in d.ac) if (P.ach[k]) P.ac[k] = 1;
+  } else for (const k in P.ach) P.ac[k] = 1; // older saves: their achievements paid out already
   if (d.sk && typeof d.sk === 'object')
     for (const f of ['viking', 'rentner']) if (SKINS[d.sk[f]] && SKINS[d.sk[f]].fac === f) P.sk[f] = d.sk[f];
   if (AV_BY[d.av]) P.av = d.av;
@@ -503,7 +515,7 @@ function godLevel(L) {
   for (let i = 1; i < Math.min(L, LEVEL_MAX); i++) xp += lvNeed(i);
   if (L > LEVEL_MAX) xp += (L - LEVEL_MAX) * 500;
   PLAYER.xp = xp;
-  PLAYER.lvC = Math.min(L, LEVEL_MAX);
+  PLAYER.lvC = PLAYER.cl = Math.min(L, LEVEL_MAX);
 }
 const profLevel = () => lvOf(PLAYER.xp).L;
 // owned: free, reached by level, earned by an achievement, or bought
@@ -512,7 +524,7 @@ function profOwns(id) {
   if (!it) return false;
   if (GOD.on) return true;
   const u = it.u;
-  return !!(u.free || PLAYER.own[id] || (u.lv && profLevel() >= u.lv) || (u.ach && PLAYER.ach[u.ach]));
+  return !!(u.free || PLAYER.own[id] || (u.lv && PLAYER.cl >= u.lv) || (u.ach && PLAYER.ach[u.ach])); // (a level reward once collected)
 }
 function profBuy(id) {
   const it = AV_BY[id] || SKINS[id];
@@ -533,34 +545,72 @@ const profDay = () => {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 };
+// an achievement is earned at once; its Juwelen wait in the profile (profClaim)
 function profGrantAch(id, out) {
   if (PLAYER.ach[id] || !ACH_BY[id]) return false;
   PLAYER.ach[id] = Date.now();
-  PLAYER.gems += ACH_BY[id].g;
   if (out) out.push(id);
   return true;
 }
-// level rewards for every level reached since the last claim (and the master bonus beyond the last level)
+// levels reached since the last match (their rewards wait in the profile until collected, profClaim) and the master bonus beyond
 function profClaimLevels(out) {
   const lv = lvOf(PLAYER.xp);
   while (PLAYER.lvC < lv.L) {
     PLAYER.lvC++;
-    const r = LEVEL_REWARDS[PLAYER.lvC];
-    if (r && r.gems) PLAYER.gems += r.gems;
     out.push(PLAYER.lvC);
   }
-  if (lv.master > PLAYER.mC) {
-    PLAYER.gems += 30 * (lv.master - PLAYER.mC);
-    PLAYER.mC = lv.master;
-  }
+  if (lv.master > PLAYER.mC) PLAYER.mC = lv.master;
 }
-/* News: what the red number on the menu chip counts. Level rewards reached but not yet looked at on the Ruhmespfad, and new
-   achievements not yet looked at. Looking at the tab clears them (profSeen). */
+/* What waits to be collected in the profile: level rewards reached, master bonuses, Juwelen of quests and daily wins, achievements.
+   n: the red number on the menu chip. */
+function profPending() {
+  let lv = 0,
+    gems = 0;
+  for (let i = PLAYER.cl + 1; i <= Math.min(PLAYER.lvC, LEVEL_MAX); i++)
+    if (LEVEL_REWARDS[i]) {
+      lv++;
+      gems += LEVEL_REWARDS[i].gems || 0;
+    }
+  const master = Math.max(0, PLAYER.mC - PLAYER.mCl),
+    ach = ACH.filter(a => PLAYER.ach[a.id] && !PLAYER.ac[a.id]).map(a => a.id);
+  gems += 30 * master + PLAYER.pq + ach.reduce((s, id) => s + ACH_BY[id].g, 0);
+  return { lv, master, q: PLAYER.pq, ach, gems, n: lv + (master ? 1 : 0) + (PLAYER.pq ? 1 : 0) + ach.length };
+}
+/* Collect: { t: 'lv', L } every level up to L (all reached ones without L), { t: 'q' } the quests' Juwelen, { t: 'ach', id } one
+   achievement ({ t: 'ach' } all), { t: 'all' } everything. Returns { gems, items } (items: the pictures and skins now owned). */
+function profClaim(c) {
+  const out = { gems: 0, items: [] };
+  const lvTo = c.t === 'lv' ? Math.min(c.L || LEVEL_MAX, PLAYER.lvC) : c.t === 'all' ? PLAYER.lvC : 0;
+  while (PLAYER.cl < Math.min(lvTo, LEVEL_MAX)) {
+    PLAYER.cl++;
+    const r = LEVEL_REWARDS[PLAYER.cl];
+    if (!r) continue;
+    out.gems += r.gems || 0;
+    if (r.av) out.items.push({ id: r.av, isAv: true });
+    for (const k of r.sk || []) out.items.push({ id: k, isAv: false });
+  }
+  if ((c.t === 'lv' || c.t === 'all') && PLAYER.mC > PLAYER.mCl) {
+    out.gems += 30 * (PLAYER.mC - PLAYER.mCl);
+    PLAYER.mCl = PLAYER.mC;
+  }
+  if (c.t === 'q' || c.t === 'all') {
+    out.gems += PLAYER.pq;
+    PLAYER.pq = 0;
+  }
+  if (c.t === 'ach' || c.t === 'all')
+    for (const a of ACH)
+      if (PLAYER.ach[a.id] && !PLAYER.ac[a.id] && (!c.id || c.id === a.id)) {
+        PLAYER.ac[a.id] = 1;
+        out.gems += a.g;
+      }
+  PLAYER.gems += out.gems;
+  profSave();
+  return out;
+}
+// the red number on the menu chip and the dots on the tabs: rewards waiting to be collected
 function profNews() {
-  let lv = 0;
-  for (let i = PLAYER.sL + 1; i <= Math.min(PLAYER.lvC, LEVEL_MAX); i++) if (LEVEL_REWARDS[i]) lv++;
-  const ach = Math.max(0, Object.keys(PLAYER.ach).length - PLAYER.sA);
-  return { lv, ach, n: lv + ach };
+  const P = profPending();
+  return { lv: P.lv + (P.master ? 1 : 0), q: P.q ? 1 : 0, ach: P.ach.length, n: P.n };
 }
 function profSeen(tab) {
   const n0 = PLAYER.sL + ',' + PLAYER.sA;
@@ -591,7 +641,7 @@ function dqLeft() {
     m = new Date(n.getFullYear(), n.getMonth(), n.getDate() + 1);
   return m - n;
 }
-// one finished match counts for today's quests; finished ones pay out right away. Returns the quests finished now.
+// one finished match counts for today's quests; the Juwelen of finished ones wait in the profile. Returns the quests finished now.
 function dqMatch(M) {
   const Q = dqToday(),
     st = M.st || [],
@@ -602,13 +652,13 @@ function dqMatch(M) {
     Q.p[i] = Math.min(q.g, Q.p[i] + Math.max(0, q.v(M, st) | 0));
     if (Q.p[i] >= q.g) {
       Q.c[i] = 1;
-      PLAYER.gems += q.gems;
+      PLAYER.pq += q.gems; // (collected in the profile)
       done.push(id);
     }
   });
   if (!Q.b && Q.c.every(Boolean)) {
     Q.b = 1;
-    PLAYER.gems += DQ_BONUS;
+    PLAYER.pq += DQ_BONUS;
     done.push('bonus');
   }
   return done;
@@ -617,7 +667,7 @@ function dqMatch(M) {
    Returns what the end screen shows: XP, levels before and after, Juwelen won, new achievements and level rewards. */
 function profMatchEnd(M) {
   const S = PLAYER.st,
-    g0 = PLAYER.gems,
+    g0 = profPending().gems,
     lv0 = lvOf(PLAYER.xp),
     ach = [],
     lvUp = [];
@@ -654,7 +704,7 @@ function profMatchEnd(M) {
     xp = Math.round(xp * (M.online ? 1.5 : M.ai ? AI_XP[M.lvl] || 1 : 1));
     if (M.won && PLAYER.daily !== today) {
       PLAYER.daily = today;
-      PLAYER.gems += 20; // the first win of the day
+      PLAYER.pq += 20; // the first win of the day (collected in the profile with the quests' Juwelen)
       M.daily = 20;
     }
     M.dq = dqMatch(M);
@@ -663,7 +713,8 @@ function profMatchEnd(M) {
   profClaimLevels(lvUp);
   for (const a of ACH) if (a.t && !PLAYER.ach[a.id] && a.t(PLAYER, M)) profGrantAch(a.id, ach);
   profSave();
-  return { xp, lv0, lv1: lvOf(PLAYER.xp), gems: PLAYER.gems - g0, daily: M.daily || 0, ach, lvUp, dq: M.dq || [] };
+  // gems: what this match added to the Juwelen waiting in the profile
+  return { xp, lv0, lv1: lvOf(PLAYER.xp), gems: profPending().gems - g0, daily: M.daily || 0, ach, lvUp, dq: M.dq || [] };
 }
 // Giving up counts as a lost match for the statistics and ends a winning streak (no XP).
 function profQuit() {
@@ -693,7 +744,7 @@ function profEvent(ty, a, b) {
   if (id && profGrantAch(id)) {
     profSave();
     const A = ACH_BY[id];
-    toast(TR('Erfolg: {0} · +{1} Juwelen', A.n, A.g), 2600);
+    toast(TR('Erfolg: {0} · {1} Juwelen warten im Profil', A.n, A.g), 2600);
     SFX.play('ding');
   }
 }

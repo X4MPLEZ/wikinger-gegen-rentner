@@ -17,17 +17,17 @@ const FASS = {
   own: 0.22, // own warriors take this share
   knock: 7.5, // how far the blast throws (own warriors about half as far)
   lift: 3.6,
-  burn: 3.4, // seconds an enemy burns ...
+  burn: 4.5, // seconds an enemy burns ...
   burnOwn: 0.9, // ... and an own warrior
-  burnDps: 9,
+  burnDps: 7,
   dud: 0.6, // felled before it went off: radius and damage share of the burst
   belly: 160, // a swallowed barrel against the worm
   cataR: 5.4, // shot from a catapult
   cataDmg: 130,
   cataBase: 200,
   load: 4.2, // how close to the own catapult to climb in
-  torch: 1.8, // seconds a warrior burns after a blow with the torch (FASS.burnDps per second) ...
-  torchPanic: 1.2, // ... and runs about screaming (a blast: the whole time he burns)
+  torch: 3, // seconds a warrior burns after a blow with the torch (FASS.burnDps per second) ...
+  torchPanic: 2.2, // ... and runs about screaming (a blast: the whole time he burns)
   imm: 2.5, // once the fire is out, a torch cannot light him again for this long (no burning for ever)
   wet: 11, // a burning warrior runs into water this close ...
   jump: 5, // ... and jumps in from a bank at most this high above it ...
@@ -63,7 +63,7 @@ const FANG = {
   soft: 0.3, // a steered one against riders: at least this share of their health per bite (a single blow counters with 0.7)
   hold: 0.45, // held by the ankle (snapshot bit 2097152) ...
   holdCav: 0.9, // ... a rider longer
-  base: 12, // against the enemy base wall, once per row
+  base: 30, // against the enemy base wall, once per row (at full force, like a catapult)
   max: 6, // at most this many bitten by one row
 };
 let fangNow = 0; // 1 while a steered Fallenleger's jaws bite (hit() in 10-sim.js softens the hard counter)

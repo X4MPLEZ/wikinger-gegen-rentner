@@ -12,44 +12,44 @@ const WIKI_VS = {
     [1, 3],
   ],
   1: [
-    [0, 2, 12, 13],
-    [4, 5],
+    [0, 2, 13],
+    [4, 5, 12],
   ],
   2: [
     [4, 5],
     [1, 3],
   ],
   3: [
-    [0, 2, 12, 13],
-    [4, 5],
+    [0, 2, 13],
+    [4, 5, 12],
   ],
   4: [
-    [1, 3, 6, 7],
-    [0, 2, 12, 13],
+    [1, 3, 6, 7, 12],
+    [0, 2, 13],
   ],
   5: [
-    [1, 3, 6, 7],
-    [0, 2, 12, 13],
+    [1, 3, 6, 7, 12],
+    [0, 2, 13],
   ],
   6: [
-    [1, 3],
-    [4, 5],
+    [1, 3, 8],
+    [4, 5, 12],
   ],
   7: [
-    [1, 3],
-    [4, 5],
+    [1, 3, 8],
+    [4, 5, 12],
   ],
   8: [
     [0, 2, 4, 5, 12, 13],
-    [1, 3],
+    [1, 3, 6, 7],
   ],
   10: [
     [0, 2, 4, 5, 12, 13],
     [1, 3],
   ],
   12: [
+    [1, 3, 6, 7],
     [4, 5],
-    [1, 3],
   ],
   13: [
     [4, 5],
@@ -62,44 +62,48 @@ function wikiText(k) {
     case 0:
       return {
         s: TR(
-          'Björn der Unrasierte hat einmal einen Bären zum Armdrücken herausgefordert – und verloren. Seitdem trainiert er jeden Morgen mit seiner Axt und brüllt dabei so laut, dass die Möwen auswandern. Wenn ihm im Kampf die Puste ausgeht, wird er erst richtig wütend.'
+          'Björn der Unrasierte hat einmal einen Bären zum Armdrücken herausgefordert und verloren. Seitdem trainiert er jeden Morgen mit seiner Axt und brüllt dabei so laut, dass die Möwen auswandern. Wenn ihm im Kampf die Puste ausgeht, wird er erst richtig wütend.'
         ),
         h: TR(
-          'Nahkämpfer mit Axt und Schild. Nach jedem besiegten Gegner schlägt er eine Weile schneller (Blutrausch). Selbst gesteuert hält er mehr aus, schlägt schneller und härter, und seine Spezialfähigkeit ist die Raserei: Er packt den Vordermann und wirft ihn wie eine Kegelkugel in dessen Kumpels.'
+          'Nahkämpfer mit Axt und Schild. Nach jedem besiegten Gegner schlägt er eine Weile schneller (Blutrausch). Selbst gesteuert hält er mehr aus, schlägt schneller und härter, und seine Spezialfähigkeit ist die Raserei: Er packt den Vordermann, stemmt ihn über den Kopf und schleudert ihn wie eine Kegelkugel in dessen Kumpels.'
         ),
         t: [
           TR('Schick Berserker gegen Reiter: Nahkampf schlägt Reiter.'),
-          TR('Auf Abstand verliert er gegen Bogenschützinnen und Gebiss-Omas – lass ihn hinter deinen Reitern nachrücken.'),
-          TR('Selbst gesteuert: Raserei mitten im Getümmel zünden und den Vordermann in die Gruppe werfen.'),
+          TR('Auf Abstand verliert er gegen Bogenschützinnen und Gebiss-Omas. Lass ihn hinter deinen Reitern nachrücken.'),
+          TR('Selbst gesteuert: Raserei mitten im Getümmel zünden, den Vordermann hochstemmen, dich zu seinen Kumpels drehen und werfen.'),
         ],
       };
     case 1:
       return {
         s: TR(
-          'Astrid trifft eine Fliege auf hundert Schritt – sagt sie. Bewiesen hat es noch keiner, denn die Fliegen trauen sich nicht mehr in ihre Nähe. Ihren Bogen nennt sie liebevoll „Pieks“.'
+          'Astrid trifft eine Fliege auf hundert Schritt, sagt sie. Bewiesen hat es noch keiner, denn die Fliegen trauen sich nicht mehr in ihre Nähe. Ihren Bogen nennt sie liebevoll „Pieks“.'
         ),
         h: TR(
-          'Die größte Reichweite im Spiel, und von Hügeln schießt sie noch weiter. Selbst gesteuert spannst du den Bogen und zielst frei – Kopfschüsse sind besonders gemein. Spezialfähigkeit: der Pfeilfächer, fünf Pfeile auf einmal.'
+          'Die größte Reichweite im Spiel, und von Hügeln schießt sie noch weiter. Selbst gesteuert spannst du den Bogen und zielst frei. Kopfschüsse sind besonders gemein. Spezialfähigkeit: der Pfeilfächer, fünf Pfeile auf einmal.'
         ),
         t: [
           TR('Hinter einer Reihe Nahkämpfer aufstellen: Fernkampf schlägt Nahkampf.'),
-          TR('Bring sie vor Reitern in Sicherheit – die überrennen sie.'),
+          TR('Bring sie vor Reitern und Feuerfässern in Sicherheit.'),
           TR('Auf Hügeln aufstellen: Von oben reicht der Bogen weiter.'),
-          TR('Ein Feuerfass im Anmarsch? Kopfschuss – dann geht sein Fass mitten zwischen seinen eigenen Leuten hoch.'),
+          TR(
+            'Ein Feuerfass im Anmarsch? Schieß, bevor es da ist: Ein Kopfschuss lässt sein Fass mitten zwischen seinen eigenen Leuten hochgehen. Kommt es nah heran, lauf weg.'
+          ),
         ],
       };
     case 2:
       return {
         s: TR(
-          'Opa Herbert war 1962 Vize-Kreismeister im Stockfechten. Seine Krücke braucht er eigentlich gar nicht – er hat sie nur, um jungen Leuten damit auf die Finger zu klopfen. Und Wikingern auf den Helm.'
+          'Opa Herbert war 1962 Vize-Kreismeister im Stockfechten. Seine Krücke braucht er eigentlich gar nicht. Er hat sie nur, um jungen Leuten damit auf die Finger zu klopfen. Und Wikingern auf den Helm.'
         ),
         h: TR(
-          'Zäher Nahkämpfer mit viel Leben, der sich kaum wegstoßen lässt (standfest). Spezialfähigkeit: der Stockwirbel – er dreht sich mit dem Stock und haut alle um sich herum weg.'
+          'Zäher Nahkämpfer mit viel Leben, der sich kaum wegstoßen lässt (standfest). Spezialfähigkeit: der Stockwirbel. Er dreht sich dreimal mit ausgestrecktem Stock, saust dabei viel schneller übers Feld und haut alle um sich herum weg.'
         ),
         t: [
           TR('Stell ihn gegen Reiter: Nahkampf schlägt Reiter, und er steht wie eine Eiche.'),
           TR('Mit dem Stockwirbel fegst du Gegner auf der Klippen-Karte über die Kante.'),
-          TR('Gegen Bogenschützinnen braucht er Hilfe von deinen E-Mobil-Rasern.'),
+          TR(
+            'Im Stockwirbel bist du schnell: Wirbel mitten durch eine Gruppe hindurch. Gegen Bogenschützinnen braucht er trotzdem Hilfe von deinen E-Mobil-Rasern.'
+          ),
         ],
       };
     case 3:
@@ -108,12 +112,12 @@ function wikiText(k) {
           'Oma Gertrud hat drei Gebisse: eins zum Essen, eins für Sonntag und eins zum Werfen. Das dritte ist inzwischen das wichtigste. Mit Haftcreme bestrichen bleibt es an jedem Wikinger kleben.'
         ),
         h: TR(
-          'Fernkämpferin: Ihre Gebisse kleben, getroffene Gegner werden langsamer (Klebegebiss). Spezialfähigkeit: die Gebiss-Salve – ein ganzer Fächer Gebisse auf einmal.'
+          'Fernkämpferin: Ihre Gebisse kleben, getroffene Gegner werden langsamer (Klebegebiss). Spezialfähigkeit: die Gebiss-Salve, ein ganzer Fächer Gebisse auf einmal.'
         ),
         t: [
           TR('Hinter deine Opas stellen: Fernkampf schlägt Nahkampf.'),
           TR('Gebremste Gegner sind leichte Beute für deine Opas.'),
-          TR('Schütze sie vor Ziegenreitern – die überrennen sie.'),
+          TR('Schütze sie vor Ziegenreitern und Feuerfässern.'),
         ],
       };
     case 4:
@@ -122,11 +126,13 @@ function wikiText(k) {
           'Sven wollte eigentlich ein Pferd. Bekommen hat er Gerda, eine Ziege mit Hörnern wie Eisenstangen und der Laune eines Gewitters. Zusammen haben sie schon drei Zäune, zwei Brücken und eine Hochzeit gesprengt.'
         ),
         h: TR(
-          'Schneller Reiter mit Axt. Mit Anlauf schleudert der Hörnerstoß Gegner weg, und fliegende Körper kegeln alle um, die im Weg stehen. Spezialfähigkeit: der Ramm-Anlauf – ein Sprint, der Katapulte sofort zerbricht.'
+          'Schneller Reiter mit Axt. Mit Anlauf schleudert der Hörnerstoß Gegner weg, und fliegende Körper kegeln alle um, die im Weg stehen. Spezialfähigkeit: der Ramm-Anlauf, ein Sprint, der Katapulte sofort zerbricht.'
         ),
         t: [
           TR('Jag Gebiss-Omas: Reiter überrennen Fernkampf.'),
-          TR('Gegnerische Katapulte sind deine Lieblingsbeute.'),
+          TR(
+            'Gegnerische Katapulte sind deine Lieblingsbeute, Feuerfässer gleich danach: Renn sie um, bevor sie bei deinen Schützinnen sind.'
+          ),
           TR('Auf der Klippen-Karte schubst dein Anlauf Gegner über die Kante.'),
           TR('Vorsicht vor Opas und den Fangeisen des Fallenlegers: Die halten Reiter lange fest.'),
         ],
@@ -137,12 +143,12 @@ function wikiText(k) {
           'Heinz hat seinen Führerschein 1971 gemacht und betrachtet jedes Tempolimit seitdem als freundliche Empfehlung. Sein E-Mobil hat er selbst frisiert: Hupe, Turbo-Knopf und ein Wackeldackel als Glücksbringer.'
         ),
         h: TR(
-          'Das schnellste Gefährt im Spiel, mit Anlauf trifft er besonders hart. Spezialfähigkeit: der Turbo – ein Sprint, der Katapulte sofort zerbricht.'
+          'Das schnellste Gefährt im Spiel, mit Anlauf trifft er besonders hart. Spezialfähigkeit: der Turbo, ein Sprint, der Katapulte sofort zerbricht.'
         ),
         t: [
           TR('Jag Bogenschützinnen: Reiter überrennen Fernkampf.'),
           TR('Mit dem Turbo mitten durchs gegnerische Katapult.'),
-          TR('Meide Berserker und Feuerfässer im Nahkampf.'),
+          TR('Meide Berserker im Nahkampf. Feuerfässer dagegen fährst du einfach um.'),
         ],
       };
     case 6:
@@ -151,25 +157,25 @@ function wikiText(k) {
           'Gebaut aus einem umgekippten Langschiff und viel gutem Willen. Die Mannschaft behauptet, sie könne damit einen Felsen bis nach Rom werfen. Bisher hat sie zweimal die eigene Scheune getroffen.'
         ),
         h: TR(
-          'Wirft Felsen weit über das Schlachtfeld; nur Katapulte treffen Basen mit voller Wucht. Der Fels rollt nach dem Einschlag weiter und walzt alles um. Selbst gesteuert zielst du frei, die Spezialfähigkeit ist eine Salve aus mehreren Würfen.'
+          'Wirft Felsen weit über das Schlachtfeld und trifft Basen mit voller Wucht. Der Fels rollt nach dem Einschlag weiter und walzt alles um. Selbst gesteuert zielst du frei, die Spezialfähigkeit ist eine Salve aus mehreren Würfen.'
         ),
         t: [
           TR('Hinter der eigenen Front aufstellen und Basis oder Gegnerhaufen beschießen.'),
-          TR('Reiter zerlegen Katapulte im Nu – stell Nahkämpfer zum Schutz daneben.'),
+          TR('Reiter und Feuerfässer zerlegen Katapulte im Nu. Stell Nahkämpfer zum Schutz daneben.'),
           TR('Ein Feuerfass passt hinein: Dann ist der nächste Wurf ein explodierendes Fass.'),
         ],
       };
     case 7:
       return {
         s: TR(
-          'Eigentlich für den Kuchenbasar gebaut, als die Schlange zu lang wurde. Heute fliegen Sahnetorten mit Kirsche obendrauf. Das Rezept ist streng geheim – angeblich ist Beton drin.'
+          'Eigentlich für den Kuchenbasar gebaut, als die Schlange zu lang wurde. Heute fliegen Sahnetorten mit Kirsche obendrauf. Das Rezept ist streng geheim, angeblich ist Beton drin.'
         ),
         h: TR(
-          'Wirft Torten weit über das Schlachtfeld; nur Katapulte treffen Basen mit voller Wucht. Wo eine Torte landet, bleibt eine Sahnepfütze, in der man kaum vorankommt. Selbst gesteuert zielst du frei, die Spezialfähigkeit ist eine Salve aus mehreren Würfen.'
+          'Wirft Torten weit über das Schlachtfeld und trifft Basen mit voller Wucht. Wo eine Torte landet, bleibt eine Sahnepfütze, in der man kaum vorankommt. Selbst gesteuert zielst du frei, die Spezialfähigkeit ist eine Salve aus mehreren Würfen.'
         ),
         t: [
           TR('Sahnepfützen auf Brücken und Engstellen bremsen ganze Armeen.'),
-          TR('Reiter zerlegen Katapulte im Nu – stell Opas zum Schutz daneben.'),
+          TR('Reiter und Feuerfässer zerlegen Katapulte im Nu. Stell Opas zum Schutz daneben.'),
         ],
       };
     case 8:
@@ -178,10 +184,10 @@ function wikiText(k) {
           'Der Eisbär wollte nur in Ruhe Fisch essen. Dann kamen Wikinger und Rentner und erklärten seine Eisscholle zum Schlachtfeld. Seitdem ist er schlecht gelaunt.'
         ),
         h: TR(
-          'Lebt auf der Arktis-Karte. Wer ihn angreift, den verfolgt er eine Weile. Wer ihn besiegt, dem schließt er sich an und kämpft für ihn – mit Pranken, die Nahkämpfer und Reiter zerlegen. Selbst gesteuert ist seine Spezialfähigkeit ein Hagel aus Prankenhieben.'
+          'Lebt auf der Arktis-Karte. Wer ihn angreift, den verfolgt er eine Weile. Wer ihn besiegt, dem schließt er sich an und kämpft für ihn, mit Pranken, die Nahkämpfer und Reiter zerlegen. Selbst gesteuert ist seine Spezialfähigkeit ein Hagel aus Prankenhieben.'
         ),
         t: [
-          TR('Erleg ihn mit Fernkämpfern: Pfeile und Gebisse treffen Bären besonders hart.'),
+          TR('Erleg ihn mit Fernkämpfern oder Katapulten: Pfeile, Gebisse, Felsen und Torten treffen Bären besonders hart.'),
           TR('Ein gezähmter Eisbär ist wie ein Panzer: Schick ihn gegen Nahkämpfer und Reiter.'),
         ],
       };
@@ -203,27 +209,29 @@ function wikiText(k) {
           'Knut hat als Kind das Silvesterfeuerwerk des ganzen Dorfes auf einmal gezündet. Statt Ärger gab es eine Beförderung: Jetzt schleppt er ein Pulverfass auf der Schulter und eine Fackel in der Hand, und sein Helm ist ein kleines Fass, das immer ein bisschen qualmt.'
         ),
         h: TR(
-          'Jeder Schlag mit der Fackel setzt das Opfer in Brand: Es rennt schreiend herum und springt ins Wasser, wenn welches in der Nähe ist. Das Pulverfass zündet er nur, wenn du ihn selbst steuerst (Spezialfähigkeit = Lunte): Kurz danach fliegt alles im Umkreis, auch eine nahe gegnerische Basis bekommt viel ab. Fällt er vorher, platzt das Fass kleiner; ein Kopfschuss lässt es sofort hochgehen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
+          'Jeder Schlag mit der Fackel setzt das Opfer in Brand: Es rennt schreiend herum und springt ins Wasser, wenn welches in der Nähe ist. Gegen Bogenschützinnen, Gebiss-Omas, Katapulte und Basen ist er besonders stark, Reiter rennen ihn dagegen einfach um. Das Pulverfass zündet er nur, wenn du ihn selbst steuerst (Spezialfähigkeit = Lunte): Kurz danach fliegt alles im Umkreis, auch eine nahe gegnerische Basis bekommt viel ab. Fällt er vorher, platzt das Fass kleiner, und ein Kopfschuss lässt es sofort hochgehen. Neben einem eigenen Katapult steigt er ein und fliegt selbst!'
         ),
         t: [
           TR('Übernimm ihn, lauf mitten in einen Haufen Gegner und zünde die Lunte.'),
           TR('Steig ins Katapult und schieß dich auf die gegnerische Basis.'),
-          TR('Halt ihn von Bogenschützinnen fern: Ein Kopfschuss, und dein Fass knallt zwischen deinen eigenen Leuten.'),
-          TR('Gegen ihn: Wasser löscht, Abstand hilft, Kopfschüsse sind Gold wert.'),
+          TR(
+            'Schick ihn gegen Bogenschützinnen, Gebiss-Omas und Katapulte. Aber Vorsicht auf dem Weg dorthin: Ein Kopfschuss, und dein Fass knallt zwischen deinen eigenen Leuten.'
+          ),
+          TR('Halt ihn von Reitern fern, die rennen ihn um. Und gegen ihn: Reiter schicken, Wasser löscht, Kopfschüsse sind Gold wert.'),
         ],
       };
     case 13:
       return {
         s: TR(
-          'Opa Waldemar war vierzig Jahre Jäger im Kleingartenverein – gefangen hat er nie etwas außer dem Nachbarn. Jetzt hat er den Dreh raus: Er rammt seinen Spaten in den Boden, und eine ganze Reihe alter Fangeisen schnappt aus der Erde. Seine Waschbärmütze trägt er auch im Hochsommer.'
+          'Opa Waldemar war vierzig Jahre Jäger im Kleingartenverein, gefangen hat er aber nie etwas außer dem Nachbarn. Jetzt hat er den Dreh raus: Er rammt seinen Spaten in den Boden, und eine ganze Reihe alter Fangeisen schnappt aus der Erde. Seine Waschbärmütze trägt er auch im Hochsommer.'
         ),
         h: TR(
-          'Sein Angriff reicht ein paar Schritte weit: Eine Reihe Fangeisen schnappt nacheinander aus dem Boden. Jeder auf der Linie wird gebissen und hängt kurz fest, Reiter länger. Spezialfähigkeit: Er wirft seine Bärenfalle dorthin, wo der Ring zeigt – der Gegner sieht sie kaum. Wer hineintritt, sitzt fest und wird zerbissen, auch mehrere auf einmal. Eine liegende Falle holt er zurück und wirft sie neu.'
+          'Sein Angriff reicht ein paar Schritte weit: Eine Reihe Fangeisen schnappt nacheinander aus dem Boden. Jeder auf der Linie wird gebissen und hängt kurz fest, Reiter länger, und auch eine gegnerische Basis bekommt ordentlich ab. Spezialfähigkeit: Er wirft seine Bärenfalle dorthin, wo der Ring zeigt, und der Gegner sieht sie kaum. Wer hineintritt, sitzt fest und wird zerbissen, auch mehrere auf einmal. Eine liegende Falle holt er zurück und wirft sie neu.'
         ),
         t: [
           TR('Gegen Reiter ist er Gold wert: Die Fangeisen halten sie lange fest.'),
           TR('Wirf die Falle auf den Weg, den der Gegner nehmen muss: Brücken, Engstellen, vor die Fahne.'),
-          TR('Stell dich so, dass die Gegner in einer Linie vor dir stehen – dann erwischt die Reihe alle.'),
+          TR('Stell dich so, dass die Gegner in einer Linie vor dir stehen. Dann erwischt die Reihe alle.'),
           TR('Gegen Bogenschützinnen verliert er: Halte Abstand oder schick Reiter vor.'),
         ],
       };
@@ -261,7 +269,7 @@ function wikiStats(k) {
   out.push(wikiKpi(TR('Reichweite'), TR('{0} m', numL(K.range))));
   out.push(wikiKpi(TR('Tempo'), TR('{0} m/s', numL(K.speed))));
   if (fac) out.push(wikiKpi(TR('Kosten'), K.cost + ' ' + fac.res, TR('Ausbildung {0} s', numL(K.build))));
-  else out.push(wikiKpi(TR('Kosten'), '–', TR('wild: wer ihn besiegt, bekommt ihn')));
+  else out.push(wikiKpi(TR('Kosten'), TR('keine'), TR('wild: wer ihn besiegt, bekommt ihn')));
   if (K.sp) out.push(wikiKpi(TR('Spezialfähigkeit'), K.sp, TR('lädt in {0} s', numL(spCdOf(k)))));
   if (k === 12)
     out.push(wikiKpi(TR('Explosion'), TR('{0} Schaden', FASS.dmg), TR('Umkreis {0} m, gegen Basen {1}', numL(FASS.r), FASS.base)));
@@ -275,14 +283,12 @@ function wikiStats(k) {
     );
   return out.join('');
 }
+// a warrior's picture: his face, a catapult as a still of the machine
+const wikiPic = k => (KINDS[k].role === 'siege' ? unitThumb(k) : PORTRAIT[k]);
+const wikiImg = k => `<img src="${wikiPic(k)}" alt=""${KINDS[k].role === 'siege' ? ' class="wmach"' : ''}>`;
 // the faces of a few warriors (strong / weak against)
 const wikiFaces = ks =>
-  ks
-    .map(
-      k =>
-        `<button class="wface" data-k="${k}" title="${KINDS[k].name}"><img src="${PORTRAIT[k]}" alt=""><span>${KINDS[k].name}</span></button>`
-    )
-    .join('');
+  ks.map(k => `<button class="wface" data-k="${k}" title="${KINDS[k].name}">${wikiImg(k)}<span>${KINDS[k].name}</span></button>`).join('');
 function wikiUi() {
   const tab = WIKI.tab;
   $$('#wikiTabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.w === tab)));
@@ -303,28 +309,36 @@ function wikiUi() {
   const pick = ks
     .map(
       q =>
-        `<button class="wpick${q === k ? ' on' : ''}" data-k="${q}" aria-pressed="${q === k}"><img src="${PORTRAIT[q]}" alt=""><span>${KINDS[q].name}</span></button>`
+        `<button class="wpick${q === k ? ' on' : ''}" data-k="${q}" aria-pressed="${q === k}">${wikiImg(q)}<span>${KINDS[q].name}</span></button>`
     )
     .join('');
   const wild = K.bear || K.worm,
     facName = wild ? TR('Wildnis') : FAC[K.fac].name;
   box.innerHTML = `<div class="wpicks">${pick}</div>
-    <div class="whero"><div class="wstage psstage" id="wikiStage"><img class="wfall" src="${PORTRAIT[k]}" alt=""></div>
+    <div class="whero"><div class="wstage psstage" id="wikiStage"><img class="wfall" src="${wikiPic(k)}" alt=""></div>
       <div class="wname"><b>${K.name}</b><span class="wchips"><span class="wchip">${facName}</span><span class="wchip">${wild ? TR('Wildtier') : R[K.role]}</span>${K.tag ? `<span class="wchip">${K.tag}</span>` : ''}</span>
       <small class="note">${TR('Zum Drehen ziehen')}</small></div></div>
     <section class="wsec"><h3>${TR('Geschichte')}</h3><p>${T.s}</p></section>
     <section class="wsec"><h3>${TR('Kampfweise')}</h3><p>${T.h}</p></section>
     <section class="wsec"><h3>${TR('Werte')}</h3><div class="wkpis">${wikiStats(k)}</div>
       <p class="note">${TR('Selbst gesteuert: mehr Schaden, weniger einstecken.')}</p></section>
-    <section class="wsec wvs"><h3>${TR('Stark gegen')}</h3><div class="wfaces">${wikiFaces(vs[0]) || '–'}</div>
-      <h3>${TR('Schwach gegen')}</h3><div class="wfaces">${wikiFaces(vs[1]) || '–'}</div></section>
+    <section class="wsec wvs"><h3>${TR('Stark gegen')}</h3><div class="wfaces">${wikiFaces(vs[0]) || TR('niemand')}</div>
+      <h3>${TR('Schwach gegen')}</h3><div class="wfaces">${wikiFaces(vs[1]) || TR('niemand')}</div></section>
     <section class="wsec"><h3>${TR('Tipps & Tricks')}</h3><ul>${T.t.map(t => `<li>${t}</li>`).join('')}</ul></section>`;
   box.scrollTop = 0;
   // the warrior in 3D (the picture stays underneath if WebGL is not there)
   const st = $('#wikiStage');
-  if (showMount(st, { k, skin: K.fac === 'rentner' ? 'r0' : 'v0', sc: K.role === 'siege' ? 0.6 : K.worm ? 0.42 : K.bear ? 0.75 : 1 }))
+  if (showMount(st, { k, skin: K.fac === 'rentner' ? 'r0' : 'v0', sc: K.role === 'siege' ? 0.6 : K.worm ? 0.34 : K.bear ? 0.75 : 1 }))
     st.classList.add('live');
   fitText();
+  wikiFit();
+}
+// a name too long for its tile gets a smaller font instead of breaking in the middle of a word
+function wikiFit() {
+  for (const el of $$('#wikiBody .wpick span, #wikiBody .wface span')) {
+    el.style.fontSize = '';
+    for (let f = 0.6; f >= 0.46 && el.scrollWidth > el.clientWidth + 1; f -= 0.04) el.style.fontSize = f + 'rem';
+  }
 }
 // the rules: rock-paper-scissors, the special warriors, a few basics
 function wikiRules() {
@@ -337,14 +351,10 @@ function wikiRules() {
         'Wer den anderen kontert, macht mehr Schaden. Selbst gesteuert reichen oft zwei saubere Treffer gegen den Konter-Gegner (Fernkämpfer brauchen dafür Kopfschüsse).'
       )}</p></section>
     <section class="wsec"><h3>${TR('Die Spezialisten')}</h3>
-      <p>${TR(
-        '{0} und {1} zählen zum Nahkampf: Sie schlagen Reiter und verlieren gegen Fernkämpfer. Jeder hat seinen eigenen Trick:',
-        '<b>' + KINDS[12].name + '</b>',
-        '<b>' + KINDS[13].name + '</b>'
-      )}</p>
-      <ul><li>${TR('Das Feuerfass zündet mit der Fackel jeden an und sprengt selbst gesteuert ganze Haufen und Basen. Sein Feind ist der Kopfschuss.')}</li>
-      <li>${TR('Der Fallenleger hält Reiter und ganze Reihen mit seinen Fangeisen fest und stellt Bärenfallen. Gegen Bogenschützinnen hat er keine Chance.')}</li></ul></section>
-    <section class="wsec"><h3>${TR('Katapulte')}</h3><p>${TR('Nur Katapulte treffen Basen mit voller Wucht. Reiter zerbrechen sie mit dem Ramm-Anlauf oder dem Turbo sofort.')}</p></section>
+      <p>${TR('{0} und {1} sind Spezialisten mit eigenen Regeln:', '<b>' + KINDS[12].name + '</b>', '<b>' + KINDS[13].name + '</b>')}</p>
+      <ul><li>${TR('Das Feuerfass zündet mit der Fackel jeden an und sprengt selbst gesteuert ganze Haufen und Basen. Es ist stark gegen Fernkämpfer, Katapulte und Basen, aber Reiter rennen es um. Und ein Kopfschuss lässt sein Fass sofort hochgehen.')}</li>
+      <li>${TR('Der Fallenleger zählt zum Nahkampf: Er hält Reiter und ganze Reihen mit seinen Fangeisen fest, stellt Bärenfallen und beißt auch Basen kräftig an. Gegen Bogenschützinnen hat er keine Chance.')}</li></ul></section>
+    <section class="wsec"><h3>${TR('Katapulte')}</h3><p>${TR('Katapulte, Feuerfass und Fallenleger treffen Basen mit voller Wucht. Reiter zerbrechen Katapulte mit dem Ramm-Anlauf oder dem Turbo sofort.')}</p></section>
     <section class="wsec"><h3>${TR('Gut zu wissen')}</h3><ul>
       <li>${TR('Fahnen bringen Geld. Wer weniger Fahnen hat, bekommt mehr für jeden besiegten Gegner.')}</li>
       <li>${TR('An der eigenen Basis halten Krieger mehr aus und heilen sich.')}</li>

@@ -667,11 +667,13 @@ function buildRider(k, parent, P, seated) {
   if (k === 13) {
     // Fallenleger: a green loden waistcoat over the shirt (horn buttons, two pockets), a big white beard, a pipe in the corner of his
     // mouth, and a wooden pack frame on his back with a sack and a coil of chain (his bear trap hangs on it, 25-worm-model.js)
-    const loden = lam(0x4d6a3c),
+    // (the waistcoat is the faction's main colour, so a skin dresses him too)
+    const vest = LAM_MAP && LAM_MAP.has(0x995a8d) ? LAM_MAP.get(0x995a8d) : 0x995a8d,
+      loden = lam(0x995a8d),
       wood2 = lam(0x7a5a36);
     mesh(UG.body, loden, 0, 0.6, 0, torso).scale.set(1.08, 0.82, 1.1); // the waistcoat
     [-1, 1].forEach(s2 => {
-      const pk = mesh(UG.pocket, lam(0x3e5730), s2 * 0.12, 0.78, 0.215, torso);
+      const pk = mesh(UG.pocket, lam(new THREE.Color(vest).multiplyScalar(0.72).getHex()), s2 * 0.12, 0.78, 0.215, torso);
       pk.scale.set(1.25, 1.2, 1);
       pk.rotation.y = s2 * 0.45;
     });

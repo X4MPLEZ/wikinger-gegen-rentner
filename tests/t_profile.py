@@ -14,7 +14,7 @@ with sync_playwright() as p:
         mode: 'classic', t: 500, k: 20, st: [10, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0], ost: [8, 9, 300, 0, 0, 0, 0, 0, 0, 0, 0], base: 900, mhp: 1500, ru: 0 }, o);
       // first win: 50 + 40 + 20 kills = 110 XP -> level 2 (needs 70), first-win and daily bonus Juwelen
       let R = W.profMatchEnd(M({}));
-      out.first = [R.xp, R.lv1.L, R.ach.includes('firstWin'), R.daily, W.PLAYER.gems];
+      out.first = [R.xp, R.lv1.L, R.ach.includes('firstWin'), R.daily, W.PLAYER.gems, W.profPending().gems, R.gems]; // (the Juwelen wait in the profile)
       // a loss online: (50 + 10 kills) x 1.5 = 90, streak back to 0
       R = W.profMatchEnd(M({ won: false, online: true, ai: false, k: 10 }));
       out.loss = [R.xp, W.PLAYER.st.streak, W.PLAYER.st.onGames];
@@ -31,7 +31,9 @@ with sync_playwright() as p:
       W.V.playing = false;
       // levels and rewards: enough XP for level 10 (1120 + a lost match's 50) -> the Rotbart skin (level 3) is owned, Eiswolf (20) not
       W.PLAYER.xp = 1120; R = W.profMatchEnd(M({ won: false, k: 0 }));
-      out.lv10 = [R.lv1.L, R.lvUp.includes(10), W.profOwns('v1'), W.profOwns('v2')];
+      const ownBefore = W.profOwns('v1'), g9 = W.PLAYER.gems, cl = W.profClaim({ t: 'lv' }); // collected by hand: then it is owned
+      out.lv10 = [R.lv1.L, R.lvUp.includes(10), W.profOwns('v1'), W.profOwns('v2'), ownBefore, cl.gems, W.PLAYER.gems - g9, cl.items.some(i => i.id === 'v1'), W.profPending().lv];
+      const ga = W.PLAYER.gems, ca = W.profClaim({ t: 'all' }); out.claimAll = [ca.gems, W.PLAYER.gems - ga, W.profPending().n, W.PLAYER.ac.firstWin];
       // shop: too poor, then buy and equip; a locked level item cannot be bought
       W.PLAYER.gems = 50; out.poor = W.profBuy('goat');
       W.PLAYER.gems = 500; out.buy = [W.profBuy('goat'), W.PLAYER.gems, W.profEquip('goat'), W.PLAYER.av, W.profBuy('berserkerCrown')];
@@ -42,7 +44,7 @@ with sync_playwright() as p:
       out.badPeer = [W.profPeer({ n: 99999 }), W.profPeer({ n: 1210, a: 999, l: 77, s: [5, 1] })]; // skins of the wrong faction fall back to Klassisch
       // broken or edited data is cleaned
       const c = W.profClean({ xp: -5, gems: 'x', nm: 999, av: 'nope', sk: { viking: 'r1' }, own: { hack: 1, goat: 1 }, ach: { firstWin: 1, fake: 1 }, st: { kills: 1e12 } });
-      out.clean = [c.xp, c.gems, c.nm, c.av, c.sk.viking, Object.keys(c.own), Object.keys(c.ach), c.st.kills];
+      out.clean = [c.xp, c.gems, c.nm, c.av, c.sk.viking, Object.keys(c.own), Object.keys(c.ach), c.st.kills, c.ac.firstWin, c.cl];
       // skins on the battlefield: only the matching faction
       W.setSkins(['viking', 'rentner'], ['v1', 'v2']);
       out.skins = Object.fromEntries(Object.entries(W.UNIT_SKIN).map(([k, v]) => [k, v.id]));
@@ -54,7 +56,8 @@ with sync_playwright() as p:
       const g0 = W.PLAYER.gems, Mq = { won: true, online: false, ai: true, tut: false, adv: false, lvl: 'easy', fac: 'rentner', map: 'wiesen', mode: 'classic', t: 500, k: 20, st: [3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], ost: [1, 3, 50, 0, 0, 0, 0, 0, 0, 0, 0], base: 900, mhp: 1500 };
       const q1 = W.profMatchEnd({ ...Mq }).dq, q2 = W.profMatchEnd({ ...Mq }).dq, q3 = W.profMatchEnd({ ...Mq, won: false }).dq;
       out.quests = [q1, q2, q3, D.p, D.c, D.b];
-      out.questGems = W.PLAYER.gems - g0; // + the Juwelen of the first win, daily win and level ups of these matches
+      out.questGems = [W.PLAYER.gems - g0, W.PLAYER.pq]; // waiting in the profile (with the daily win), nothing paid yet
+      const gq = W.PLAYER.gems; W.profClaim({ t: 'q' }); out.questClaim = [W.PLAYER.gems - gq, W.PLAYER.pq];
       out.questOnly = 30 + 25 + 20 + W.DQ_BONUS;
       // god mode: everything owned and free, nothing saved, the real profile back afterwards
       W.profSave(); const before = localStorage.getItem('wvr-prof');
@@ -72,17 +75,18 @@ with sync_playwright() as p:
     }""")
     print(json.dumps(r))
     peer = r['badPeer'][1]
-    ok = (r['first'] == [110, 2, True, 20, 25 + 20] and r['loss'][0] == 90 and r['loss'][1:] == [0, 1]
+    ok = (r['first'] == [110, 2, True, 20, 0, 25 + 20, 45] and r['loss'][0] == 90 and r['loss'][1:] == [0, 1]
           and r['streak'] == [3, True, True, True] and r['dailyOnce'] == 0 and r['fortressBlitz'] == [True, True] and r['strike']
-          and r['lv10'][0] == 10 and r['lv10'][1] and r['lv10'][2] and not r['lv10'][3]
+          and r['lv10'][0] == 10 and r['lv10'][1] and r['lv10'][2] and not r['lv10'][3] and not r['lv10'][4] and r['lv10'][5] == 40 + 40 + 50 + 50
+          and r['lv10'][6] == r['lv10'][5] and r['lv10'][7] and r['lv10'][8] == 0 and r['claimAll'][0] == r['claimAll'][1] > 0 and r['claimAll'][2] == 0 and r['claimAll'][3] == 1
           and r['poor'] is False and r['buy'][0] is True and r['buy'][1] == 420 and r['buy'][2] is True and r['buy'][3] == 'goat' and r['buy'][4] is False
           and r['equipSkin'] == [True, 'v1', False, 'v1'] and r['pub'] == [10, 10, 'goat', 'v1', 'r0']
           and r['badPeer'][0] is None and peer['lv'] == 30 and peer['av'] == 'opa' and peer['sk']['viking'] == 'v0' and peer['sk']['rentner'] == 'r0'
-          and r['clean'][:5] == [0, 0, 23, r['clean'][3], 'v0'] and r['clean'][5] == ['goat'] and r['clean'][6] == ['firstWin'] and r['clean'][7] == 1e9
+          and r['clean'][:5] == [0, 0, 23, r['clean'][3], 'v0'] and r['clean'][5] == ['goat'] and r['clean'][6] == ['firstWin'] and r['clean'][7] == 1e9 and r['clean'][8] == 1 and r['clean'][9] == 1
           and r['skins'] == {'0': 'v1', '1': 'v1', '4': 'v1', '6': 'v1', '12': 'v1'}
           and r['shop'][:3] == [False, False, True] and r['shop'][3] == 9499 and r['shop'][4]
           and r['quests'][0] == [] and r['quests'][1] == ['win2', 'kills40'] and r['quests'][2] == ['play3', 'bonus'] and r['quests'][4] == [1, 1, 1] and r['quests'][5] == 1
-          and r['questGems'] >= r['questOnly']
+          and r['questGems'][0] == 0 and r['questGems'][1] == r['questOnly'] + 20 and r['questClaim'] == [r['questOnly'] + 20, 0]
           and r['god'][:3] == [True, True, 99999] and r['god'][3] == 25 and r['godSaved'] and r['godBack'] == [False, False, 'v0'] and r['icons'] == [True, True] and not errs)
     print('ERRS', errs[:3])
     print('PROFILE', 'OK' if ok else 'FAIL')

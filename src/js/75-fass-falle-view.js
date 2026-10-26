@@ -378,7 +378,7 @@ function specTip(u) {
             'Feuerfass: Seine Fackel zündet jeden an, den er schlägt. Selbst gesteuert: Spezial = Lunte – dann fliegt alles im Umkreis. Neben deinem Katapult: „Ins Katapult“!'
           )
         : TR(
-            'Achtung, Feuerfass! Seine Fackel zündet dich an – ab ins Wasser. Ein Kopfschuss lässt sein Fass sofort hochgehen, mitten zwischen seinen Leuten.'
+            'Achtung, Feuerfass! Seine Fackel zündet dich an, dann ab ins Wasser. Ein Kopfschuss lässt sein Fass sofort hochgehen, mitten zwischen seinen Leuten. Reiter rennen ihn einfach um.'
           )
       : own
         ? TR(
@@ -528,6 +528,7 @@ function trapTick(dt) {
     }
     const st = e[4];
     if (st !== v.st) {
+      if (st === 2 && v.st >= 0 && v.st < 2) v.snapT = 0; // it just bit: slam, bounce, hop (below)
       v.st = st;
       if (st >= 2 && !v.own && !v.foeVis) {
         // a sprung trap shows to everyone
@@ -541,9 +542,23 @@ function trapTick(dt) {
     }
     // laid shut, it opens (the jaws fold down flat); snapping is quick
     const want = st <= 1 ? 1 : 0;
-    v.open = want > v.open ? Math.min(1, v.open + dt * 2.6) : Math.max(0, v.open - dt * 22);
-    v.jaws[0].rotation.x = -(Math.PI / 2) * (1 - v.open);
-    v.jaws[1].rotation.x = (Math.PI / 2) * (1 - v.open);
+    v.open = want > v.open ? Math.min(1, v.open + dt * 2.6) : Math.max(0, v.open - dt * 30);
+    // snapping: the jaws slam past shut and spring back a little, the trap hops off the ground; while it holds it rattles
+    let over = 0;
+    const gy0 = groundY(v.x, v.z) + 0.03;
+    if (v.snapT !== undefined) {
+      v.snapT += dt;
+      const q = v.snapT;
+      over = Math.sin(q * 38) * Math.exp(-q * 9) * 0.3;
+      v.g.position.y = gy0 + (q < 0.28 ? Math.sin((q / 0.28) * Math.PI) * 0.45 : 0);
+      v.g.rotation.z = q < 0.5 ? Math.sin(q * 50) * 0.12 * (1 - q / 0.5) : 0;
+      if (q > 0.6) v.snapT = undefined;
+    } else if (st === 2) {
+      v.g.position.y = gy0;
+      v.g.rotation.z = Math.sin(clock * 31 + id) * 0.035 * (Math.sin(clock * 2.3 + id) > 0.2 ? 1 : 0); // the victims tug at it
+    }
+    v.jaws[0].rotation.x = -(Math.PI / 2) * (1 - v.open) - over;
+    v.jaws[1].rotation.x = (Math.PI / 2) * (1 - v.open) + over;
     if (st === 3) v.g.scale.setScalar(Math.max(0.01, v.g.scale.x - dt * 1.1));
     v.g.visible = v.own || v.foeVis || !FOG.on || fogSeen(v.x, v.z);
     if (v.own && st === 1) {
@@ -754,9 +769,97 @@ function fangReset() {
 }
 /* ---------- per warrior, every frame (from updateStatusFx in 42-view-world-fx.js) ---------- */
 const BOOM_V = new THREE.Vector3();
+// flames that stay on a burning warrior (the sparks fly off; these lick up his body and over his head all the time he burns)
+const FIRE_GEO = new THREE.ConeGeometry(0.2, 0.85, 6, 1, true).translate(0, 0.42, 0);
+FIRE_GEO.userData.shared = true;
+const FIRE_MATS = [0xffc21a, 0xff7a12, 0xe8380c].map(c => {
+  // (plain blending: added light washed out to white on snow and sand)
+  const m = new THREE.MeshBasicMaterial({ color: lin(c), transparent: true, opacity: 0.92, depthWrite: false, side: THREE.DoubleSide });
+  m.userData.shared = true;
+  return m;
+});
+function fireCrown(u) {
+  const g = new THREE.Group(),
+    hb = headBox({ k: u.k, poss: u.isPoss }),
+    top = hb.y + hb.r * 0.6;
+  for (let i = 0; i < 11; i++) {
+    const head = i >= 8,
+      a = i * 2.4,
+      r = head ? hb.r * 0.55 : 0.3,
+      f = new THREE.Mesh(FIRE_GEO, FIRE_MATS[i % 3]);
+    f.position.set(Math.sin(a) * r, head ? top : 0.35 + (i / 8) * (top - 0.6), Math.cos(a) * r);
+    f.userData.b = head ? 1.25 : 0.8 + (i % 3) * 0.15;
+    f.renderOrder = 3;
+    g.add(f);
+  }
+  u.g.add(g);
+  return g;
+}
+// a warrior caught in a bear trap: the trap's jaws round his ankle and a taut chain to the trap that caught him (so everyone sees why
+// he is stuck, even a few steps off the trap)
+const TRAP_CHAIN = new THREE.CylinderGeometry(0.025, 0.025, 1, 5).translate(0, 0.5, 0).rotateX(Math.PI / 2);
+TRAP_CHAIN.userData.shared = true;
+function trapLegFx(u, x, y, z) {
+  const on = u.trapped && !u.snag && !u.fogHid && !u.dead;
+  if (!on) {
+    if (u.trapLeg) u.trapLeg.visible = u.trapChain.visible = false;
+    u.wasTrapped = false;
+    return;
+  }
+  const M = boomMats(),
+    seated = KINDS[u.k].role === 'cav';
+  if (!u.trapLeg) {
+    u.trapLeg = trapModel(true, M.own, true);
+    u.trapLeg.scale.setScalar(0.85);
+    u.g.add(u.trapLeg);
+    u.trapChain = new THREE.Mesh(TRAP_CHAIN, M.own.dark);
+    scene.add(u.trapChain);
+  }
+  u.trapLeg.visible = true;
+  u.trapLeg.position.set(seated ? 0.15 : -0.11, 0.07, seated ? 0.55 : 0.04);
+  u.trapLeg.rotation.set(0, Math.PI / 2, Math.sin(clock * 21) * 0.08);
+  // the chain: from the ankle to the nearest sprung trap
+  let best = null,
+    bd = TRAP.r + 1.5;
+  for (const v of BOOM.traps.values()) {
+    if (v.st < 2) continue;
+    const d = Math.hypot(v.x - x, v.z - z);
+    if (d < bd) {
+      bd = d;
+      best = v;
+    }
+  }
+  const ch = u.trapChain;
+  ch.visible = !!best && bd > 0.5;
+  if (ch.visible) {
+    u.trapLeg.getWorldPosition(BOOM_V);
+    const ty = groundY(best.x, best.z) + 0.06;
+    ch.position.copy(BOOM_V);
+    ch.lookAt(best.x, ty, best.z);
+    ch.scale.set(1, 1, Math.hypot(best.x - BOOM_V.x, ty - BOOM_V.y, best.z - BOOM_V.z));
+  }
+  if (!u.wasTrapped) {
+    // caught: he jolts, sparks at the ankle, a shout
+    u.wasTrapped = true;
+    u.trapLeg.getWorldPosition(BOOM_V);
+    emitFX('spark', BOOM_V.x, BOOM_V.y + 0.1, BOOM_V.z, { n: 6, size: 0.3 });
+    if (u.isPoss || Math.random() < 0.5)
+      word(pick([TR('AUA, MEIN FUSS!'), TR('FESTGEKLEMMT!'), TR('EINE FALLE!')]), x, y + 2.9, z, { color: '#ffd34d', scale: 0.95 });
+    if (V.poss && V.poss.id === u.id) shake(0.3);
+  }
+}
 function specFx(u, dt, x, y, z) {
+  trapLegFx(u, x, y, z);
   // burning: flames and soot from the whole body
   if (u.burning && !u.fogHid) {
+    const fc = u.fireM || (u.fireM = fireCrown(u));
+    fc.visible = true;
+    fc.children.forEach((f, i) => {
+      const b = f.userData.b,
+        fl = Math.sin(clock * 15 + i * 1.9) * 0.5 + Math.sin(clock * 23 + i) * 0.25;
+      f.scale.set(b * (0.9 + 0.15 * fl), b * (1 + 0.45 * fl), b * (0.9 + 0.15 * fl));
+      f.rotation.y = clock * 3 + i;
+    });
     // the whole body in flames, the head too (a burning warrior must be seen from afar), soot rising behind him
     const rate = (u.isPoss ? 46 : 38) * Math.max(0.5, QS.fx);
     u.flameAcc = (u.flameAcc || 0) + dt * rate;
@@ -789,6 +892,7 @@ function specFx(u, dt, x, y, z) {
       }
     }
   } else if (u.burnSaid) {
+    if (u.fireM) u.fireM.visible = false;
     u.burnSaid = 0;
     u.screamT = undefined;
     const wet = !u.fogHid && wetNear(x, z, FASS.dip + 0.3);
@@ -869,6 +973,7 @@ function charBody(u) {
 }
 // a warrior gone without dying (the Feuerfass climbed into a catapult): he hops in and is gone
 function goneQuiet(u, id) {
+  if (u.trapChain) scene.remove(u.trapChain);
   V.units.delete(id);
   V.selected.delete(id);
   const p = u.g.position;
@@ -1019,3 +1124,47 @@ $('#egoLoad') &&
     e.preventDefault();
     egoLoad();
   });
+
+/* ---------- the own Feuerfass went off in the ego: the camera rises behind him and looks down on who flies where, holds, then back ---------- */
+const BOOM_CAM = { rise: 0.75, hold: 1.7, back: 0.55 };
+function boomCamStart(x, z, yaw, look) {
+  V.boomCam = { x, z, yaw, t: 0, p0: camera.position.clone(), l0: look, up: new THREE.Vector3(), lk: new THREE.Vector3() };
+  camS.x = x; // the map view afterwards looks at the crater
+  camS.z = z;
+}
+function boomCamTick(dt) {
+  const B = V.boomCam;
+  if (!B) return;
+  if (V.poss || V.ending || !V.playing) {
+    V.boomCam = null;
+    return;
+  }
+  B.t += dt;
+  const gy = groundY(B.x, B.z),
+    a = B.yaw + B.t * 0.12, // (a slow turn while it hangs up there)
+    T1 = BOOM_CAM.rise,
+    T2 = T1 + BOOM_CAM.hold,
+    T3 = T2 + BOOM_CAM.back;
+  B.up.set(B.x - Math.sin(a) * 7, gy + 16, B.z - Math.cos(a) * 7);
+  B.lk.set(B.x, gy + 0.5, B.z);
+  if (B.t >= T3) {
+    V.boomCam = null;
+    return;
+  }
+  if (B.t < T1) {
+    const q = sstep(0, T1, B.t);
+    camera.position.lerpVectors(B.p0, B.up, q);
+    BOOM_V.lerpVectors(B.l0, B.lk, q);
+  } else if (B.t < T2) {
+    camera.position.copy(B.up);
+    BOOM_V.copy(B.lk);
+  } else {
+    // back to the map camera (applyCam has just put it where it belongs)
+    const q = sstep(T2, T3, B.t),
+      cp = camera.position.clone();
+    camera.position.lerpVectors(B.up, cp, q);
+    BOOM_V.set(camS.x, groundY(camS.x, camS.z), camS.z).lerp(B.lk, 1 - q);
+  }
+  camera.lookAt(BOOM_V);
+  camera.updateMatrixWorld();
+}

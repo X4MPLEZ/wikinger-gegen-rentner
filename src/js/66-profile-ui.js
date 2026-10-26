@@ -9,7 +9,7 @@ function profChipUi() {
   $('#pcLv').textContent = TR('Lv {0}', lv.L);
   $('#pcBar').style.width = Math.round((lv.x / lv.need) * 100) + '%';
   $('#pcGems').textContent = GOD.on ? '∞' : PLAYER.gems;
-  // the red number: only for things waiting to be looked at (new level rewards, new achievements), never for open quests
+  // the red number: rewards waiting to be collected in the profile (levels, quest Juwelen, achievements)
   const nw = profNews().n,
     qb = $('#pcQuest');
   if (qb) {
@@ -49,6 +49,7 @@ function profUi() {
     const nw = profNews();
     if (PUI.tab === 'path' && PUI.newFrom === undefined) PUI.newFrom = PLAYER.sL;
     $('#profScr .ptabs [data-tab="path"]').classList.toggle('nw', nw.lv > 0 && PUI.tab !== 'path');
+    $('#profScr .ptabs [data-tab="quests"]').classList.toggle('nw', nw.q > 0 && PUI.tab !== 'quests');
     $('#profScr .ptabs [data-tab="ach"]').classList.toggle('nw', nw.ach > 0 && PUI.tab !== 'ach');
     if (PUI.tab === 'ach' && PUI.newAch === undefined) PUI.newAch = PLAYER.sA;
     profSeen(PUI.tab);
@@ -74,6 +75,87 @@ const gemEl = (n, cls = 'gemn') => {
   g.lastChild.textContent = n;
   return g;
 };
+/* Collecting: the Juwelen burst out of what was tapped, fly in an arc into the counter at the top, which counts up with a ping for
+   every one; then done() (pictures and skins: their preview opens). */
+function gemFly(from, n, done) {
+  const to = $('#pGems');
+  if (!from || !to || !n) {
+    if (done) done();
+    return;
+  }
+  const r0 = from.getBoundingClientRect(),
+    r1 = to.getBoundingClientRect(),
+    x0 = r0.left + r0.width / 2,
+    y0 = r0.top + r0.height / 2,
+    dx = r1.left + r1.width / 2 - x0,
+    dy = r1.top + r1.height / 2 - y0,
+    k = clamp(Math.round(n / 5), 5, 14),
+    g0 = PLAYER.gems - n,
+    lay = document.body;
+  if (!GOD.on) to.textContent = g0;
+  SFX.play('gemBurst');
+  // sparkles where it bursts
+  for (let i = 0; i < 14; i++) {
+    const sp = mkEl('i', 'gemspark'),
+      a = (i / 14) * TAU,
+      d = 40 + Math.random() * 40;
+    sp.style.left = x0 + 'px';
+    sp.style.top = y0 + 'px';
+    lay.appendChild(sp);
+    sp.animate(
+      [
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+        { transform: `translate(calc(-50% + ${Math.cos(a) * d}px), calc(-50% + ${Math.sin(a) * d}px)) scale(0.2)`, opacity: 0 },
+      ],
+      { duration: 520, easing: 'cubic-bezier(.2,.7,.3,1)' }
+    ).onfinish = () => sp.remove();
+  }
+  let got = 0;
+  for (let i = 0; i < k; i++) {
+    const g = mkEl('span', 'gemfly');
+    g.innerHTML = si('gem');
+    g.style.left = x0 + 'px';
+    g.style.top = y0 + 'px';
+    lay.appendChild(g);
+    const sx = (Math.random() - 0.5) * 140,
+      sy = -50 - Math.random() * 70;
+    const an = g.animate(
+      [
+        { transform: 'translate(-50%,-50%) scale(0.3) rotate(0deg)', opacity: 0 },
+        { transform: `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px)) scale(1.5) rotate(${sx}deg)`, opacity: 1, offset: 0.35 },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.55) rotate(${sx * 3}deg)`, opacity: 1 },
+      ],
+      { duration: 820, delay: i * 70, easing: 'cubic-bezier(.45,.05,.55,1)', fill: 'backwards' }
+    );
+    an.onfinish = () => {
+      g.remove();
+      got++;
+      if (!GOD.on) to.textContent = g0 + Math.round((n * got) / k);
+      to.classList.remove('gpop');
+      void to.offsetWidth;
+      to.classList.add('gpop');
+      SFX.play('gem', { n: got, vol: 0.7 });
+      if (got === k) {
+        profChipUi();
+        if (done) setTimeout(done, 250);
+      }
+    };
+  }
+}
+// collect and show it: Juwelen fly, a new picture or skin opens in the preview
+function profCollect(c, from) {
+  const r = profClaim(c);
+  const show = () => {
+    profUi();
+    if (r.items.length) profSheet(r.items.find(it => !it.isAv && SKINS[it.id].fac === myFacPref()) || r.items[0]);
+  };
+  if (r.gems) gemFly(from, r.gems, show);
+  else {
+    SFX.play('gemBurst');
+    show();
+  }
+  return r;
+}
 function rewardText(r) {
   const out = [];
   if (!r) return TR('Start');
@@ -175,6 +257,17 @@ function profTabPath(box) {
   const me = mkEl('button', 'bpme', TR('Zu mir'));
   head.append(ht, me);
   bp.appendChild(head);
+  {
+    // rewards reached and not collected yet: one button collects them all
+    const P = profPending();
+    if (P.lv || P.master) {
+      const cb = mkEl('button', 'claimall');
+      cb.innerHTML = si('gem') + '<span></span>';
+      cb.lastChild.textContent = P.lv ? TR('{0} Belohnungen abholen', P.lv + (P.master ? 1 : 0)) : TR('Meister-Juwelen abholen');
+      cb.addEventListener('click', () => profCollect({ t: 'lv' }, cb));
+      bp.appendChild(cb);
+    }
+  }
   // the road
   const road = mkEl('div', 'bproad'),
     row = mkEl('div', 'bprow'),
@@ -201,8 +294,13 @@ function profTabPath(box) {
         card.appendChild(ex);
       }
       card.appendChild(mkEl('span', 'bpname', rw.sk ? SKINS[bpSkin(rw, fac)].n : rw.av ? TR('Profilbild') : '+' + rw.gems));
-      const st = mkEl('span', 'bpst');
-      if (i <= L) st.textContent = '✓';
+      const st = mkEl('span', 'bpst'),
+        ready = i <= PLAYER.lvC && i > PLAYER.cl; // reached, waiting to be collected
+      if (ready) {
+        card.classList.add('ready');
+        st.textContent = TR('Abholen!');
+        st.classList.add('take');
+      } else if (i <= L) st.textContent = '✓';
       else st.innerHTML = si('lock');
       card.appendChild(st);
       if (PUI.newFrom !== undefined && i > PUI.newFrom && i <= L) {
@@ -211,6 +309,10 @@ function profTabPath(box) {
       }
       card.setAttribute('aria-label', TR('Level {0}', i) + ': ' + rewardText(rw) + (i <= L ? ' ✓' : ''));
       card.addEventListener('click', e => {
+        if (card.classList.contains('ready')) {
+          profCollect({ t: 'lv', L: i }, card);
+          return;
+        }
         SFX.play('click');
         const o = e.target.closest('[data-sk]');
         if (o) profSheet({ id: o.dataset.sk, isAv: false });
@@ -234,7 +336,7 @@ function profTabPath(box) {
   }
   box.appendChild(bp);
   bp.appendChild(road);
-  bp.appendChild(mkEl('p', 'note', TR('Wische durch den Pfad – tippe auf eine Belohnung für die Vorschau.')));
+  bp.appendChild(mkEl('p', 'note', TR('Wische durch den Pfad. Tippe auf eine Belohnung für die Vorschau, erreichte holst du so ab.')));
   // bar and fill follow the real column positions
   const cx = i => cols[i].offsetLeft + cols[i].offsetWidth / 2;
   const layout = () => {
@@ -352,6 +454,14 @@ function profTabQuests(box) {
     h = Math.floor(dqLeft() / 3600000),
     mn = Math.floor((dqLeft() % 3600000) / 60000);
   box.appendChild(mkEl('p', 'note', TR('Neue Aufgaben in {0} h {1} min', h, mn)));
+  if (PLAYER.pq > 0) {
+    // the Juwelen of finished quests and daily wins wait here (also from earlier days)
+    const cb = mkEl('button', 'claimall');
+    cb.innerHTML = si('gem') + '<span></span>';
+    cb.lastChild.textContent = TR('{0} Juwelen abholen', PLAYER.pq);
+    cb.addEventListener('click', () => profCollect({ t: 'q' }, cb));
+    box.appendChild(cb);
+  }
   const list = mkEl('div', 'quests');
   Q.ids.forEach((id, i) => {
     const q = DQ_BY[id],
@@ -373,7 +483,7 @@ function profTabQuests(box) {
   list.appendChild(bonus);
   box.appendChild(list);
   box.appendChild(
-    mkEl('p', 'note', TR('Aufgaben zählen in jeder fertigen Partie, gegen den Computer und online. Die Juwelen gibt es sofort.'))
+    mkEl('p', 'note', TR('Aufgaben zählen in jeder fertigen Partie, gegen den Computer und online. Die Juwelen holst du hier ab.'))
   );
 }
 /* ---------- achievements ---------- */
@@ -386,6 +496,19 @@ function profTabAch(box) {
   bar.appendChild(f);
   head.append(mkEl('b', '', TR('{0} von {1} Erfolgen', got, ACH.length)), bar);
   box.appendChild(head);
+  {
+    const P = profPending();
+    if (P.ach.length > 1) {
+      const cb = mkEl('button', 'claimall');
+      cb.innerHTML = si('gem') + '<span></span>';
+      cb.lastChild.textContent = TR(
+        'Alle abholen: {0} Juwelen',
+        P.ach.reduce((s2, id) => s2 + ACH_BY[id].g, 0)
+      );
+      cb.addEventListener('click', () => profCollect({ t: 'ach' }, cb));
+      box.appendChild(cb);
+    }
+  }
   const grid = mkEl('div', 'achs'),
     gotT = id => PLAYER.ach[id] || 0,
     // newest first among the unlocked ones; the ones unlocked since the last visit get "NEU"
@@ -397,7 +520,15 @@ function profTabAch(box) {
     const ic = mkEl('span', 'ai');
     ic.innerHTML = si(a.ic);
     t.append(ic, mkEl('b', '', a.n), mkEl('small', '', a.d));
-    t.appendChild(gemEl('+' + a.g, 'ag'));
+    if (PLAYER.ach[a.id] && !PLAYER.ac[a.id]) {
+      // earned, its Juwelen not collected yet
+      const cb = mkEl('button', 'achtake');
+      cb.innerHTML = si('gem') + '<span></span>';
+      cb.lastChild.textContent = TR('+{0} abholen', a.g);
+      cb.addEventListener('click', () => profCollect({ t: 'ach', id: a.id }, cb));
+      t.classList.add('ready');
+      t.appendChild(cb);
+    } else t.appendChild(gemEl('+' + a.g, 'ag'));
     grid.appendChild(t);
   });
   box.appendChild(grid);
@@ -696,6 +827,21 @@ function profEndUi(R) {
     g.innerHTML = si('gem') + '<span></span>';
     g.lastChild.textContent = TR('+{0} Juwelen', R.gems) + (R.daily ? ' · ' + TR('Tagessieg +{0}', R.daily) : '');
     box.appendChild(g);
+  }
+  const pend = profPending();
+  if (pend.n) {
+    // collected by hand in the profile (the burst of Juwelen there): a hint, against the computer a button that goes there
+    const c = mkEl('div', 'rclaim');
+    c.appendChild(mkEl('span', '', TR('Deine Belohnungen warten im Profil.')));
+    if (V.mode === 'ai' && !V.tut) {
+      const b = mkEl('button', 'btn small', TR('Abholen'));
+      b.addEventListener('click', () => {
+        SFX.play('click');
+        profOpen(pend.lv || pend.master ? 'path' : pend.q ? 'quests' : 'ach');
+      });
+      c.appendChild(b);
+    }
+    box.appendChild(c);
   }
   for (const L of R.lvUp) box.appendChild(mkEl('div', 'rlvup', TR('Level {0}! {1}', L, rewardText(LEVEL_REWARDS[L]))));
   for (const id of R.dq || []) {

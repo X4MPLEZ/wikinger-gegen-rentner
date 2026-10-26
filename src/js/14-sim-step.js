@@ -492,6 +492,10 @@ function step(G) {
       }
       continue;
     } // a hero press in the air is used up
+    if (u.lift) {
+      liftStep(G, u, byId); // held up over a Berserker's head
+      continue;
+    }
     if (u.poss) {
       possStep(G, u, byId);
       continue;
@@ -861,10 +865,10 @@ function step(G) {
   for (let i = 0; i < us.length; i++) {
     const a = us[i],
       ra = KINDS[a.k].r;
-    if (a.pj || a.fall > 0 || a.hp <= 0 || a.grab || a.bur || a.fh > 0.4) continue;
+    if (a.pj || a.fall > 0 || a.hp <= 0 || a.grab || a.bur || a.fh > 0.4 || a.lift) continue; // (held up overhead: no body down here)
     for (let j = i + 1; j < us.length; j++) {
       const b = us[j];
-      if (b.pj || b.fall > 0 || b.hp <= 0 || b.grab || b.bur || b.fh > 0.4) continue;
+      if (b.pj || b.fall > 0 || b.hp <= 0 || b.grab || b.bur || b.fh > 0.4 || b.lift) continue;
       const dx = b.x - a.x,
         dz = b.z - a.z,
         d2 = dx * dx + dz * dz,
@@ -1500,6 +1504,7 @@ function snapOf(G) {
     pd: (G.padSt || []).map(st => [st.n, Math.ceil(st.cd * 10), st.arm > 0 ? 1 : 0]),
     fz: G.units.filter(u => u.fall > 0).map(u => u.id),
     hf: G.units.filter(u => u.fh > 0.05).map(u => [u.id, Math.round(u.fh * 10)]), // flying chickens: [id, height*10]
+    lf: G.units.filter(u => u.lift).map(u => [u.id, u.lift.by, Math.round(u.lift.t * 100)]), // held up by a Berserker: [id, by, t*100]
     xe: G.xe ? G.xe.slice() : [],
     tr: (G.traps || []).map(t => [t.id, t.team, Math.round(t.x * 10), Math.round(t.z * 10), t.st, t.own]), // bear traps
     gn: G.gone ? G.gone.slice() : [], // warriors gone without dying (a Feuerfass in the catapult)

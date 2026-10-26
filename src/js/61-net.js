@@ -427,7 +427,7 @@ async function openRoom(code, role) {
   return r;
 }
 /* open every available transport at once (direct P2P + Claude room), so devices that ended up on different ones still meet */
-const NET_VER = 51; // bump when snapshots, commands or presence change shape: two different versions refuse to play together
+const NET_VER = 52; // bump when snapshots, commands or presence change shape: two different versions refuse to play together
 async function openClaude(code, role) {
   const vr = await viewerRoom();
   if (!vr) return null;

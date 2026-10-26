@@ -363,7 +363,7 @@ function ragdollRig(u, dt) {
 const fpView = new Map();
 function freeArrowMesh(k) {
   const m = projGet(k === 3 ? 'teeth' : 'arrow');
-  m.scale.setScalar(k === 3 ? 1.3 : 1.25);
+  m.scale.setScalar(k === 3 ? 1.3 : 1.7); // (an arrow shot by hand: big enough to follow with the eye)
   scene.add(m);
   return m;
 }
@@ -445,10 +445,7 @@ function updateFreeArrows(dt) {
     orientProj(a.m, a.d, a.k, dt);
     shotTrail(a);
     if (done) {
-      if (a.tr) {
-        scene.remove(a.tr);
-        a.tr.geometry.dispose();
-      }
+      if (a.tr) scene.remove(a.tr);
       if (hitU) {
         // it lands: the target flinches and flashes, sparks fly, an arrow stays stuck in it for a moment
         hitU.flash = 0.16;
@@ -480,21 +477,26 @@ function updateFreeArrows(dt) {
   }
 }
 // a thin bright streak behind an own shot: you see where it flies
-const TRAIL_MAT = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, depthWrite: false, fog: false });
-TRAIL_MAT.userData.shared = true;
+// the own shot draws a bright streak behind it (a thin line was hard to see): one shared tapered tube, stretched to the length flown
+const SHOT_TRAIL_GEO = new THREE.CylinderGeometry(0.012, 0.06, 1, 6, 1, true).rotateX(Math.PI / 2).translate(0, 0, 0.5);
+const SHOT_TRAIL_MAT = new THREE.MeshBasicMaterial({
+  color: 0xfff3c4,
+  transparent: true,
+  opacity: 0.8,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
+SHOT_TRAIL_MAT.userData.shared = true;
 function shotTrail(a) {
   if (!a.tr) {
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
-    a.tr = new THREE.Line(g, TRAIL_MAT);
+    a.tr = new THREE.Mesh(SHOT_TRAIL_GEO, SHOT_TRAIL_MAT);
     a.tr.frustumCulled = false;
     scene.add(a.tr);
   }
-  const pa = a.tr.geometry.attributes.position,
-    len = Math.min(2.4, a.t * CFG.arrowSpeed);
-  pa.setXYZ(0, a.p.x - a.d.x * len, a.p.y - a.d.y * len, a.p.z - a.d.z * len);
-  pa.setXYZ(1, a.p.x, a.p.y, a.p.z);
-  pa.needsUpdate = true;
+  const len = Math.min(3.2, a.t * CFG.arrowSpeed);
+  a.tr.position.copy(a.p);
+  a.tr.lookAt(a.p.x - a.d.x, a.p.y - a.d.y, a.p.z - a.d.z);
+  a.tr.scale.set(1, 1, Math.max(0.01, len));
 }
 function orientProj(m, d, k, dt) {
   if (k === 3) {
@@ -507,10 +509,7 @@ function clearFreeArrows() {
   fpView.clear();
   fx.shots.forEach(a => {
     projPut(a.m);
-    if (a.tr) {
-      scene.remove(a.tr);
-      a.tr.geometry.dispose();
-    }
+    if (a.tr) scene.remove(a.tr);
   });
   fx.shots.length = 0;
   fx.stuck.forEach(st => {

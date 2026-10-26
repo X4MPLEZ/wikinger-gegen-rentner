@@ -16,16 +16,17 @@ const AI_LVL = {
     bonus: 0,
   },
   medium: {
+    // (was nearly as strong as Schwer: same army tactics, two in the queue, early catapults; now the step between Einfach and Schwer)
     name: TR('Mittel'),
-    think: 1.0,
-    inc: 0.9,
-    counter: 0.4,
-    micro: 2,
+    think: 1.4,
+    inc: 0.82,
+    counter: 0.3,
+    micro: 1,
     cavRush: 1,
     retreat: true,
     wave: 17,
-    poss: 110,
-    ps: { react: 0.4, sp: 1, flee: 0.15, min: 6, hunt: 0.2 },
+    poss: 140,
+    ps: { react: 0.55, sp: 1, flee: 0.1, min: 7, hunt: 0.1 },
     bonus: 0,
   },
   hard: {
@@ -158,7 +159,9 @@ function aiRecruit(G, team, A, L, mine, foes) {
       const spk = ks.find(k => KINDS[k].spec);
       if (spk !== undefined && total >= 4) {
         const nSp = mine.filter(u => u.k === spk).length + T.q.filter(k => k === spk).length;
-        if (nSp < (L.micro >= 2 ? 3 : 2) && Math.random() < (L.micro >= 2 ? 0.16 : 0.1)) A.plan = spk;
+        // (the Feuerfass is the answer to archers: more of them over there, more often one)
+        const rng = spk === 12 && foes.length ? foes.filter(u => KINDS[u.k].role === 'ranged').length / foes.length : 0;
+        if (nSp < (L.micro >= 2 ? 3 : 2) && Math.random() < (L.micro >= 2 ? 0.16 : 0.1) * (1 + 2 * rng)) A.plan = spk;
       }
     }
     const nSiege = mine.filter(u => KINDS[u.k].role === 'siege').length + T.q.filter(k => KINDS[k].role === 'siege').length;

@@ -905,7 +905,7 @@ function humanRig(u, dt, moving, attacking) {
   if (k === 2) {
     if ((u.spin || 0) > (u.spinPrev || 0) + 0.01) u.spinMax = u.spin;
     u.spinPrev = u.spin || 0;
-    if (u.spin > 0) spinQ = clamp(u.spin / 0.08, 0, 1) * clamp(((u.spinMax || 0.6) - u.spin) / 0.06, 0, 1);
+    if (u.spin > 0) spinQ = clamp(u.spin / 0.08, 0, 1) * clamp(((u.spinMax || WHIRL.t) - u.spin) / 0.06, 0, 1);
     if (spinQ > 0) {
       P[Z_R] = lerp(P[Z_R], 1.5, spinQ);
       P[A_R] = lerp(P[A_R], 0, spinQ);
@@ -990,7 +990,7 @@ function humanRig(u, dt, moving, attacking) {
   u.rig.position.set(rx, ry + P[HOP], 0);
   if (u.spin > 0) {
     u.spin -= dt;
-    u.rig.rotation.y = ((0.6 - u.spin) / 0.6) * TAU * 2;
+    u.rig.rotation.y = (((u.spinMax || WHIRL.t) - u.spin) / WHIRL.t) * TAU * WHIRL.turns; // three turns in WHIRL.t
   } else u.rig.rotation.y = u.cw > 0.3 ? u.swYaw || 0 : 0; // the whirlwind finisher turns the whole body
   const target = moving ? Math.sin(t * 0.5) * 0.02 * calm : 0;
   springStep(u, 'wob', 'wobV', target, 90, 14, dt, 0.8);

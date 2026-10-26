@@ -853,6 +853,18 @@ const SFX = (() => {
       tone(b, 'sine', 300, 2400, t, 1.0, 0.1, { vib: 20, vibD: 40 });
       noise(b, 'lowpass', 2000, 300, t, 0.2, 0.3);
     },
+    // one Juwel lands in the counter (the profile's collect burst): a glassy ping, a step higher with every one (o.n)
+    gem(b, t, o = {}) {
+      const f = 1318 * Math.pow(2, Math.min(14, o.n || 0) / 12);
+      tone(b, 'sine', f, f, t, 0.22, 0.12);
+      tone(b, 'triangle', f * 2, f * 2, t + 0.01, 0.16, 0.05);
+      tone(b, 'sine', f * 3, f * 3.02, t + 0.02, 0.1, 0.03);
+    },
+    // the collect button: a sparkling whoosh up
+    gemBurst(b, t) {
+      noise(b, 'highpass', 3000, 6000, t, 0.35, 0.12);
+      for (let i = 0; i < 6; i++) tone(b, 'sine', 1568 * (1 + i * 0.25), 1568 * (1 + i * 0.25), t + i * 0.035, 0.18, 0.06);
+    },
     pling(b, t) {
       tone(b, 'sine', 2637, 2637, t, 0.35, 0.14);
       tone(b, 'sine', 3520, 3520, t + 0.07, 0.4, 0.1);
@@ -1587,9 +1599,9 @@ const SFX = (() => {
       for (let i = 0; i < 5; i++) S(b, 'gen', t + 0.08 + i * R(0.05, 0.11), { vol: R(0.12, 0.28), rate: R(0.7, 1.3), rv: 0 });
     },
     base(b, t) {
-      if (!S(b, 'door', t, { vol: 0.75, rate: 0.75 })) return SYN.base(b, t);
-      S(b, 'rock', t, { vol: 0.42, rate: 0.62 });
-      tone(b, 'sine', 80, 35, t, 0.32, 0.42);
+      if (!S(b, 'door', t, { vol: 0.5, rate: 0.75 })) return SYN.base(b, t);
+      S(b, 'rock', t, { vol: 0.3, rate: 0.62 });
+      tone(b, 'sine', 80, 35, t, 0.32, 0.34);
     },
     splinter(b, t) {
       if (!S(b, 'plank', t, { vol: 0.7, rate: 0.9 })) return SYN.splinter(b, t);

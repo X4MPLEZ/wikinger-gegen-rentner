@@ -22,6 +22,7 @@ const V = {
   poss: null,
 };
 function resetView() {
+  V.boomCam = null;
   V.units.forEach(disposeUnit);
   V.units.clear();
   V.dying.forEach(u => {
@@ -149,6 +150,7 @@ function disposeUnit(u) {
     u.aLoop = null;
   }
   if (u.fuseRing) fuseRingDrop(u);
+  if (u.trapChain) scene.remove(u.trapChain);
   removeOwnedObject(u.g);
   if (u.hSplit && u.mount && u.mount.parent === scene) scene.remove(u.mount); // a hero's mount that was in the scene on its own
   hpGroup.remove(u.hp);
@@ -189,6 +191,15 @@ function airMap(s) {
 }
 const hfMaps = new WeakMap();
 // flying chickens in a snapshot: id -> height*10
+// warriors held up over a Berserker's head (snapshot lf): id → [id, by, t*100]
+const lfMaps = new WeakMap();
+function lfMap(s) {
+  if (lfMaps.has(s)) return lfMaps.get(s);
+  const m = new Map();
+  for (const e of s.lf || []) m.set(e[0], e);
+  lfMaps.set(s, m);
+  return m;
+}
 function hfMap(s) {
   if (hfMaps.has(s)) return hfMaps.get(s);
   const m = new Map();
@@ -452,6 +463,7 @@ function processSnap(s) {
           } // whoever just felled it cheers
         V.units.delete(id);
         V.selected.delete(id);
+        if (u.trapChain) scene.remove(u.trapChain); // (the chain to a bear trap lies in the scene, not on him)
         u.dieT = 0;
         u.hp.visible = false;
         u.ring.visible = false;
@@ -480,7 +492,9 @@ function processSnap(s) {
         startDeath(u, dc);
         if ((Math.random() < 0.3 || u.isPoss) && u.dv !== 'drama' && u.dv !== 'gone') say(u, QUOTES[u.k].die);
         if (V.poss && V.poss.id === id) {
+          const boomCam = dc === 5 && u.k === 12 && !u.heroOn && [u.g.position.x, u.g.position.z, V.poss.camYaw, EG.lk.clone()];
           exitEgo(false);
+          if (boomCam) boomCamStart(...boomCam); // his own barrel: the camera rises over the blast first (75-fass-falle-view.js)
           toast(
             u.heroOn
               ? TR('HELDENTOD! Dein Krieger hat sich dem Sandwurm geopfert.')
@@ -515,7 +529,7 @@ function processSnap(s) {
         const hard = ps.b[i] - s.b[i] >= 2;
         baseViews[i].shake = hard ? 0.25 : 0.08;
         if (hard) {
-          SFX.play('base', { x: BASES[i].x, z: BASES[i].z });
+          SFX.play('base', { x: BASES[i].x, z: BASES[i].z, vol: 0.5 }); // (quieter: in a siege it comes again and again)
           if (i === V.myTeam && V.playing) baseAlarm();
         }
       }
@@ -850,7 +864,7 @@ function onSpecial(u, cur) {
   }
   if (u.k === 0) setTimeout(() => SFX.play('heave', { x: p.x, z: p.z, vol: 1 }), 60);
   if (u.k === 2) {
-    u.spin = 0.6 + (u.isPoss ? [0, 5][tpk(u.team, 'spin')] : 0);
+    u.spin = u.isPoss && tpk(u.team, 'spin') ? 2.4 : WHIRL.t; // (three turns; the perk Tornado-Opa whirls longer)
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * TAU;
       puff(p.x + Math.cos(a) * 2.5, p.y + 0.6, p.z + Math.sin(a) * 2.5, 0xf6f1e7, 1, 0.8);

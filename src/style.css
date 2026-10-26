@@ -5898,56 +5898,6 @@ body.heroSlow::after {
 }
 /* the steered archer's draw: a little bow under the crosshair, its string pulled back as the real one is drawn (the own big head
    hides the bow from the camera behind her); gold when fully drawn */
-#bowGauge {
-  position: absolute;
-  left: 50%;
-  top: calc(50% + 26px);
-  width: 64px;
-  height: 43px;
-  transform: translateX(-50%);
-  pointer-events: none;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.85));
-  opacity: 0.55;
-  transition: opacity 0.15s;
-}
-#bowGauge svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-  overflow: visible;
-}
-#bowGauge .limb {
-  fill: none;
-  stroke: #c98a4b;
-  stroke-width: 3.2;
-  stroke-linecap: round;
-}
-#bowGauge .str {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 1.3;
-}
-#bowGauge .shaft,
-#bowGauge .fl {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-}
-#bowGauge .tip {
-  fill: #fff;
-}
-#bowGauge.drawn {
-  opacity: 1;
-}
-#bowGauge.full .tip,
-#bowGauge.full .fl {
-  fill: #ffd34d;
-  stroke: #ffd34d;
-}
-#bowGauge.full .limb {
-  stroke: #ffb347;
-}
 /* ----- the wiki (68-wiki.js): a page like the profile; tabs, warrior chips, a 3D stage, paper sections ----- */
 #btnWikiWait {
   display: none;
@@ -6008,7 +5958,7 @@ body.heroSlow::after {
   text-align: center;
   -webkit-hyphens: auto;
   hyphens: auto;
-  overflow-wrap: break-word;
+  overflow-wrap: normal;
   max-width: 100%;
 }
 .wpick.on {
@@ -6168,6 +6118,11 @@ body.heroSlow::after {
   border-radius: 50%;
   box-shadow: 0 0 0 2px var(--ink2);
 }
+.wpick img.wmach,
+.wface img.wmach {
+  object-fit: cover;
+  background: radial-gradient(circle at 50% 40%, #f3e6c8, #b99d6c);
+}
 .wrps {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -6223,4 +6178,145 @@ body.heroSlow::after {
   #pause #btnResume {
     grid-column: 1 / -1;
   }
+}
+
+/* ---------- collecting rewards in the profile (66-profile-ui.js: profCollect, gemFly) ---------- */
+.claimall {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin: 4px 0 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--ink2);
+  box-shadow: 3px 3px 0 var(--ink2);
+  background: linear-gradient(180deg, #ffe27a, #f0b23c);
+  color: #2a1c08;
+  font: inherit;
+  font-weight: 900;
+  font-size: 0.95rem;
+  cursor: pointer;
+  animation: claimPulse 1.4s ease-in-out infinite;
+}
+.claimall .si {
+  width: 22px;
+  height: 22px;
+  color: #2fa8d8;
+}
+.claimall:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 var(--ink2);
+}
+@keyframes claimPulse {
+  0%,
+  100% {
+    filter: brightness(1);
+    transform: scale(1);
+  }
+  50% {
+    filter: brightness(1.12);
+    transform: scale(1.02);
+  }
+}
+.bpcard.ready {
+  box-shadow:
+    0 0 0 3px #ffd34d,
+    0 0 18px rgba(255, 211, 77, 0.75),
+    3px 3px 0 var(--ink2);
+  animation: claimPulse 1.2s ease-in-out infinite;
+}
+.bpst.take {
+  width: auto;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 12px;
+  background: #ffd34d;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  top: -12px;
+  right: -6px;
+}
+.ach.ready {
+  border-color: #ffd34d;
+  box-shadow:
+    0 0 0 2px #ffd34d,
+    3px 3px 0 var(--ink2);
+}
+.achtake {
+  grid-column: 2;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 2px solid var(--ink2);
+  background: #ffd34d;
+  color: #2a1c08;
+  font: inherit;
+  font-weight: 900;
+  font-size: 0.75rem;
+  cursor: pointer;
+  animation: claimPulse 1.2s ease-in-out infinite;
+}
+.achtake .si {
+  width: 15px;
+  height: 15px;
+  color: #2fa8d8;
+}
+.gemfly {
+  position: fixed;
+  z-index: 200;
+  width: 30px;
+  height: 30px;
+  pointer-events: none;
+  color: #4fd0ff;
+  filter: drop-shadow(0 0 6px rgba(120, 220, 255, 0.9)) drop-shadow(1px 2px 0 #1b1430);
+}
+.gemfly .si {
+  width: 100%;
+  height: 100%;
+}
+.gemspark {
+  position: fixed;
+  z-index: 199;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, #fff, #ffe27a 45%, rgba(255, 200, 60, 0) 70%);
+}
+.gpop {
+  animation: gemPop 0.28s ease-out;
+}
+@keyframes gemPop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.45);
+    color: #8fe6ff;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+#pGems {
+  display: inline-block;
+}
+.rclaim {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(255, 211, 77, 0.16);
+  border: 2px solid #ffd34d;
+  font-weight: 800;
+  font-size: 0.85rem;
 }

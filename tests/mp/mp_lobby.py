@@ -41,7 +41,7 @@ with sync_playwright() as p:
     h=page(ctx,'h'); g=page(ctx,'g')
     h.evaluate("__wvr.FACE.mine={id:'f1',net:'data:image/jpeg;base64,'+'A'.repeat(900),crop:null}")
     # the host's profile: level 13 (1900 XP) with the Trainingsanzug skin for the Rentner and a picture of his own
-    h.evaluate("()=>{const W=__wvr,P=W.PLAYER; P.xp=1900; P.lvC=13; W.PLAYER=P; W.profEquip('r1'); W.profEquip('oma');}")
+    h.evaluate("()=>{const W=__wvr,P=W.PLAYER; P.xp=1900; P.lvC=13; P.cl=13; W.PLAYER=P; W.profEquip('r1'); W.profEquip('oma');}")
     h.click('#btnQuick')
     res['hostPub']=wait(h, "__wvr.NET.role==='host' && __wvr.NET.pub===true && !document.querySelector('#btnPractice').hidden")
     res['listed']=wait(g, "document.querySelectorAll('#lobbyList .lrow').length>0", 40)

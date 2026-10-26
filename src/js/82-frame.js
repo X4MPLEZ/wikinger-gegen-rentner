@@ -67,6 +67,7 @@ function frame() {
         camS.z += (-mx * s + mz * c) * sp;
       }
       applyCam();
+      boomCamTick(dt);
       if (TUT.on) tutCamTick(dt);
     }
     if (pf) pm('ctl');
@@ -371,7 +372,9 @@ function renderUnits(t, dt) {
   const aa = airMap(A),
     ba = B ? airMap(B) : null,
     ha = hfMap(A),
-    hb = B ? hfMap(B) : null;
+    hb = B ? hfMap(B) : null,
+    lfm = lfMap(A),
+    lifters = new Set([...lfm.values()].map(e => e[1]));
   const k = B ? clamp((rt - A.t) / Math.max(0.001, B.t - A.t), 0, 1) : 0,
     camQ = camera.quaternion;
   for (const u of V.units.values()) {
@@ -420,7 +423,29 @@ function renderUnits(t, dt) {
       u.flyH = mine ? V.poss.fh || 0 : (hb ? lerp(h0, hb.get(u.id) || 0, k) : h0) / 10;
       if (!mine && u.flyH > 0) y += u.flyH;
     }
-    const wet = !flight && u.padY === undefined && !(mine && V.poss.pj) && inWater(x, z) && !(u.flyH > 0.3);
+    // held up over a Berserker's head (liftStep in 10-sim.js): across his shoulders above his hands, until he hurls him
+    u.lifted = 0;
+    u.lifting = lifters.has(u.id);
+    {
+      const lf = lfm.get(u.id),
+        L = lf && V.units.get(lf[1]);
+      if (L) {
+        const la = am.get(lf[1]),
+          lb = bm && bm.get(lf[1]),
+          lmine = V.poss && V.poss.id === lf[1],
+          lx = lmine ? V.poss.x : la ? (lb ? lerp(la[2], lb[2], k) : la[2]) / 10 : L.g.position.x,
+          lz = lmine ? V.poss.z : la ? (lb ? lerp(la[3], lb[3], k) : la[3]) / 10 : L.g.position.z,
+          ly = lmine ? V.poss.yaw : L.g.rotation.y,
+          hb2 = headBox({ k: L.k, poss: L.isPoss }),
+          q = clamp((lf[2] / 100 + Math.max(0, rt - A.t)) / 0.18, 0, 1);
+        x = lx + Math.cos(ly) * 0.95 * q;
+        z = lz - Math.sin(ly) * 0.95 * q;
+        y = unitY(lx, lz) + lerp(0.5, hb2.y + hb2.r * 0.85 + 0.15, q) + Math.sin(clock * 9) * 0.05;
+        u.lifted = Math.max(0.01, q);
+        u.liftYaw = ly;
+      }
+    }
+    const wet = !flight && !u.lifted && u.padY === undefined && !(mine && V.poss.pj) && inWater(x, z) && !(u.flyH > 0.3);
     waterMotionFX(u, x, y, z, wet, dt);
     u.dryT = wet ? 0 : (u.dryT || 0) + dt;
     u.wet = wet && !u.arm;
@@ -462,7 +487,7 @@ function renderUnits(t, dt) {
     if (u.slowed && Math.random() < dt * 6)
       puff(x + (Math.random() - 0.5) * 0.6, y + 0.25, z + (Math.random() - 0.5) * 0.6, 0xffb3d1, 1, 0.3);
     if (u.padY !== undefined) u.g.position.set(x, u.padY, z);
-    else if (flight) u.g.position.set(x, y, z);
+    else if (flight || u.lifted) u.g.position.set(x, y, z);
     else if (!mine && !u.rag && Math.hypot(u.g.position.x - x, u.g.position.z - z) < 3) {
       const f = Math.min(1, dt * 15);
       u.g.position.set(lerp(u.g.position.x, x, f), y + jh, lerp(u.g.position.z, z, f));
@@ -508,6 +533,7 @@ function renderUnits(t, dt) {
       }
     }
     if (!u.rag) u.g.rotation.y += angDiff(want, u.g.rotation.y) * Math.min(1, dt * (mine ? 20 : sgR ? 3.5 : 12));
+    if (u.lifted) u.g.rotation.y = u.liftYaw;
     if (u.worm) wormUnitState(u, A, rt);
     {
       // animation LOD (visual only): far or off-screen units update their rig at 30 or 15 Hz, the controlled and enemy ego unit always at full rate
@@ -579,6 +605,30 @@ function renderUnits(t, dt) {
       u.rig.rotation.set(0, 0, 0);
     }
     if (!flight) u.wasImpact = false;
+    if (u.lifted) {
+      // held up: lying across, kicking and waving
+      const w = Math.sin(clock * 17);
+      u.rig.rotation.set(0, 0, (Math.PI / 2) * u.lifted);
+      u.rig.position.y = 0;
+      if (u.armL) {
+        u.armL.rotation.x = -2.6 + w * 0.5;
+        u.armR.rotation.x = -2.6 - w * 0.5;
+      }
+      if (u.shinL) {
+        u.shinL.rotation.x = 0.7 + Math.sin(clock * 19) * 0.6;
+        u.shinR.rotation.x = 0.7 - Math.sin(clock * 19) * 0.6;
+      }
+      u.wasLifted = 1;
+    } else if (u.wasLifted) {
+      u.wasLifted = 0;
+      if (!flight) u.rig.rotation.set(0, 0, 0);
+    }
+    if (u.lifting && u.armL && !u.bear) {
+      // the Berserker holds him up with both arms
+      u.armL.rotation.set(-2.95, 0, -0.15);
+      u.armR.rotation.set(-2.95, 0, 0.15);
+      if (u.foreL) u.foreL.rotation.x = u.foreR.rotation.x = -0.3;
+    }
     unitShadowRange(u);
     {
       const ist = WV.ic.get(u.id) || 0;

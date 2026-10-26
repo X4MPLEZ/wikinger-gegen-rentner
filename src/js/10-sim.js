@@ -590,20 +590,31 @@ function spawnUnit(G, team, k) {
 }
 // Desert: open sight lines, ranged units and catapults shoot farther.
 const desertRange = K => (MAP && MAP.type === 'wueste' ? (K.role === 'ranged' ? 1.5 : K.role === 'siege' ? 3 : 0) : 0);
-const isCounter = (attK, defK) => BEATS[KINDS[attK].role] === KINDS[defK].role || dmgMult(attK, defK) > 1;
+// rock-paper-scissors by role, with one exception: the Feuerfass (12) blows up archers and catapults and is run down by riders
+function beats(attK, defK) {
+  if (attK === 12) return KINDS[defK].role === 'ranged' || KINDS[defK].role === 'siege';
+  if (defK === 12) return KINDS[attK].role === 'cav';
+  return BEATS[KINDS[attK].role] === KINDS[defK].role;
+}
+const isCounter = (attK, defK) => beats(attK, defK) || dmgMult(attK, defK) > 1;
 function dmgMult(attK, defK) {
   if (KINDS[attK].worm) return KINDS[defK].role === 'siege' ? 1.4 : 1.2;
   if (KINDS[defK].worm) return KINDS[attK].role === 'ranged' ? 1.5 : 1;
   if (KINDS[attK].bear) return KINDS[defK].role === 'ranged' ? 0.6 : 1.7;
-  if (KINDS[defK].bear && KINDS[attK].role === 'ranged') return 2.4;
+  if (KINDS[defK].bear) return KINDS[attK].role === 'ranged' ? 2.4 : KINDS[attK].role === 'siege' ? 1.8 : 1;
   if (KINDS[attK].role === 'cav' && KINDS[defK].role === 'siege') return 6;
-  return BEATS[KINDS[attK].role] === KINDS[defK].role ? MULT[KINDS[attK].role] : 1;
+  if (attK === 12) return beats(attK, defK) ? (KINDS[defK].role === 'siege' ? 2 : 1.7) : KINDS[defK].role === 'cav' ? 0.7 : 1;
+  if (defK === 12) return KINDS[attK].role === 'cav' ? 1.6 : 1;
+  return beats(attK, defK) ? MULT[KINDS[attK].role] : 1;
 }
 function hit(G, tgt, dmg, team, byId, attK, bp, head) {
   if (tgt === -2) {
     const bd =
-      dmg * CFG.phaseBase[G.phase || 0] * ((attK >= 0 && KINDS[attK].role === 'siege') || G.tut || (G.phase || 0) >= 2 ? 1 : CFG.baseArmor);
-    /* walls: only catapults hit bases at full force (until the final battle) */ G.teams[1 - team].hp -= bd;
+      dmg *
+      CFG.phaseBase[G.phase || 0] *
+      ((attK >= 0 && (KINDS[attK].role === 'siege' || KINDS[attK].spec)) || G.tut || (G.phase || 0) >= 2 ? 1 : CFG.baseArmor);
+    /* walls: only catapults, the Feuerfass and the Fallenleger hit bases at full force (until the final battle) */ G.teams[1 - team].hp -=
+      bd;
     if (G.st) G.st[team].baseDmg += bd;
     return;
   }
@@ -617,7 +628,7 @@ function hit(G, tgt, dmg, team, byId, attK, bp, head) {
     const ar = KINDS[attK].role,
       dr = KINDS[e.k].role,
       mh = maxHp(e);
-    if (BEATS[ar] === dr && (ar !== 'ranged' || head))
+    if (beats(attK, e.k) && (ar !== 'ranged' || head))
       d = Math.max(d, mh * (fangNow ? FANG.soft : 0.7)); // controlled counter: two clean hits, not one (a row of trap jaws: softer)
     else if (ar === 'ranged' && dr === 'cav') d = Math.max(d, mh * (head ? 0.62 : 0.4));
   }
@@ -712,7 +723,7 @@ function counterHit(G, e, attK, team, bp) {
     return;
   const ar = KINDS[attK].role,
     dr = KINDS[e.k].role;
-  if (BEATS[ar] !== dr) return;
+  if (!beats(attK, e.k)) return;
   const fresh = G.t - (e.konT || -9) > 4; // (a counter floors the same warrior at most every 4 s: fewer bodies flying about)
   if (!fresh) return;
   e.konT = G.t;
@@ -786,7 +797,7 @@ function egoKnockOK(e, src) {
   return false;
 }
 function knockFly(e, fx, fz, dist, impulseX, impulseZ, lift = 0, src = 'ego') {
-  if (e.hp <= 0 || (e.tutDummy && !e.poss && !e.tutPush) || e.grab || e.bur || KINDS[e.k].worm) return false;
+  if (e.hp <= 0 || (e.tutDummy && !e.poss && !e.tutPush) || e.grab || e.bur || e.lift || KINDS[e.k].worm) return false;
   if (!egoKnockOK(e, src)) return false;
   e.kbEgo = src === 'ego' ? 1 : 0; // a body flung by an ego bowls like an ego blow
   dist *= KNOCK_RES(e.k);
@@ -1150,6 +1161,34 @@ function possAttack(G, u, byId) {
   }
   u.run = 0;
 }
+// the Berserker's throw (possSpecial): the victim is held up over his head for LIFT.hold s (he can turn to aim), then flies the way the
+// Berserker faces and bowls through his friends; if the Berserker falls or is knocked away meanwhile, the victim drops
+const LIFT = { hold: 0.6, h: 2.4 };
+function liftStep(G, u, byId) {
+  const L = byId.get(u.lift.by);
+  u.lift.t += DT;
+  if (!L || L.hp <= 0 || L.air || L.fall > 0 || L.down > 0) {
+    delete u.lift;
+    u.down = Math.max(u.down || 0, 0.5);
+    return;
+  }
+  const fx = Math.sin(L.yaw),
+    fz = Math.cos(L.yaw);
+  u.x = L.x + fx * 0.1;
+  u.z = L.z + fz * 0.1;
+  u.tgt = -1;
+  u.path = null;
+  u.kb = null;
+  u.vx = u.vz = 0;
+  u.down = Math.max(u.down || 0, LIFT.hold - u.lift.t + 0.2);
+  if (u.lift.t >= LIFT.hold) {
+    delete u.lift;
+    u.y = u.fy = unitY(u.x, u.z) + LIFT.h;
+    u.kbT = G.t;
+    u.kbTeam = L.team;
+    if (knockFly(u, 0, 0, 10, fx, fz, 4.8) && u.air) u.air.by = L.id; // the thrower himself is never bowled by his own throw
+  }
+}
 function possSpecial(G, u, byId) {
   const K = KINDS[u.k];
   if (u.hen) return; // a chicken only pecks
@@ -1228,19 +1267,20 @@ function possSpecial(G, u, byId) {
   }
   if (u.k === 0) {
     u.rage = pk(G, u.team, 'walhalla', [4, 10]);
-    const fx0 = Math.sin(u.yaw),
-      fz0 = Math.cos(u.yaw);
     enemiesInCone(G, u, 2.8, 0.95)
-      .filter(c => KINDS[c.e.k].role !== 'siege')
+      .filter(c => KINDS[c.e.k].role !== 'siege' && !KINDS[c.e.k].worm && !c.e.lift && !c.e.air && !c.e.pj)
       .slice(0, 1)
       .forEach(c => {
         hit(G, c.e.id, 22, u.team, byId, u.k, true);
-        c.e.kbT = G.t;
-        c.e.kbTeam = u.team;
-        if (knockFly(c.e, 0, 0, 10, fx0, fz0, 4.8) && c.e.air) c.e.air.by = u.id; // the thrower himself is never bowled by his own throw
+        if (c.e.hp <= 0) return;
+        c.e.lift = { by: u.id, t: 0 }; // up over his head (liftStep), then hurled the way he faces
+        c.e.down = Math.max(c.e.down || 0, LIFT.hold + 0.2);
+        c.e.kb = null;
+        c.e.tgt = -1;
+        c.e.path = null;
       });
-    u.kbImm = Math.max(u.kbImm || 0, G.t + 0.5);
-  } // Viking throw: whoever stands in front is hurled away and bowls through his friends
+    u.kbImm = Math.max(u.kbImm || 0, G.t + LIFT.hold + 0.5);
+  } // Viking throw: whoever stands in front is lifted over the Berserker's head, held up a moment and hurled into his friends
   else if ((u.k === 1 || u.k === 3) && u.aim) {
     const vl = pkL(G, u.team, 'volley'),
       [ax, ay, az] = u.aim,
@@ -1282,8 +1322,10 @@ function possSpecial(G, u, byId) {
     });
     if (baseGap(BASES[1 - u.team], u.x, u.z) < 3.4) hit(G, -2, 60, u.team, byId, -1);
     for (const b of G.bears.slice()) if (Math.hypot(b.x - u.x, b.z - u.z) < 3.6) hitBear(G, b, 60, u.team, -1, true, false, u.id);
-    u.spinT = pk(G, u.team, 'spin', [0, 2.4]);
-    u.spinP = 0.4;
+    const big = pk(G, u.team, 'spin', [0, 2.4]); // (the perk Tornado-Opa: a long, wide whirl)
+    u.spinT = big || WHIRL.t;
+    u.spinBig = big ? 1 : 0;
+    u.spinP = big ? 0.4 : WHIRL.pulse;
   } else if (u.k === 3) {
     enemiesInCone(G, u, K.range + 1, Math.PI)
       .sort((a, b) => a.d - b.d)
@@ -1431,10 +1473,10 @@ function possStep(G, u, byId) {
     u.spinT -= DT;
     u.spinP -= DT;
     if (u.spinP <= 0) {
-      u.spinP = 0.4;
-      enemiesInCone(G, u, 5.5, Math.PI).forEach(c => {
-        hit(G, c.e.id, 30, u.team, byId, u.k, true);
-        if (!(c.e.down > 0.6)) knockFly(c.e, u.x, u.z, 5);
+      u.spinP = u.spinBig ? 0.4 : WHIRL.pulse;
+      enemiesInCone(G, u, u.spinBig ? 5.5 : WHIRL.r, Math.PI).forEach(c => {
+        hit(G, c.e.id, u.spinBig ? 30 : WHIRL.dmg, u.team, byId, u.k, !!u.spinBig); // (the plain whirl's later turns: no hard counter again)
+        if (!(c.e.down > 0.6)) knockFly(c.e, u.x, u.z, u.spinBig ? 5 : 3.2);
       });
     }
   }

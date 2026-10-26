@@ -706,7 +706,7 @@ function buildUnitRaw0(k) {
     4: { body: 0x396f9e, leg: 0x5a4330, arm: 0xf0c39c, skin: 0xf0c39c, boot: 0x4a3424 },
     5: { body: 0x83517d, leg: 0x55565e, arm: 0x83517d, belt: 0x4e3250, skin: 0xecc1a3 },
     12: { body: 0x326a9e, leg: 0x5a4330, arm: 0xe9b38c, skin: 0xe9b38c, boot: 0x4a3424, belt: 0x3a2a1c }, // Feuerfass: bare arms, tunic
-    13: { body: 0x83517d, leg: 0x6a5238, arm: 0x83517d, belt: 0x4e3250, skin: 0xefc4a6, boot: 0x3d5a32 }, // Fallenleger: shirt, leather breeches, rubber boots
+    13: { body: 0xc47aa9, leg: 0x6a5238, arm: 0xc47aa9, belt: 0x4e3250, skin: 0xefc4a6, boot: 0x3b2a20 }, // Fallenleger: shirt, leather breeches, boots
   }[k];
   // the skin's swaps already here, so shades derived from these colours (sleeves, dark trims) follow the skin
   const P = LAM_MAP ? Object.fromEntries(Object.entries(P0).map(([n, c]) => [n, LAM_MAP.has(c) ? LAM_MAP.get(c) : c])) : P0;
